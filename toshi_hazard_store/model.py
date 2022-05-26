@@ -2,8 +2,16 @@
 
 import logging
 
-from pynamodb.attributes import ( ListAttribute, MapAttribute, NumberAttribute, UnicodeAttribute, VersionAttribute,
-    UTCDateTimeAttribute, JSONAttribute, UnicodeSetAttribute )
+from pynamodb.attributes import (
+    JSONAttribute,
+    ListAttribute,
+    MapAttribute,
+    NumberAttribute,
+    UnicodeAttribute,
+    UnicodeSetAttribute,
+    UTCDateTimeAttribute,
+    VersionAttribute,
+)
 from pynamodb.models import Model
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
@@ -30,15 +38,15 @@ class ToshiOpenquakeHazardMeta(Model):
     version = VersionAttribute()
 
     # known at configuration
-    vs30 = NumberAttribute()              # vs30 value
-    imt_codes = UnicodeSetAttribute()     # list of IMTs
-    loc_codes = UnicodeSetAttribute()     # list of Location codes
-    source_models = UnicodeSetAttribute() # list of source model ids
+    vs30 = NumberAttribute()  # vs30 value
+    imt_codes = UnicodeSetAttribute()  # list of IMTs
+    loc_codes = UnicodeSetAttribute()  # list of Location codes
+    source_models = UnicodeSetAttribute()  # list of source model ids
 
     # extracted from the OQ HDF5
-    source_df = JSONAttribute() # sources meta as DataFrame JSON
-    gsim_df = JSONAttribute()   # gmpe meta as DataFrame JSON
-    rlzs_df = JSONAttribute()   # realization meta as DataFrame JSON
+    source_df = JSONAttribute()  # sources meta as DataFrame JSON
+    gsim_df = JSONAttribute()  # gmpe meta as DataFrame JSON
+    rlzs_df = JSONAttribute()  # realization meta as DataFrame JSON
 
 
 class LevelValuePairAttribute(MapAttribute):

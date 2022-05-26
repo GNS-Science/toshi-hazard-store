@@ -7,6 +7,7 @@ import datetime as dt
 
 from dateutil.tz import tzutc
 
+
 @mock_dynamodb
 class PynamoTest(unittest.TestCase):
     def setUp(self):
@@ -75,23 +76,21 @@ class PynamoTest(unittest.TestCase):
         self.assertEqual(obj.lvl_val_pairs[9].level, 0.01)
         self.assertEqual(obj.lvl_val_pairs[9].value, 0.00001)
 
-
-
     def test_save_one_meta_object(self):
 
         obj = model.ToshiOpenquakeHazardMeta(
-            hazard_solution_id = "UnicodeAttribute(hash_key=True)",
-            hazsol_vs30_rk = "UnicodeAttribute(range_key=True)",
-            created = dt.datetime.now(tzutc()),
-             # known at configuration
-            vs30 = 350,                         # vs30 value
-            imt_codes = ['PGA', 'SA(0.5)'],     # list of IMTs
-            loc_codes = ['WLG', 'AKL'],         # list of Location codes
-            source_models = ['A', 'B'],         # list of source model ids
+            hazard_solution_id="UnicodeAttribute(hash_key=True)",
+            hazsol_vs30_rk="UnicodeAttribute(range_key=True)",
+            created=dt.datetime.now(tzutc()),
+            # known at configuration
+            vs30=350,  # vs30 value
+            imt_codes=['PGA', 'SA(0.5)'],  # list of IMTs
+            loc_codes=['WLG', 'AKL'],  # list of Location codes
+            source_models=['A', 'B'],  # list of source model ids
             # extracted from the OQ HDF5
-            source_df = json.dumps(dict(sources=[1,2])),  # sources meta as DataFrame JSON
-            gsim_df = json.dumps(dict(gsims=[1,2])),   # gmpe meta as DataFrame JSON
-            rlzs_df = json.dumps(dict(rlzs=[1,2]))    # realization meta as DataFrame JSON
+            source_df=json.dumps(dict(sources=[1, 2])),  # sources meta as DataFrame JSON
+            gsim_df=json.dumps(dict(gsims=[1, 2])),  # gmpe meta as DataFrame JSON
+            rlzs_df=json.dumps(dict(rlzs=[1, 2])),  # realization meta as DataFrame JSON
         )
 
         print(f'obj: {obj} {obj.version}')
@@ -104,4 +103,3 @@ class PynamoTest(unittest.TestCase):
         # self.assertEqual(obj.lvl_val_pairs[0].value, 0.000001)
         # self.assertEqual(obj.lvl_val_pairs[9].level, 0.01)
         # self.assertEqual(obj.lvl_val_pairs[9].value, 0.00001)
-
