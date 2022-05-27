@@ -23,6 +23,7 @@ def batch_save_hcurve_rlzs(toshi_id, models: Iterable[model.ToshiOpenquakeHazard
 
 
 mOHCS = model.ToshiOpenquakeHazardCurveStats
+mOHCR = model.ToshiOpenquakeHazardCurveRlzs
 mOHM = model.ToshiOpenquakeHazardMeta
 
 
@@ -55,6 +56,42 @@ def get_hazard_stats_curves(
 
     for hit in model.ToshiOpenquakeHazardCurveStats.query(
         hazard_solution_id, mOHCS.imt_loc_agg_rk >= range_key_first_val, filter_condition=condition_expr
+    ):
+        yield (hit)
+
+
+def get_hazard_rlz_curves(
+    hazard_solution_id: str,
+    imt_codes: Iterable[str] = None,
+    loc_codes: Iterable[str] = None,
+    rlz_ids: Iterable[str] = None,
+) -> Iterator[mOHCR]:
+    """Use ToshiOpenquakeHazardCurveRlzs.imt_loc_agg_rk range key as much as possible."""
+
+    range_key_first_val = ""
+    condition_expr = None
+
+    if imt_codes:
+        first_imt = sorted(imt_codes)[0]
+        range_key_first_val += f"{first_imt}"
+        condition_expr = condition_expr & mOHCR.imt_code.is_in(*imt_codes)
+    if loc_codes:
+        condition_expr = condition_expr & mOHCR.location_code.is_in(*loc_codes)
+    if rlz_ids:
+        condition_expr = condition_expr & mOHCR.rlz_id.is_in(*rlz_ids)
+
+    if imt_codes and loc_codes:
+        first_loc = sorted(loc_codes)[0]
+        range_key_first_val += f":{first_loc}"
+    if imt_codes and loc_codes and rlz_ids:
+        first_rlz = sorted(rlz_ids)[0]
+        range_key_first_val += f":{first_rlz}"
+
+    print(f"range_key_first_val: {range_key_first_val}")
+    print(condition_expr)
+
+    for hit in model.ToshiOpenquakeHazardCurveRlzs.query(
+        hazard_solution_id, mOHCR.imt_loc_rlz_rk >= range_key_first_val, filter_condition=condition_expr
     ):
         yield (hit)
 
