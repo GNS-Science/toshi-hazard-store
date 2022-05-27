@@ -31,8 +31,7 @@ class PynamoTest(unittest.TestCase):
 
         obj = model.ToshiOpenquakeHazardCurveRlzs(
             hazard_solution_id="ABCDE",
-            vs30_imt_loc_rlz_rk="350:PGA:WLG:rlz-010",
-            vs30=350,
+            imt_loc_rlz_rk="350:PGA:WLG:rlz-010",
             location_code="WLG",
             rlz_id="rlz-010",
             imt_code="PGA",
@@ -56,8 +55,7 @@ class PynamoTest(unittest.TestCase):
 
         obj = model.ToshiOpenquakeHazardCurveStats(
             hazard_solution_id="ABCDE",
-            vs30_imt_loc_agg_rk="350:SA(0.5):WLG:quantile-0.1",
-            vs30=350,
+            imt_loc_agg_rk="350:SA(0.5):WLG:quantile-0.1",
             location_code="WLG",
             aggregation="quantile-0.1",
             imt_code="SA(0.5)",

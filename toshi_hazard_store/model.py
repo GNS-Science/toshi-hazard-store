@@ -70,9 +70,8 @@ class ToshiOpenquakeHazardCurveRlzs(Model):
             host = "http://localhost:8000"  # pragma: no cover
 
     hazard_solution_id = UnicodeAttribute(hash_key=True)
-    vs30_imt_loc_rlz_rk = UnicodeAttribute(range_key=True)  # TODO: check we can actually use this in queries!
+    imt_loc_rlz_rk = UnicodeAttribute(range_key=True)  # TODO: check we can actually use this in queries!
 
-    vs30 = NumberAttribute()
     imt_code = UnicodeAttribute()
     location_code = UnicodeAttribute()
     rlz_id = UnicodeAttribute()
@@ -94,9 +93,8 @@ class ToshiOpenquakeHazardCurveStats(Model):
             host = "http://localhost:8000"  # pragma: no cover
 
     hazard_solution_id = UnicodeAttribute(hash_key=True)
-    vs30_imt_loc_agg_rk = UnicodeAttribute(range_key=True)
+    imt_loc_agg_rk = UnicodeAttribute(range_key=True)
 
-    vs30 = NumberAttribute()
     imt_code = UnicodeAttribute()
     location_code = UnicodeAttribute()
     aggregation = UnicodeAttribute()
