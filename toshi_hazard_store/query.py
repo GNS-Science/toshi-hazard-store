@@ -26,23 +26,32 @@ mOHCS = model.ToshiOpenquakeHazardCurveStats
 mOHM = model.ToshiOpenquakeHazardMeta
 
 
-def get_hazard_curves_stats(
+def get_hazard_stats_curves(
     hazard_solution_id: str,
-    imt_code: str,
+    imt_codes: Iterable[str] = None,
     loc_codes: Iterable[str] = None,
     agg_codes: Iterable[str] = None,
 ) -> Iterator[mOHCS]:
     """Use ToshiOpenquakeHazardCurveStats.imt_loc_agg_rk range key as much as possible."""
 
-    range_key_first_val = f"{imt_code}"
-    condition_expr = mOHCS.imt_code == imt_code
+    range_key_first_val = ""
+    condition_expr = None
 
+    if imt_codes:
+        first_imt = sorted(imt_codes)[0]
+        range_key_first_val += f"{first_imt}"
+        condition_expr = condition_expr & mOHCS.imt_code.is_in(*imt_codes)
     if loc_codes:
-        first_loc = sorted(loc_codes)[0]
-        range_key_first_val += f":{first_loc}"
         condition_expr = condition_expr & mOHCS.location_code.is_in(*loc_codes)
     if agg_codes:
         condition_expr = condition_expr & mOHCS.aggregation.is_in(*agg_codes)
+
+    if imt_codes and loc_codes:
+        first_loc = sorted(loc_codes)[0]
+        range_key_first_val += f":{first_loc}"
+    if imt_codes and loc_codes and agg_codes:
+        first_agg = sorted(agg_codes)[0]
+        range_key_first_val += f":{first_agg}"
 
     for hit in model.ToshiOpenquakeHazardCurveStats.query(
         hazard_solution_id, mOHCS.imt_loc_agg_rk >= range_key_first_val, filter_condition=condition_expr
@@ -63,6 +72,6 @@ def get_hazard_metadata(
         condition_expr = condition_expr & mOHM.vs30.is_in(*vs30_vals)
 
     for hit in model.ToshiOpenquakeHazardMeta.query(
-        "ToshiOpenquakeHazardMeta", filter_condition=condition_expr  # the partition key is the table name!
+        "ToshiOpenquakeHazardMeta", filter_condition=condition_expr  # NB the partition key is the table name!
     ):
         yield (hit)

@@ -55,7 +55,7 @@ class QueryModuleTest(unittest.TestCase):
     def test_query_stats_objects(self):
         self.assertEqual(model.ToshiOpenquakeHazardCurveStats.exists(), True)
         query.batch_save_hcurve_stats(TOSHI_ID, models=build_stats_models())
-        res = list(query.get_hazard_curves_stats(TOSHI_ID, 'PGA', ['WLG'], None))
+        res = list(query.get_hazard_stats_curves(TOSHI_ID, ['PGA'], ['WLG'], None))
         print(stats)
         self.assertEqual(len(res), len(stats))
         self.assertEqual(res[0].location_code, 'WLG')
@@ -65,7 +65,7 @@ class QueryModuleTest(unittest.TestCase):
     def test_query_stats_objects_2(self):
         self.assertEqual(model.ToshiOpenquakeHazardCurveStats.exists(), True)
         query.batch_save_hcurve_stats(TOSHI_ID, models=build_stats_models())
-        res = list(query.get_hazard_curves_stats(TOSHI_ID, 'PGA', ['WLG', 'QZN'], None))
+        res = list(query.get_hazard_stats_curves(TOSHI_ID, ['PGA'], ['WLG', 'QZN'], None))
         print(stats)
         self.assertEqual(len(res), len(stats) * 2)
         self.assertEqual(res[0].location_code, 'QZN')
@@ -76,17 +76,26 @@ class QueryModuleTest(unittest.TestCase):
     def test_query_stats_objects_3(self):
         self.assertEqual(model.ToshiOpenquakeHazardCurveStats.exists(), True)
         query.batch_save_hcurve_stats(TOSHI_ID, models=build_stats_models())
-        res = list(query.get_hazard_curves_stats(TOSHI_ID, 'PGA', None, None))
+        res = list(query.get_hazard_stats_curves(TOSHI_ID, ['PGA'], None, None))
         print(res)
         self.assertEqual(len(res), len(stats) * len(locs))
 
     def test_query_stats_objects_4(self):
         self.assertEqual(model.ToshiOpenquakeHazardCurveStats.exists(), True)
         query.batch_save_hcurve_stats(TOSHI_ID, models=build_stats_models())
-        res = list(query.get_hazard_curves_stats(TOSHI_ID, 'PGA', ['WLG', 'QZN'], ['mean']))
+        res = list(query.get_hazard_stats_curves(TOSHI_ID, ['PGA'], ['WLG', 'QZN'], ['mean']))
         print(res)
         self.assertEqual(len(res), 2)
         self.assertEqual(res[0].location_code, 'QZN')
         self.assertEqual(res[1].location_code, 'WLG')
         self.assertEqual(res[0].aggregation, 'mean')
         self.assertEqual(res[1].aggregation, 'mean')
+
+    def test_query_stats_objects_all(self):
+        self.assertEqual(model.ToshiOpenquakeHazardCurveStats.exists(), True)
+        query.batch_save_hcurve_stats(TOSHI_ID, models=build_stats_models())
+        res = list(query.get_hazard_stats_curves(TOSHI_ID))
+        print(res)
+        self.assertEqual(len(res), len(list(build_stats_models())))
+        self.assertEqual(res[0].location_code, 'QZN')
+        self.assertEqual(res[0].aggregation, 'mean')
