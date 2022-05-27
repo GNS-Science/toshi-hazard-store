@@ -23,6 +23,7 @@ def batch_save_hcurve_rlzs(toshi_id, models: Iterable[model.ToshiOpenquakeHazard
 
 
 mOHCS = model.ToshiOpenquakeHazardCurveStats
+mOHM = model.ToshiOpenquakeHazardMeta
 
 
 def get_hazard_curves_stats(
@@ -46,5 +47,23 @@ def get_hazard_curves_stats(
 
     for hit in model.ToshiOpenquakeHazardCurveStats.query(
         hazard_solution_id, mOHCS.vs30_imt_loc_agg_rk >= range_key_first_val, filter_condition=condition_expr
+    ):
+        yield (hit)
+
+
+def get_hazard_metadata(
+    hazard_solution_ids: Iterable[str] = None,
+    vs30_vals: Iterable[int] = None,
+) -> Iterator[mOHM]:
+    """Fetch ToshiOpenquakeHazardMeta based on criteria."""
+
+    condition_expr = None
+    if hazard_solution_ids:
+        condition_expr = condition_expr & mOHM.hazard_solution_id.is_in(*hazard_solution_ids)
+    if vs30_vals:
+        condition_expr = condition_expr & mOHM.vs30.is_in(*vs30_vals)
+
+    for hit in model.ToshiOpenquakeHazardMeta.query(
+        "ToshiOpenquakeHazardMeta", filter_condition=condition_expr  # the partition key is the table name!
     ):
         yield (hit)

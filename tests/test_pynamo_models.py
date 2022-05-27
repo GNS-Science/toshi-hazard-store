@@ -79,9 +79,10 @@ class PynamoTest(unittest.TestCase):
     def test_save_one_meta_object(self):
 
         obj = model.ToshiOpenquakeHazardMeta(
-            hazard_solution_id="UnicodeAttribute(hash_key=True)",
+            partition_key="ToshiOpenquakeHazardMeta",
+            hazard_solution_id="AMCDEF",
             hazsol_vs30_rk="UnicodeAttribute(range_key=True)",
-            created=dt.datetime.now(tzutc()),
+            updated=dt.datetime.now(tzutc()),
             # known at configuration
             vs30=350,  # vs30 value
             imt_codes=['PGA', 'SA(0.5)'],  # list of IMTs

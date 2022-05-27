@@ -31,13 +31,14 @@ class ToshiOpenquakeHazardMeta(Model):
         if IS_OFFLINE:
             host = "http://localhost:8000"  # pragma: no cover
 
-    hazard_solution_id = UnicodeAttribute(hash_key=True)
+    partition_key = UnicodeAttribute(hash_key=True)  # a static value as we actually don't want to partition our data
     hazsol_vs30_rk = UnicodeAttribute(range_key=True)
 
-    created = UTCDateTimeAttribute()
+    updated = UTCDateTimeAttribute()
     version = VersionAttribute()
 
     # known at configuration
+    hazard_solution_id = UnicodeAttribute()
     vs30 = NumberAttribute()  # vs30 value
     imt_codes = UnicodeSetAttribute()  # list of IMTs
     loc_codes = UnicodeSetAttribute()  # list of Location codes
