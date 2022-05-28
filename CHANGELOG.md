@@ -1,5 +1,10 @@
 # Changelog
 
+
+## [0.3.0] - 2022-05-28
+### Changed
+ - tightened up model attributes names
+
 ## [0.2.0] - 2022-05-27
 ### Added
  - query api improvements
