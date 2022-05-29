@@ -2,6 +2,8 @@
 
 
 ## [0.3.0] - 2022-05-28
+### Added
+ - store_hazard script for openquake systems.
 ### Changed
  - tightened up model attributes names
 
