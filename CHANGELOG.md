@@ -1,5 +1,16 @@
 # Changelog
 
+
+## [0.3.2] - 2022-05-30
+### Added
+ - meta.aggs attribute
+ - meta.inv_tme attribute
+
+### Changed
+ - store hazard can create tables.
+ - store hazard adds extra meta.
+ - store hazard truncates values for rlz and agg fields.
+
 ## [0.3.1] - 2022-05-29
 ### Changed
  - updated usage.
