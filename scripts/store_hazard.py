@@ -91,12 +91,16 @@ def get_data(dstore, im, kind):
     return [CustomHazardCurve(CustomLocation(*site), poes[0]) for site, poes in zip(sitemesh, hcurves)]
 
 
-def export_stats(dstore, toshi_id, kind):
+def export_stats(dstore, toshi_id: str, kind: str):
     oq = dstore['oqparam']
     curves = []
     for im in oq.imtls:
         for hazcurve in get_data(dstore, im, kind):
             # build the model objects....
+
+            # strip the extra stuff
+            kind = kind[9:] if "quantile-" in kind else kind
+
             lvps = [
                 model.LevelValuePairAttribute(lvl=float(x), val=float(y)) for (x, y) in zip(oq.imtls[im], hazcurve.poes)
             ]
@@ -113,13 +117,17 @@ def export_stats(dstore, toshi_id, kind):
             query.batch_save_hcurve_stats(toshi_id, models=curves)
 
 
-def export_rlzs(dstore, toshi_id, kind):
+def export_rlzs(dstore, toshi_id: str, kind: str):
     oq = dstore['oqparam']
     curves = []
     for im in oq.imtls:
 
         for hazcurve in get_data(dstore, im, kind):
             # build the model objects....
+
+            # strip the extra stuff
+            kind = kind[4:] if "rlz-" in kind else kind
+
             lvps = [
                 model.LevelValuePairAttribute(lvl=float(x), val=float(y)) for (x, y) in zip(oq.imtls[im], hazcurve.poes)
             ]
@@ -142,6 +150,8 @@ def export_meta(toshi_id, dstore):
     sitemesh = get_sites(dstore['sitecol'])
     source_lt, gsim_lt, rlz_lt = parse_logic_tree_branches(dstore.filename)
 
+    quantiles = vars(oq)['quantiles'] + ['mean']  # mean is default, other values come from the config
+
     obj = model.ToshiOpenquakeHazardMeta(
         partition_key="ToshiOpenquakeHazardMeta",
         updated=dt.datetime.now(tzutc()),
@@ -149,6 +159,9 @@ def export_meta(toshi_id, dstore):
         haz_sol_id=toshi_id,
         imts=list(oq.imtls.keys()),  # list of IMTs
         locs=[tup[0].decode() for tup in sitemesh.tolist()],  # list of Location codes
+        # important configuration arguments
+        aggs=quantiles,
+        investigation_time=vars(oq)['investigation_time'],
         src_lt=source_lt.to_json(),  # sources meta as DataFrame JSON
         gsim_lt=gsim_lt.to_json(),  # gmpe meta as DataFrame JSON
         rlz_lt=rlz_lt.to_json(),  # realization meta as DataFrame JSON
@@ -179,9 +192,13 @@ def extract_and_save(calc_id, toshi_id):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='deluge_dls.py (dls)  - list deluge FS contents')
+    parser = argparse.ArgumentParser(
+        description='store_hazard.py (store_hazard)  - extract oq hazard by calc_id and store it.'
+    )
     parser.add_argument('calc_id', help='openquake calc id.')
     parser.add_argument('toshi_id', help='openquake_hazard_solution id.')
+    parser.add_argument('-c', '--create-tables', action="store_true", help="Ensure tables exist.")
+
     # parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     # parser.add_argument("-s", "--summary", help="summarise output", action="store_true")
     parser.add_argument('-D', '--debug', action="store_true", help="print debug statements")
@@ -193,8 +210,10 @@ def handle_args(args):
     if args.debug:
         print(f"Args: {args}")
 
-    ## model.drop_tables() #DANGERMOUSE
-    ## model.migrate() #ensure model Table(s) exist (check env REGION, DEPLOYMENT_STAGE, etc
+    if args.create_tables:
+        print('Ensuring tables exist.')
+        ## model.drop_tables() #DANGERMOUSE
+        model.migrate()  # ensure model Table(s) exist (check env REGION, DEPLOYMENT_STAGE, etc
 
     extract_and_save(int(args.calc_id), args.toshi_id)
 
