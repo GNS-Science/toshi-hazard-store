@@ -97,15 +97,14 @@ def export_stats(dstore, toshi_id: str, kind: str):
     for im in oq.imtls:
         for hazcurve in get_data(dstore, im, kind):
             # build the model objects....
-
-            # strip the extra stuff
-            kind = kind[9:] if "quantile-" in kind else kind
-
             lvps = [
                 model.LevelValuePairAttribute(lvl=float(x), val=float(y)) for (x, y) in zip(oq.imtls[im], hazcurve.poes)
             ]
+
+            # strip the extra stuff
+            agg = kind[9:] if "quantile-" in kind else kind
             obj = model.ToshiOpenquakeHazardCurveStats(
-                loc=hazcurve.loc.site_code.decode(), imt=im, agg=kind, values=lvps
+                loc=hazcurve.loc.site_code.decode(), imt=im, agg=agg, values=lvps
             )
             curves.append(obj)
             if len(curves) >= 50:
@@ -124,16 +123,13 @@ def export_rlzs(dstore, toshi_id: str, kind: str):
 
         for hazcurve in get_data(dstore, im, kind):
             # build the model objects....
-
-            # strip the extra stuff
-            kind = kind[4:] if "rlz-" in kind else kind
-
             lvps = [
                 model.LevelValuePairAttribute(lvl=float(x), val=float(y)) for (x, y) in zip(oq.imtls[im], hazcurve.poes)
             ]
-            obj = model.ToshiOpenquakeHazardCurveRlzs(
-                loc=hazcurve.loc.site_code.decode(), imt=im, rlz=kind, values=lvps
-            )
+
+            # strip the extra stuff
+            rlz = kind[4:] if "rlz-" in kind else kind
+            obj = model.ToshiOpenquakeHazardCurveRlzs(loc=hazcurve.loc.site_code.decode(), imt=im, rlz=rlz, values=lvps)
             curves.append(obj)
             if len(curves) >= 50:
                 query.batch_save_hcurve_rlzs(toshi_id, models=curves)
@@ -150,7 +146,7 @@ def export_meta(toshi_id, dstore):
     sitemesh = get_sites(dstore['sitecol'])
     source_lt, gsim_lt, rlz_lt = parse_logic_tree_branches(dstore.filename)
 
-    quantiles = vars(oq)['quantiles'] + ['mean']  # mean is default, other values come from the config
+    quantiles = [str(q) for q in vars(oq)['quantiles']] + ['mean']  # mean is default, other values come from the config
 
     obj = model.ToshiOpenquakeHazardMeta(
         partition_key="ToshiOpenquakeHazardMeta",
@@ -161,7 +157,7 @@ def export_meta(toshi_id, dstore):
         locs=[tup[0].decode() for tup in sitemesh.tolist()],  # list of Location codes
         # important configuration arguments
         aggs=quantiles,
-        investigation_time=vars(oq)['investigation_time'],
+        inv_time=vars(oq)['investigation_time'],
         src_lt=source_lt.to_json(),  # sources meta as DataFrame JSON
         gsim_lt=gsim_lt.to_json(),  # gmpe meta as DataFrame JSON
         rlz_lt=rlz_lt.to_json(),  # realization meta as DataFrame JSON

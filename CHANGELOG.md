@@ -10,6 +10,7 @@
  - store hazard can create tables.
  - store hazard adds extra meta.
  - store hazard truncates values for rlz and agg fields.
+ - make stats & rlz queries tolerant to ID-only form (fails with REAL dynamodb & not in mocks).
 
 ## [0.3.1] - 2022-05-29
 ### Changed
