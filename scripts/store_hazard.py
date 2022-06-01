@@ -158,9 +158,9 @@ def export_meta(toshi_id, dstore):
         # important configuration arguments
         aggs=quantiles,
         inv_time=vars(oq)['investigation_time'],
-        src_lt=source_lt.to_json(),  # sources meta as DataFrame JSON
-        gsim_lt=gsim_lt.to_json(),  # gmpe meta as DataFrame JSON
-        rlz_lt=rlz_lt.to_json(),  # realization meta as DataFrame JSON
+        src_lt="{}",  # src_lt=source_lt.to_json(),  # sources meta as DataFrame JSON
+        gsim_lt="{}",  # gsim_lt=gsim_lt.to_json(),  # gmpe meta as DataFrame JSON
+        rlz_lt="{}",  # rlz_lt=rlz_lt.to_json(),  # realization meta as DataFrame JSON
     )
     obj.hazsol_vs30_rk = f"{obj.haz_sol_id}:{obj.vs30}"
     obj.save()
