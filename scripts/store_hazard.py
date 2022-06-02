@@ -180,6 +180,7 @@ def extract_and_save(calc_id, toshi_id):
     # Hazard curves
     for kind in reversed(list(oq.get_kinds('', R))):  # do the stats curves first
         if kind.startswith('rlz-'):
+            continue
             export_rlzs(dstore, toshi_id, kind)
         else:
             export_stats(dstore, toshi_id, kind)
