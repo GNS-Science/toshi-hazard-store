@@ -19,11 +19,6 @@ def build_stats_models():
         yield model.ToshiOpenquakeHazardCurveStats(loc=loc, imt=imt, agg=stat, values=lvps)
 
 
-def build_rlzs_models():
-    for (imt, loc, rlz) in itertools.product(imts, locs, rlzs):
-        yield model.ToshiOpenquakeHazardCurveRlzs(loc=loc, imt=imt, rlz=rlz, values=lvps)
-
-
 @mock_dynamodb
 class QueryModuleTest(unittest.TestCase):
     def setUp(self):
@@ -42,14 +37,6 @@ class QueryModuleTest(unittest.TestCase):
         saved = model.ToshiOpenquakeHazardCurveStats.query(TOSHI_ID)
 
         self.assertEqual(len(list(saved)), len(list(build_stats_models())))
-
-    def test_batch_save_realizations_objects(self):
-        self.assertEqual(model.ToshiOpenquakeHazardCurveRlzs.exists(), True)
-
-        query.batch_save_hcurve_rlzs(TOSHI_ID, models=build_rlzs_models())
-        saved = model.ToshiOpenquakeHazardCurveRlzs.query(TOSHI_ID)
-
-        self.assertEqual(len(list(saved)), len(list(build_rlzs_models())))
 
     def test_query_stats_objects(self):
         self.assertEqual(model.ToshiOpenquakeHazardCurveStats.exists(), True)

@@ -22,6 +22,15 @@ def batch_save_hcurve_rlzs(toshi_id: str, models: Iterable[model.ToshiOpenquakeH
             batch.save(item)
 
 
+def batch_save_hcurve_rlzs_v2(toshi_id: str, models: Iterable[model.ToshiOpenquakeHazardCurveRlzsV2]) -> None:
+    """Save list of ToshiOpenquakeHazardCurveRlzsV2 updating hash and range keys."""
+    with model.ToshiOpenquakeHazardCurveRlzsV2.batch_write() as batch:
+        for item in models:
+            item.haz_sol_id = toshi_id
+            item.loc_rlz_rk = f"{item.loc}:{item.rlz}"
+            batch.save(item)
+
+
 mOHCS = model.ToshiOpenquakeHazardCurveStats
 mOHCR = model.ToshiOpenquakeHazardCurveRlzs
 mOHM = model.ToshiOpenquakeHazardMeta

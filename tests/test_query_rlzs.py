@@ -18,6 +18,7 @@ def build_rlzs_models():
         yield model.ToshiOpenquakeHazardCurveRlzs(loc=loc, imt=imt, rlz=rlz, values=lvps)
 
 
+# @unittest.skip('disabled')
 @mock_dynamodb
 class QueryRlzsTest(unittest.TestCase):
     def setUp(self):
