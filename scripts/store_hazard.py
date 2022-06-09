@@ -33,29 +33,30 @@ def extract_and_save(args):
     if args.verbose:
         print("Done saving meta, took %s secs" % (dt.datetime.utcnow() - t0).total_seconds())
 
-    # Hazard curves
-    rlz_secs, agg_secs = 0, 0
-    t0 = dt.datetime.utcnow()
-    for kind in reversed(list(oq.get_kinds('', R))):  # do the stats curves first
-        if kind.startswith('rlz-'):
-            t0 = dt.datetime.utcnow()
-            if skip_rlzs:
-                continue
-            if args.verbose:
-                print(f'Begin saving realisations (V1) for kind {kind}')
-            export_rlzs(dstore, toshi_id, kind)
-            t1 = dt.datetime.utcnow()
-            rlz_secs += (t1 - t0).total_seconds()
-        else:
-            t0 = dt.datetime.utcnow()
-            if args.verbose:
-                print(f'Begin saving stats (V1) for kind {kind}')
-            export_stats(dstore, toshi_id, kind)
-            t1 = dt.datetime.utcnow()
-            agg_secs += (t1 - t0).total_seconds()
-    if args.verbose:
-        print("Saving Stats curves took %s secs" % agg_secs)
-        print("Saving Realization curves took %s secs" % rlz_secs)
+    if not args.new_version_only:
+        # Hazard curves
+        rlz_secs, agg_secs = 0, 0
+        t0 = dt.datetime.utcnow()
+        for kind in reversed(list(oq.get_kinds('', R))):  # do the stats curves first
+            if kind.startswith('rlz-'):
+                t0 = dt.datetime.utcnow()
+                if skip_rlzs:
+                    continue
+                if args.verbose:
+                    print(f'Begin saving realisations (V1) for kind {kind}')
+                export_rlzs(dstore, toshi_id, kind)
+                t1 = dt.datetime.utcnow()
+                rlz_secs += (t1 - t0).total_seconds()
+            else:
+                t0 = dt.datetime.utcnow()
+                if args.verbose:
+                    print(f'Begin saving stats (V1) for kind {kind}')
+                export_stats(dstore, toshi_id, kind)
+                t1 = dt.datetime.utcnow()
+                agg_secs += (t1 - t0).total_seconds()
+        if args.verbose:
+            print("Saving Stats curves took %s secs" % agg_secs)
+            print("Saving Realization curves took %s secs" % rlz_secs)
 
     # new v2 stats storage
     t0 = dt.datetime.utcnow()
@@ -88,8 +89,9 @@ def parse_args():
     parser.add_argument('calc_id', help='openquake calc id.')
     parser.add_argument('toshi_id', help='openquake_hazard_solution id.')
     parser.add_argument('-c', '--create-tables', action="store_true", help="Ensure tables exist.")
-    parser.add_argument('-k', '--skip_rlzs', action="store_true", help="Skip the realizations store.")
-    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+    parser.add_argument('-k', '--skip-rlzs', action="store_true", help="Skip the realizations store.")
+    parser.add_argument('-v', '--verbose', help="Increase output verbosity.", action="store_true")
+    parser.add_argument('-n', '--new-version-only', help="Only use the latest table version.", action="store_true")
     # parser.add_argument("-s", "--summary", help="summarise output", action="store_true")
     # parser.add_argument('-D', '--debug', action="store_true", help="print debug statements")
     args = parser.parse_args()
