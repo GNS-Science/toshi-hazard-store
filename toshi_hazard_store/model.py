@@ -106,7 +106,29 @@ class ToshiOpenquakeHazardCurveRlzsV2(Model):
     loc = UnicodeAttribute()
     rlz = UnicodeAttribute()
 
-    imtvs = ListAttribute(of=IMTValuesAttribute)
+    values = ListAttribute(of=IMTValuesAttribute)
+    version = VersionAttribute()
+
+
+class ToshiOpenquakeHazardCurveStatsV2(Model):
+    """Stores the individual hazard statistical curves."""
+
+    class Meta:
+        """DynamoDB Metadata."""
+
+        billing_mode = 'PAY_PER_REQUEST'
+        table_name = f"ToshiOpenquakeHazardCurveStatsV2-{DEPLOYMENT_STAGE}"
+        region = REGION
+        if IS_OFFLINE:
+            host = "http://localhost:8000"  # pragma: no cover
+
+    haz_sol_id = UnicodeAttribute(hash_key=True)
+    loc_agg_rk = UnicodeAttribute(range_key=True)
+
+    loc = UnicodeAttribute()
+    agg = UnicodeAttribute()
+
+    values = ListAttribute(of=IMTValuesAttribute)
     version = VersionAttribute()
 
 
@@ -138,6 +160,7 @@ tables = [
     ToshiOpenquakeHazardCurveStats,
     ToshiOpenquakeHazardMeta,
     ToshiOpenquakeHazardCurveRlzsV2,
+    ToshiOpenquakeHazardCurveStatsV2,
 ]
 
 

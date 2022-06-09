@@ -141,6 +141,49 @@ def export_rlzs(dstore, toshi_id: str, kind: str):
             query.batch_save_hcurve_rlzs(toshi_id, models=curves)
 
 
+def export_stats_v2(dstore, toshi_id: str):
+    oq = dstore['oqparam']
+    curves = []
+    sitemesh = get_sites(dstore['sitecol'])
+
+    n_sites, n_aggs, n_lvls, n_vals = dstore['hcurves-stats'].shape
+    imtls = oq.imtls  # dict of imt and the levels used at each imt e.g {'PGA': [0.011. 0.222]}
+    imtl_keys = list(oq.imtls.keys())
+
+    agg_keys = list(oq.hazard_stats().keys())
+    for site in range(n_sites):
+        loc = sitemesh[site][0].decode()
+        for agg in range(n_aggs):
+            values = []
+            for lvl in range(n_lvls):
+                values.append(
+                    model.IMTValuesAttribute(
+                        imt=imtl_keys[lvl],
+                        lvls=imtls[imtl_keys[lvl]],
+                        vals=dstore['hcurves-stats'][site][agg][lvl].tolist(),
+                    )
+                )
+
+            agg_str = agg_keys[agg]
+            agg_str = agg_str[9:] if "quantile-" in agg_str else agg_str
+            obj = model.ToshiOpenquakeHazardCurveStatsV2(
+                haz_sol_id=toshi_id,
+                loc_agg_rk=f"{loc}:{agg_str}",
+                loc=loc,
+                agg=agg_str,
+                values=values,
+            )
+            curves.append(obj)
+
+            if len(curves) >= 50:
+                query.batch_save_hcurve_stats_v2(toshi_id, models=curves)
+                curves = []
+
+    # finally
+    if len(curves):
+        query.batch_save_hcurve_stats_v2(toshi_id, models=curves)
+
+
 def export_rlzs_v2(dstore, toshi_id: str):
     oq = dstore['oqparam']
     curves = []
@@ -153,10 +196,10 @@ def export_rlzs_v2(dstore, toshi_id: str):
     for site in range(n_sites):
         loc = sitemesh[site][0].decode()
         for rlz in range(n_rlzs):
-            rlz_str = f'{rlz:03d}'
-            imtvs = []
+            rlz_str = f'{rlz:05d}'
+            values = []
             for lvl in range(n_lvls):
-                imtvs.append(
+                values.append(
                     model.IMTValuesAttribute(
                         imt=imtl_keys[lvl],
                         lvls=imtls[imtl_keys[lvl]],
@@ -168,7 +211,7 @@ def export_rlzs_v2(dstore, toshi_id: str):
                 loc_rlz_rk=f"{loc}:{rlz_str}",
                 loc=loc,
                 rlz=rlz_str,
-                imtvs=imtvs,
+                values=values,
             )
             curves.append(obj)
 
@@ -177,7 +220,6 @@ def export_rlzs_v2(dstore, toshi_id: str):
                 curves = []
 
     # finally
-    # print('n_objs:' , n_objs, curves, len(curves))
     if len(curves):
         query.batch_save_hcurve_rlzs_v2(toshi_id, models=curves)
 

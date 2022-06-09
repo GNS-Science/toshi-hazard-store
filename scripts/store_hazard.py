@@ -1,6 +1,7 @@
 """Script to export an openquake calculation and save it with toshi-hazard-store."""
 
 import argparse
+import datetime as dt
 
 try:
     from openquake.commonlib import datastore
@@ -31,15 +32,37 @@ def extract_and_save(args):
     # Hazard curves
     for kind in reversed(list(oq.get_kinds('', R))):  # do the stats curves first
         if kind.startswith('rlz-'):
+            t0 = dt.datetime.utcnow()
             if skip_rlzs:
                 continue
+            if args.verbose:
+                print(f'Begin saving realisations (V1) for kind {kind}')
             export_rlzs(dstore, toshi_id, kind)
+            if args.verbose:
+                print(f'Done saving realisations (V1) for kind {kind}')
+                t1 = dt.datetime.utcnow()
+                print("Task took %s secs" % (t1 - t0).total_seconds())
         else:
+            t0 = dt.datetime.utcnow()
+            if args.verbose:
+                print(f'Begin saving stats (V1) for kind {kind}')
             export_stats(dstore, toshi_id, kind)
+            if args.verbose:
+                print(f'Done saving stats (V1) for kind {kind}')
+                t1 = dt.datetime.utcnow()
+                print("Task took %s secs" % (t1 - t0).total_seconds())
 
     # new RLZ storage
+    t0 = dt.datetime.utcnow()
     if not skip_rlzs:
+        if args.verbose:
+            print('Begin saving realisations (V2)')
         export_rlzs_v2(dstore, toshi_id)
+        if args.verbose:
+            t1 = dt.datetime.utcnow()
+            print("Done saving realisations, took %s secs" % (t1 - t0).total_seconds())
+    elif args.verbose:
+        print("Skpping saving realisations.")
 
     dstore.close()
 
@@ -52,7 +75,7 @@ def parse_args():
     parser.add_argument('toshi_id', help='openquake_hazard_solution id.')
     parser.add_argument('-c', '--create-tables', action="store_true", help="Ensure tables exist.")
     parser.add_argument('-k', '--skip_rlzs', action="store_true", help="Skip the realizations store.")
-    # parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     # parser.add_argument("-s", "--summary", help="summarise output", action="store_true")
     parser.add_argument('-D', '--debug', action="store_true", help="print debug statements")
     args = parser.parse_args()

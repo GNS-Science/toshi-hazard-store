@@ -62,7 +62,7 @@ class PynamoTest(unittest.TestCase):
             loc_rlz_rk="WLG:010",
             loc="WLG",
             rlz="010",
-            imtvs=imtvs,
+            values=imtvs,
         )
 
         print(f'obj: {obj} {obj.version}')
@@ -70,10 +70,36 @@ class PynamoTest(unittest.TestCase):
         print(f'obj: {obj} {obj.version}')
         print(dir(obj))
 
-        self.assertEqual(obj.imtvs[0].lvls[0], 1)
-        self.assertEqual(obj.imtvs[0].vals[0], 101)
-        self.assertEqual(obj.imtvs[0].lvls[-1], 50)
-        self.assertEqual(obj.imtvs[0].vals[-1], 150)
+        self.assertEqual(obj.values[0].lvls[0], 1)
+        self.assertEqual(obj.values[0].vals[0], 101)
+        self.assertEqual(obj.values[0].lvls[-1], 50)
+        self.assertEqual(obj.values[0].vals[-1], 150)
+
+    def test_save_one_new_stats_object(self):
+        """New stats handles all the IMT levels."""
+        imtvs = []
+        for t in ['PGA', 'SA(0.5)', 'SA(1.0)']:
+            levels = range(1, 51)
+            values = range(101, 151)
+            imtvs.append(model.IMTValuesAttribute(imt="PGA", lvls=levels, vals=values))
+
+        obj = model.ToshiOpenquakeHazardCurveStatsV2(
+            haz_sol_id="ABCDE",
+            loc_agg_rk="WLG:mean",
+            loc="WLG",
+            agg="mean",
+            values=imtvs,
+        )
+
+        print(f'obj: {obj} {obj.version}')
+        obj.save()
+        print(f'obj: {obj} {obj.version}')
+        print(dir(obj))
+
+        self.assertEqual(obj.values[0].lvls[0], 1)
+        self.assertEqual(obj.values[0].vals[0], 101)
+        self.assertEqual(obj.values[0].lvls[-1], 50)
+        self.assertEqual(obj.values[0].vals[-1], 150)
 
     def test_save_one_stats_object(self):
 
