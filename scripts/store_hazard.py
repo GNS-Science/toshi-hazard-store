@@ -6,7 +6,7 @@ import datetime as dt
 try:
     from openquake.commonlib import datastore
 
-    from toshi_hazard_store.transform import export_meta, export_rlzs, export_rlzs_v2, export_stats
+    from toshi_hazard_store.transform import export_meta, export_rlzs, export_rlzs_v2, export_stats, export_stats_v2
 except ImportError:
     print("WARNING: the transform module uses the optional openquake dependencies - h5py, pandas and openquake.")
     raise
@@ -23,13 +23,19 @@ def extract_and_save(args):
 
     dstore = datastore.read(calc_id)
     oq = dstore['oqparam']
-
     R = len(dstore['full_lt'].get_realizations())
 
     # Save metadata record
+    t0 = dt.datetime.utcnow()
+    if args.verbose:
+        print('Begin saving meta')
     export_meta(toshi_id, dstore)
+    if args.verbose:
+        print("Done saving meta, took %s secs" % (dt.datetime.utcnow() - t0).total_seconds())
 
     # Hazard curves
+    rlz_secs, agg_secs = 0, 0
+    t0 = dt.datetime.utcnow()
     for kind in reversed(list(oq.get_kinds('', R))):  # do the stats curves first
         if kind.startswith('rlz-'):
             t0 = dt.datetime.utcnow()
@@ -38,21 +44,29 @@ def extract_and_save(args):
             if args.verbose:
                 print(f'Begin saving realisations (V1) for kind {kind}')
             export_rlzs(dstore, toshi_id, kind)
-            if args.verbose:
-                print(f'Done saving realisations (V1) for kind {kind}')
-                t1 = dt.datetime.utcnow()
-                print("Task took %s secs" % (t1 - t0).total_seconds())
+            t1 = dt.datetime.utcnow()
+            rlz_secs += (t1 - t0).total_seconds()
         else:
             t0 = dt.datetime.utcnow()
             if args.verbose:
                 print(f'Begin saving stats (V1) for kind {kind}')
             export_stats(dstore, toshi_id, kind)
-            if args.verbose:
-                print(f'Done saving stats (V1) for kind {kind}')
-                t1 = dt.datetime.utcnow()
-                print("Task took %s secs" % (t1 - t0).total_seconds())
+            t1 = dt.datetime.utcnow()
+            agg_secs += (t1 - t0).total_seconds()
+    if args.verbose:
+        print("Saving Stats curves took %s secs" % agg_secs)
+        print("Saving Realization curves took %s secs" % rlz_secs)
 
-    # new RLZ storage
+    # new v2 stats storage
+    t0 = dt.datetime.utcnow()
+    if args.verbose:
+        print('Begin saving stats (V2)')
+    export_stats_v2(dstore, toshi_id)
+    if args.verbose:
+        t1 = dt.datetime.utcnow()
+        print("Done saving stats, took %s secs" % (t1 - t0).total_seconds())
+
+    # new v2 realisations storage
     t0 = dt.datetime.utcnow()
     if not skip_rlzs:
         if args.verbose:
@@ -77,14 +91,14 @@ def parse_args():
     parser.add_argument('-k', '--skip_rlzs', action="store_true", help="Skip the realizations store.")
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     # parser.add_argument("-s", "--summary", help="summarise output", action="store_true")
-    parser.add_argument('-D', '--debug', action="store_true", help="print debug statements")
+    # parser.add_argument('-D', '--debug', action="store_true", help="print debug statements")
     args = parser.parse_args()
     return args
 
 
 def handle_args(args):
-    if args.debug:
-        print(f"Args: {args}")
+    # if args.debug:
+    #     print(f"Args: {args}")
 
     if args.create_tables:
         print('Ensuring tables exist.')
