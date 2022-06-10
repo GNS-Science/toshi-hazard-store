@@ -1,4 +1,4 @@
-"""transform module depends on openquake and pandas."""
+"""Transform module depends on openquake and pandas."""
 
 import sys
 import unittest
@@ -16,7 +16,24 @@ except ImportError:
     HAVE_OQ = False
 
 
+class TestOpenquakeVersion(unittest.TestCase):
+    def test_alert_when_openquake_includes_base183(self):
+        try:
+            from openquake.baselib.general import BASE183  # noqa
+
+            HAVE_BASE183 = True
+        except ImportError:
+            HAVE_BASE183 = False
+        self.assertEqual(
+            HAVE_BASE183,
+            False,
+            "When this test passes, please refactor transform.py to use BASE183 from openquake.baselib.general.",
+        )
+
+
 class TestWithoutOpenquake(unittest.TestCase):
+    """This test class disables openquake for testing, even if it's actually installed."""
+
     def setUp(self):
         self._temp_oq = None
         if sys.modules.get('openquake'):
@@ -29,7 +46,7 @@ class TestWithoutOpenquake(unittest.TestCase):
         else:
             del sys.modules['openquake']
 
-    def test_no_openquake(self):
+    def test_there_will_be_no_openquake_even_if_installed(self):
         flag = False
         try:
             import openquake  # noqa
@@ -37,7 +54,7 @@ class TestWithoutOpenquake(unittest.TestCase):
             flag = True
         self.assertTrue(flag)
 
-    def test_no_openquake_raises_import_error(self):
+    def test_no_openquake_raises_import_error_on_transform_modules(self):
         flag = False
         try:
             import toshi_hazard_store.transform  # noqa
@@ -56,7 +73,7 @@ class TestWithOpenquake(unittest.TestCase):
         model.drop_tables()
         return super(TestWithOpenquake, self).tearDown()
 
-    @unittest.skipUnless(HAVE_OQ, "requires openquake")
+    @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
     def test_export_aggs_v2(self):
         from openquake.commonlib import datastore
 
@@ -82,7 +99,7 @@ class TestWithOpenquake(unittest.TestCase):
         self.assertEqual(round(saved[0].values[0].lvls[-1], 5), 5.0)
         self.assertEqual(saved[0].values[0].vals[-1], 0.0)
 
-    @unittest.skipUnless(HAVE_OQ, "requires openquake")
+    @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
     def test_export_stats_v2(self):
         from openquake.commonlib import datastore
 
