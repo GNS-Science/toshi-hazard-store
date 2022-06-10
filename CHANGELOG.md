@@ -3,7 +3,7 @@
 ## [0.4.0] - 2022-06-10
 ### Added
  - new V2 models for stats and rlzs.
- - new get_hazardd script for manual testing.
+ - new get_hazard script for manual testing.
  - extra test coverage with optional openquake install as DEV dependency.
 
 ### Changed
