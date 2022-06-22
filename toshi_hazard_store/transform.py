@@ -4,7 +4,7 @@ import datetime as dt
 
 from dateutil.tz import tzutc
 
-from toshi_hazard_store.utils import CustomHazardCurve, CustomLocation, normalise_site_code
+from toshi_hazard_store.utils import CustomHazardCurve, CustomLocation, downsample_loc, normalise_site_code
 
 try:
     import h5py
@@ -157,9 +157,9 @@ def export_stats_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = Fal
     imtl_keys = list(oq.imtls.keys())
 
     agg_keys = list(oq.hazard_stats().keys())
-    for site in range(n_sites):
-        loc = normalise_site_code(sitemesh[site], force_normalized_sites)
-        for agg in range(n_aggs):
+    for agg in range(n_aggs):
+        for site in range(n_sites):
+            loc = normalise_site_code(sitemesh[site], force_normalized_sites)
             values = []
             for lvl in range(n_lvls):
                 values.append(
@@ -173,7 +173,7 @@ def export_stats_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = Fal
             agg_str = agg_keys[agg]
             agg_str = agg_str[9:] if "quantile-" in agg_str else agg_str
 
-            # toshi_id =
+            toshi_id = downsample_loc(loc)
             obj = model.ToshiOpenquakeHazardCurveStatsV2(
                 haz_sol_id=toshi_id,
                 loc_agg_rk=f"{loc.site_code}:{agg_str}",
@@ -203,10 +203,11 @@ def export_rlzs_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = Fals
     imtls = oq.imtls  # dict of imt and the levels used at each imt e.g {'PGA': [0.011. 0.222]}
     imtl_keys = list(oq.imtls.keys())
 
-    for site in range(n_sites):
-        loc = normalise_site_code(sitemesh[site], force_normalized_sites)
-        for rlz in range(n_rlzs):
-            rlz_str = f'{rlz:05d}'
+    for rlz in range(n_rlzs):
+        rlz_str = f'{rlz:05d}'
+        for site in range(n_sites):
+            loc = normalise_site_code(sitemesh[site], force_normalized_sites)
+            toshi_id = downsample_loc(loc)
             values = []
             for lvl in range(n_lvls):
                 values.append(
