@@ -32,8 +32,6 @@ def extract_and_save(args):
     oq = dstore['oqparam']
     R = len(dstore['full_lt'].get_realizations())
 
-    assert 0
-
     # Save metadata record
     t0 = dt.datetime.utcnow()
     if args.verbose:
