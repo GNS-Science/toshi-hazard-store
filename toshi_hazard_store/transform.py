@@ -149,7 +149,31 @@ def export_rlzs(dstore, toshi_id: str, kind: str):
             query.batch_save_hcurve_rlzs(toshi_id, models=curves)
 
 
-def export_stats_v2(dstore, toshi_id: str):
+def normalise_site_code(oq_site_object: tuple, force_normalized: bool = False):
+    """Return a valid code for storage."""
+    # print(oq_site_object)
+
+    def stringify(lat, lon):
+        return f'[{round(lat, 3):.3f}~{round(lon, 3):.3f}]'
+
+    force_normalized = force_normalized if len(oq_site_object) == 3 else True
+    if len(oq_site_object) not in [2, 3]:
+        raise ValueError(f"Unknown site object {oq_site_object}")
+
+    if len(oq_site_object) == 3:
+        _, lon, lat = oq_site_object
+    elif len(oq_site_object) == 2:
+        lon, lat = oq_site_object
+    else:
+        raise ValueError(f"Unknown site object {oq_site_object}")
+
+    if force_normalized:
+        return stringify(lat, lon)
+    else:
+        return oq_site_object[0].decode()
+
+
+def export_stats_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = False):
     oq = dstore['oqparam']
     curves = []
     sitemesh = get_sites(dstore['sitecol'])
@@ -160,7 +184,7 @@ def export_stats_v2(dstore, toshi_id: str):
 
     agg_keys = list(oq.hazard_stats().keys())
     for site in range(n_sites):
-        loc = sitemesh[site][0].decode()
+        loc = normalise_site_code(sitemesh[site], force_normalized_sites)
         for agg in range(n_aggs):
             values = []
             for lvl in range(n_lvls):
@@ -192,7 +216,7 @@ def export_stats_v2(dstore, toshi_id: str):
         query.batch_save_hcurve_stats_v2(toshi_id, models=curves)
 
 
-def export_rlzs_v2(dstore, toshi_id: str):
+def export_rlzs_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = False):
     oq = dstore['oqparam']
     curves = []
     sitemesh = get_sites(dstore['sitecol'])
@@ -202,7 +226,7 @@ def export_rlzs_v2(dstore, toshi_id: str):
     imtl_keys = list(oq.imtls.keys())
 
     for site in range(n_sites):
-        loc = sitemesh[site][0].decode()
+        loc = normalise_site_code(sitemesh[site], force_normalized_sites)
         for rlz in range(n_rlzs):
             rlz_str = f'{rlz:05d}'
             values = []
@@ -232,7 +256,7 @@ def export_rlzs_v2(dstore, toshi_id: str):
         query.batch_save_hcurve_rlzs_v2(toshi_id, models=curves)
 
 
-def export_meta(toshi_id, dstore):
+def export_meta(toshi_id, dstore, *, force_normalized_sites: bool = False):
     """Extract and same the meta data."""
     oq = dstore['oqparam']
     sitemesh = get_sites(dstore['sitecol'])
@@ -254,7 +278,9 @@ def export_meta(toshi_id, dstore):
         vs30=oq.reference_vs30_value,  # vs30 value
         haz_sol_id=toshi_id,
         imts=list(oq.imtls.keys()),  # list of IMTs
-        locs=[tup[0].decode() for tup in sitemesh.tolist()],  # list of Location codes
+        locs=[
+            normalise_site_code(loc, force_normalized_sites) for loc in sitemesh.tolist()
+        ],  # list of Location codes, can be normalised
         # important configuration arguments
         aggs=quantiles,
         inv_time=vars(oq)['investigation_time'],
