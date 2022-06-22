@@ -1,9 +1,10 @@
 """Helper functions to export an openquake calculation and save it with toshi-hazard-store."""
 
 import datetime as dt
-from collections import namedtuple
 
 from dateutil.tz import tzutc
+
+from toshi_hazard_store.utils import CustomHazardCurve, CustomLocation, normalise_site_code
 
 try:
     import h5py
@@ -24,9 +25,6 @@ except ImportError:
     raise
 
 from toshi_hazard_store import model, query
-
-CustomLocation = namedtuple("CustomLocation", "site_code lon lat")
-CustomHazardCurve = namedtuple("CustomHazardCurve", "loc poes")
 
 
 def parse_logic_tree_branches(file_id):
@@ -149,30 +147,6 @@ def export_rlzs(dstore, toshi_id: str, kind: str):
             query.batch_save_hcurve_rlzs(toshi_id, models=curves)
 
 
-def normalise_site_code(oq_site_object: tuple, force_normalized: bool = False):
-    """Return a valid code for storage."""
-    # print(oq_site_object)
-
-    def stringify(lat, lon):
-        return f'[{round(lat, 3):.3f}~{round(lon, 3):.3f}]'
-
-    force_normalized = force_normalized if len(oq_site_object) == 3 else True
-    if len(oq_site_object) not in [2, 3]:
-        raise ValueError(f"Unknown site object {oq_site_object}")
-
-    if len(oq_site_object) == 3:
-        _, lon, lat = oq_site_object
-    elif len(oq_site_object) == 2:
-        lon, lat = oq_site_object
-    else:
-        raise ValueError(f"Unknown site object {oq_site_object}")
-
-    if force_normalized:
-        return CustomLocation(stringify(lat, lon), lon=lon, lat=lat)
-    else:
-        return CustomLocation(oq_site_object[0].decode(), lon=lon, lat=lat)
-
-
 def export_stats_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = False):
     oq = dstore['oqparam']
     curves = []
@@ -198,6 +172,8 @@ def export_stats_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = Fal
 
             agg_str = agg_keys[agg]
             agg_str = agg_str[9:] if "quantile-" in agg_str else agg_str
+
+            # toshi_id =
             obj = model.ToshiOpenquakeHazardCurveStatsV2(
                 haz_sol_id=toshi_id,
                 loc_agg_rk=f"{loc.site_code}:{agg_str}",
