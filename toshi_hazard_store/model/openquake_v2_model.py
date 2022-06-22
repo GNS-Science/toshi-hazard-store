@@ -1,13 +1,19 @@
 """This module defines the pynamodb tables used to store openquake v2 data."""
 
 import logging
+from datetime import datetime, timezone
 
 from pynamodb.attributes import ListAttribute, MapAttribute, NumberAttribute, UnicodeAttribute, VersionAttribute
 from pynamodb.models import Model
+from pynamodb_attributes import FloatAttribute, TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
 
 log = logging.getLogger(__name__)
+
+
+def datetime_now():
+    return datetime.now(tz=timezone.utc)
 
 
 class IMTValuesAttribute(MapAttribute):
@@ -35,6 +41,9 @@ class ToshiOpenquakeHazardCurveRlzsV2(Model):
 
     loc = UnicodeAttribute()
     rlz = UnicodeAttribute()
+    lat = FloatAttribute()
+    lon = FloatAttribute()
+    created = TimestampAttribute(default=datetime_now)
 
     values = ListAttribute(of=IMTValuesAttribute)
     version = VersionAttribute()
@@ -57,6 +66,9 @@ class ToshiOpenquakeHazardCurveStatsV2(Model):
 
     loc = UnicodeAttribute()
     agg = UnicodeAttribute()
+    lat = FloatAttribute()
+    lon = FloatAttribute()
+    created = TimestampAttribute(default=datetime_now)
 
     values = ListAttribute(of=IMTValuesAttribute)
     version = VersionAttribute()

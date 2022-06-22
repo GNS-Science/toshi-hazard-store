@@ -168,9 +168,9 @@ def normalise_site_code(oq_site_object: tuple, force_normalized: bool = False):
         raise ValueError(f"Unknown site object {oq_site_object}")
 
     if force_normalized:
-        return stringify(lat, lon)
+        return CustomLocation(stringify(lat, lon), lon=lon, lat=lat)
     else:
-        return oq_site_object[0].decode()
+        return CustomLocation(oq_site_object[0].decode(), lon=lon, lat=lat)
 
 
 def export_stats_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = False):
@@ -200,8 +200,10 @@ def export_stats_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = Fal
             agg_str = agg_str[9:] if "quantile-" in agg_str else agg_str
             obj = model.ToshiOpenquakeHazardCurveStatsV2(
                 haz_sol_id=toshi_id,
-                loc_agg_rk=f"{loc}:{agg_str}",
-                loc=loc,
+                loc_agg_rk=f"{loc.site_code}:{agg_str}",
+                loc=loc.site_code,
+                lat=loc.lat,
+                lon=loc.lon,
                 agg=agg_str,
                 values=values,
             )
@@ -240,8 +242,10 @@ def export_rlzs_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = Fals
                 )
             obj = model.ToshiOpenquakeHazardCurveRlzsV2(
                 haz_sol_id=toshi_id,
-                loc_rlz_rk=f"{loc}:{rlz_str}",
-                loc=loc,
+                loc_rlz_rk=f"{loc.site_code}:{rlz_str}",
+                loc=loc.site_code,
+                lat=loc.lat,
+                lon=loc.lon,
                 rlz=rlz_str,
                 values=values,
             )
@@ -279,7 +283,7 @@ def export_meta(toshi_id, dstore, *, force_normalized_sites: bool = False):
         haz_sol_id=toshi_id,
         imts=list(oq.imtls.keys()),  # list of IMTs
         locs=[
-            normalise_site_code(loc, force_normalized_sites) for loc in sitemesh.tolist()
+            normalise_site_code(loc, force_normalized_sites).site_code for loc in sitemesh.tolist()
         ],  # list of Location codes, can be normalised
         # important configuration arguments
         aggs=quantiles,
