@@ -77,7 +77,7 @@ class TestWithOpenquake(unittest.TestCase):
     def test_export_rlzs_v2(self):
         from openquake.commonlib import datastore
 
-        from toshi_hazard_store import transform
+        from toshi_hazard_store import export
 
         TOSHI_ID = 'ABCBD'
 
@@ -87,9 +87,13 @@ class TestWithOpenquake(unittest.TestCase):
         # print(dstore['sitecol'])
 
         # do the saving....
-        transform.export_rlzs_v2(dstore, TOSHI_ID)
+        export.export_rlzs_v2(dstore, TOSHI_ID)
 
         saved = list(model.ToshiOpenquakeHazardCurveRlzsV2.query(TOSHI_ID))
+        # saved = list(model.ToshiOpenquakeHazardCurveRlzsV2.scan(limit=10)) # query(TOSHI_ID))
+
+        # print(saved[0])
+        # print(saved[0].haz_sol_id, saved[0].loc_rlz_rk)
 
         n_sites, n_rlzs, n_lvls, n_vals = dstore['hcurves-rlzs'].shape
         self.assertEqual(len(saved), (n_sites * n_rlzs))  # TODO test data has aduplicate site!
@@ -103,7 +107,7 @@ class TestWithOpenquake(unittest.TestCase):
     def test_export_rlzs_v2_without_sitecode(self):
         from openquake.commonlib import datastore
 
-        from toshi_hazard_store import transform
+        from toshi_hazard_store import export
 
         TOSHI_ID = 'WITHOUT_SITECODE'
 
@@ -114,7 +118,7 @@ class TestWithOpenquake(unittest.TestCase):
         print(dstore['sitecol'])
 
         # do the saving....
-        transform.export_rlzs_v2(dstore, TOSHI_ID)
+        export.export_rlzs_v2(dstore, TOSHI_ID)
 
         saved = list(model.ToshiOpenquakeHazardCurveRlzsV2.query(TOSHI_ID))
 
@@ -129,7 +133,7 @@ class TestWithOpenquake(unittest.TestCase):
     def test_export_rlzs_v2_force_normalized_sitecode(self):
         from openquake.commonlib import datastore
 
-        from toshi_hazard_store import transform
+        from toshi_hazard_store import export
 
         TOSHI_ID = 'WITHOUT_SITECODE'
 
@@ -140,11 +144,13 @@ class TestWithOpenquake(unittest.TestCase):
         print(dstore['sitecol'])
 
         # do the saving....
-        transform.export_rlzs_v2(dstore, TOSHI_ID, force_normalized_sites=True)
+        export.export_rlzs_v2(dstore, TOSHI_ID, force_normalized_sites=True)
 
         saved = list(model.ToshiOpenquakeHazardCurveRlzsV2.query(TOSHI_ID))
 
-        print(saved)
+        # saved = list(model.ToshiOpenquakeHazardCurveRlzsV2.scan(limit=10)) # query(TOSHI_ID))
+        # print(saved[0])
+        # print(saved[0].haz_sol_id, saved[0].loc_rlz_rk)
 
         n_sites, n_rlzs, n_lvls, n_vals = dstore['hcurves-rlzs'].shape
 
@@ -166,7 +172,7 @@ class TestStatsWithOpenquake(unittest.TestCase):
     def test_export_stats_v2(self):
         from openquake.commonlib import datastore
 
-        from toshi_hazard_store import transform
+        from toshi_hazard_store import export
 
         TOSHI_ID = 'ABCBD'
 
@@ -176,7 +182,7 @@ class TestStatsWithOpenquake(unittest.TestCase):
         # print(dstore['sitecol'])
 
         # do the saving....
-        transform.export_stats_v2(dstore, TOSHI_ID)
+        export.export_stats_v2(dstore, TOSHI_ID)
 
         saved = list(model.ToshiOpenquakeHazardCurveStatsV2.query(TOSHI_ID))
 
@@ -207,7 +213,7 @@ class TestStatsWithOpenquake(unittest.TestCase):
     def test_export_stats_v2_force_normalized_sitecode(self):
         from openquake.commonlib import datastore
 
-        from toshi_hazard_store import transform
+        from toshi_hazard_store import export
 
         TOSHI_ID = 'ABCBD'
         p = Path(Path(__file__).parent, 'fixtures', 'calc_1822.hdf5')
@@ -215,7 +221,7 @@ class TestStatsWithOpenquake(unittest.TestCase):
         # print(dstore['sitecol'])
 
         # do the saving....
-        transform.export_stats_v2(dstore, TOSHI_ID, force_normalized_sites=True)
+        export.export_stats_v2(dstore, TOSHI_ID, force_normalized_sites=True)
         saved = list(model.ToshiOpenquakeHazardCurveStatsV2.query(TOSHI_ID))
 
         n_sites, n_aggs, n_lvls, n_vals = dstore['hcurves-stats'].shape
@@ -228,25 +234,25 @@ class TestStatsWithOpenquake(unittest.TestCase):
     def test_export_stats_v2_keyword_only(self):
         from openquake.commonlib import datastore
 
-        from toshi_hazard_store import transform
+        from toshi_hazard_store import export
 
         TOSHI_ID = 'ABCBD'
         p = Path(Path(__file__).parent, 'fixtures', 'calc_1822.hdf5')
         dstore = datastore.read(str(p))
         with self.assertRaises(TypeError):
-            transform.export_stats_v2(dstore, TOSHI_ID, True)
+            export.export_stats_v2(dstore, TOSHI_ID, True)
 
     @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
     def test_export_stats_v2_valid_keyword_only(self):
         from openquake.commonlib import datastore
 
-        from toshi_hazard_store import transform
+        from toshi_hazard_store import export
 
         TOSHI_ID = 'ABCBD'
         p = Path(Path(__file__).parent, 'fixtures', 'calc_1822.hdf5')
         dstore = datastore.read(str(p))
         with self.assertRaises(TypeError):
-            transform.export_stats_v2(dstore, TOSHI_ID, misnamed_arg=True)
+            export.export_stats_v2(dstore, TOSHI_ID, misnamed_arg=True)
 
 
 @mock_dynamodb
