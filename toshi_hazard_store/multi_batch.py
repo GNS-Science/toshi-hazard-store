@@ -16,6 +16,7 @@ class DynamoBatchWorker(multiprocessing.Process):
         # self.result_queue = result_queue
         self.toshi_id = toshi_id
         self.model = model
+        self.batch_size = random.randint(15, 50)
 
     def run(self):
         proc_name = self.name
@@ -34,7 +35,7 @@ class DynamoBatchWorker(multiprocessing.Process):
 
             assert isinstance(next_task, self.model)
             models.append(next_task)
-            if len(models) >= random.randint(15, 50):
+            if len(models) > self.batch_size:
                 self._batch_save(models)
                 models = []
 
