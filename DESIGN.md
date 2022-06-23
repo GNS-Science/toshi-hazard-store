@@ -14,7 +14,7 @@ REF Reading
  - https://towardsdatascience.com/dynamo-exports-may-get-your-data-out-but-this-is-still-the-fastest-way-to-move-data-in-5bcd9748cc00
 
 Based on these we can achieve progressively (and orders of mag)  higher write throughput , following steps below (1 & 2 at least)
- - 1) multi-thread to increase write throughput (to some TBD limit). Needs TUNE/TEST and error handling.
+ - 1) multi-thread to increase write throughput (to some TBD limit). Needs TUNE/TEST and error handling. DONE
  - 2) separate the hdf5=>dynamodb batch-saving and run this on low cost Fargate nodes. Needs TUNE/TEST and error handling.
  - 3) OR MAYBE ... stream the writes from the actual oq engine task as they are produced (an oq hack) ... (Needs GEM input)
 
@@ -99,4 +99,27 @@ commit `c0f91924e48a5eb4c9eef856284e327d0d6cd901`
   File "/opt/openquake/lib/python3.8/site-packages/pynamodb/connection/base.py", line 1141, in batch_write_item
     raise PutError("Failed to batch write items: {}".format(e), e)
 pynamodb.exceptions.PutError: Failed to batch write items: An error occurred (InternalServerError) on request (7RPR86NPNVRK22IF1M6VNO8NAFVV4KQNSO5AEMVJF66Q9ASUAAJG) on table (ToshiOpenquakeHazardCurveStatsV2-TEST) when calling the BatchWriteItem operation: Internal server error
+```
+
+
+### Multi test using Toshi ID as hash key
+
+run `NZSHM22_HAZARD_STORE_NUM_WORKERS=4 store_hazard /home/openquake/oqdata/calc_131.hdf5 131FAST=4 -n -v`
+
+Write usage (average units/s ~ 980)
+
+saving 11500 sites , one Source LTB, 377 IMTS...
+
+```
+
+worker DynamoBatchWorker-8 saving batch of len: 34
+worker DynamoBatchWorker-5 saving batch of len: 50
+worker DynamoBatchWorker-6 saving batch of len: 16
+worker DynamoBatchWorker-6 saving batch of len: 16
+DynamoBatchWorker-7: Exiting
+worker DynamoBatchWorker-7 saving batch of len: 26
+DynamoBatchWorker-6: Exiting
+DynamoBatchWorker-8: Exiting
+DynamoBatchWorker-5: Exiting
+Done saving realisations, took 1586.058368 secs
 ```

@@ -19,8 +19,10 @@ class DynamoBatchWorker(multiprocessing.Process):
         self.batch_size = random.randint(15, 50)
 
     def run(self):
+        print(f"worker {self.name} running with batch size: {self.batch_size}")
         proc_name = self.name
         models = []
+
         while True:
             next_task = self.task_queue.get()
             if next_task is None:
@@ -44,7 +46,7 @@ class DynamoBatchWorker(multiprocessing.Process):
         return
 
     def _batch_save(self, models):
-        print(f"worker {self.name} saving batch of len: {len(models)}")
+        # print(f"worker {self.name} saving batch of len: {len(models)}")
         if self.model == model.ToshiOpenquakeHazardCurveStatsV2:
             query.batch_save_hcurve_stats_v2(self.toshi_id, models=models)
         elif self.model == model.ToshiOpenquakeHazardCurveRlzsV2:
