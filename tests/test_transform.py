@@ -292,6 +292,29 @@ class TestMetaWithOpenquake(unittest.TestCase):
 
         self.assertEqual(len(saved), 1)
         self.assertTrue('PGA' in saved[0].imts)
-        self.assertTrue("[-35.220~173.970]" in saved[0].locs)
+        self.assertIn("-35.220~173.970", saved[0].locs)
 
         print('saved', saved[0].locs)
+
+    @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
+    def test_export_meta_non_normalized_sitecode(self):
+        from openquake.calculators.export.hazard import get_sites
+        from openquake.commonlib import datastore
+
+        from toshi_hazard_store import transform
+
+        TOSHI_ID = 'ABCBD'
+        p = Path(Path(__file__).parent, 'fixtures', 'calc_1822.hdf5')
+        dstore = datastore.read(str(p))
+
+        sitemesh = get_sites(dstore['sitecol'])
+        print('sitemesh', sitemesh)
+
+        # do the saving....
+        transform.export_meta(TOSHI_ID, dstore, force_normalized_sites=False)
+        # saved = list(model.ToshiOpenquakeHazardMeta.query(TOSHI_ID))
+        saved = list(model.ToshiOpenquakeHazardMeta.scan())
+        print('saved', saved)
+
+        self.assertEqual(len(saved), 1)
+        self.assertIn("AKL", saved[0].locs)

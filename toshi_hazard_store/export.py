@@ -1,7 +1,7 @@
 from toshi_hazard_store import model, query
 from toshi_hazard_store.config import NUM_BATCH_WORKERS
 from toshi_hazard_store.multi_batch import save_parallel
-from toshi_hazard_store.utils import downsample_loc, normalise_site_code
+from toshi_hazard_store.utils import normalise_site_code
 
 try:
     from openquake.calculators.export.hazard import get_sites
@@ -40,8 +40,8 @@ def export_stats_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = Fal
 
                 yield model.ToshiOpenquakeHazardCurveStatsV2(
                     haz_sol_id=toshi_id,
-                    loc_agg_rk=f"{loc.site_code}:{agg_str}",
-                    loc=loc.site_code,
+                    loc_agg_rk=f"{loc.code}:{agg_str}",
+                    loc=loc.code,
                     lat=loc.lat,
                     lon=loc.lon,
                     agg=agg_str,
@@ -75,8 +75,8 @@ def export_rlzs_v2(dstore, toshi_id: str, *, force_normalized_sites: bool = Fals
                     )
                 yield model.ToshiOpenquakeHazardCurveRlzsV2(
                     haz_sol_id=toshi_id,
-                    loc_rlz_rk=f"{loc.site_code}:{rlz_str}",
-                    loc=loc.site_code,
+                    loc_rlz_rk=f"{loc.code}:{rlz_str}",
+                    loc=loc.code,
                     lat=loc.lat,
                     lon=loc.lon,
                     rlz=rlz_str,
@@ -116,11 +116,11 @@ def export_stats_v3(dstore, toshi_id: str, *, force_normalized_sites: bool = Fal
             agg_str = agg_keys[agg]
             agg_str = agg_str[9:] if "quantile-" in agg_str else agg_str
 
-            toshi_id = downsample_loc(loc)
+            # toshi_id = downsample_loc(loc)
             obj = model.ToshiOpenquakeHazardCurveStatsV2(
                 haz_sol_id=toshi_id,
-                loc_agg_rk=f"{loc.site_code}:{agg_str}",
-                loc=loc.site_code,
+                loc_agg_rk=f"{loc.code}:{agg_str}",
+                loc=loc.code,
                 lat=loc.lat,
                 lon=loc.lon,
                 agg=agg_str,
@@ -151,10 +151,10 @@ def export_rlzs_v3(dstore, toshi_id: str, *, force_normalized_sites: bool = Fals
 
         for site in range(n_sites):
             loc = normalise_site_code(sitemesh[site], force_normalized_sites)
-            toshi_id = downsample_loc(loc)
+            # toshi_id = downsample_loc(loc)
             values = []
             print('PERF: haz_sol_id=', toshi_id)
-            print('PERF: loc_rlz_rk=', f"{loc.site_code}:{rlz_str}")
+            print('PERF: loc_rlz_rk=', f"{loc.code}:{rlz_str}")
             for lvl in range(n_lvls):
                 values.append(
                     model.IMTValuesAttribute(
@@ -165,8 +165,8 @@ def export_rlzs_v3(dstore, toshi_id: str, *, force_normalized_sites: bool = Fals
                 )
             obj = model.ToshiOpenquakeHazardCurveRlzsV2(
                 haz_sol_id=toshi_id,
-                loc_rlz_rk=f"{loc.site_code}:{rlz_str}",
-                loc=loc.site_code,
+                loc_rlz_rk=f"{loc.code}:{rlz_str}",
+                loc=loc.code,
                 lat=loc.lat,
                 lon=loc.lon,
                 rlz=rlz_str,

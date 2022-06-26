@@ -1,11 +1,15 @@
 """Helper functions to export an openquake calculation and save it with toshi-hazard-store."""
 
 import datetime as dt
+from collections import namedtuple
 
 from dateutil.tz import tzutc
 
 from toshi_hazard_store import model, query
-from toshi_hazard_store.utils import CustomHazardCurve, CustomLocation, normalise_site_code
+from toshi_hazard_store.utils import CodedLocation, normalise_site_code
+
+CustomLocation = namedtuple("CustomLocation", "site_code lon lat")
+CustomHazardCurve = namedtuple("CustomHazardCurve", "loc poes")
 
 try:
     import h5py
@@ -93,7 +97,7 @@ def get_data(dstore, im, kind):
     hcurves = extract(dstore, key)[kind]  # shape (N, 1, L1)
 
     # Local helper classes, the oq classes aren't helping
-    return [CustomHazardCurve(CustomLocation(*site), poes[0]) for site, poes in zip(sitemesh, hcurves)]
+    return [CustomHazardCurve(CodedLocation(*site), poes[0]) for site, poes in zip(sitemesh, hcurves)]
 
 
 def export_stats(dstore, toshi_id: str, kind: str):
@@ -171,7 +175,7 @@ def export_meta(toshi_id, dstore, *, force_normalized_sites: bool = False):
         haz_sol_id=toshi_id,
         imts=list(oq.imtls.keys()),  # list of IMTs
         locs=[
-            normalise_site_code(loc, force_normalized_sites).site_code for loc in sitemesh.tolist()
+            normalise_site_code(loc, force_normalized_sites).code for loc in sitemesh.tolist()
         ],  # list of Location codes, can be normalised
         # important configuration arguments
         aggs=quantiles,
