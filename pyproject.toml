@@ -25,6 +25,7 @@ packages = [
 
 [tool.poetry.scripts]
 store_hazard = 'scripts.store_hazard:main'
+store_hazard_v3 = 'scripts.store_hazard_v3:main'
 get_hazard = 'scripts.get_hazard:main'
 
 [tool.poetry.dev-dependencies]
@@ -70,6 +71,7 @@ types-python-dateutil = "^2.8.16"
 python = ">=3.7.2,<4.0"
 pynamodb = "^5.2.1"
 pynamodb-attributes = "^0.3.2"
+graphql-relay = "^3.2.0"
 
 
 [tool.poetry.extras]

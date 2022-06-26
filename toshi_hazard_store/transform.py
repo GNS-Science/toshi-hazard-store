@@ -1,11 +1,12 @@
 """Helper functions to export an openquake calculation and save it with toshi-hazard-store."""
 
 import datetime as dt
+import json
 from collections import namedtuple
 
 from dateutil.tz import tzutc
 
-from toshi_hazard_store import model, query
+from toshi_hazard_store import model
 from toshi_hazard_store.utils import CodedLocation, normalise_site_code
 
 CustomLocation = namedtuple("CustomLocation", "site_code lon lat")
@@ -100,56 +101,6 @@ def get_data(dstore, im, kind):
     return [CustomHazardCurve(CodedLocation(*site), poes[0]) for site, poes in zip(sitemesh, hcurves)]
 
 
-def export_stats(dstore, toshi_id: str, kind: str):
-    oq = dstore['oqparam']
-    curves = []
-    for im in oq.imtls:
-        for hazcurve in get_data(dstore, im, kind):
-            # build the model objects....
-            lvps = [
-                model.LevelValuePairAttribute(lvl=float(x), val=float(y)) for (x, y) in zip(oq.imtls[im], hazcurve.poes)
-            ]
-
-            # strip the extra stuff
-            agg = kind[9:] if "quantile-" in kind else kind
-            obj = model.ToshiOpenquakeHazardCurveStats(
-                loc=hazcurve.loc.site_code.decode(), imt=im, agg=agg, values=lvps
-            )
-            curves.append(obj)
-            if len(curves) >= 50:
-                query.batch_save_hcurve_stats(toshi_id, models=curves)
-                curves = []
-
-        # finally
-        if len(curves):
-            query.batch_save_hcurve_stats(toshi_id, models=curves)
-
-
-def export_rlzs(dstore, toshi_id: str, kind: str):
-    oq = dstore['oqparam']
-    curves = []
-
-    for im in oq.imtls:
-
-        for hazcurve in get_data(dstore, im, kind):
-            # build the model objects....
-            lvps = [
-                model.LevelValuePairAttribute(lvl=float(x), val=float(y)) for (x, y) in zip(oq.imtls[im], hazcurve.poes)
-            ]
-
-            # strip the extra stuff
-            rlz = kind[4:] if "rlz-" in kind else kind
-            obj = model.ToshiOpenquakeHazardCurveRlzs(loc=hazcurve.loc.site_code.decode(), imt=im, rlz=rlz, values=lvps)
-            curves.append(obj)
-            if len(curves) >= 50:
-                query.batch_save_hcurve_rlzs(toshi_id, models=curves)
-                curves = []
-
-        # finally
-        if len(curves):
-            query.batch_save_hcurve_rlzs(toshi_id, models=curves)
-
-
 def export_meta(toshi_id, dstore, *, force_normalized_sites: bool = False):
     """Extract and same the meta data."""
     oq = dstore['oqparam']
@@ -186,3 +137,36 @@ def export_meta(toshi_id, dstore, *, force_normalized_sites: bool = False):
     )
     obj.hazsol_vs30_rk = f"{obj.haz_sol_id}:{obj.vs30}"
     obj.save()
+
+
+def export_meta_v3(dstore, toshi_hazard_id, toshi_gt_id, location_id, sources):
+    """Extract and same the meta data."""
+    oq = dstore['oqparam']
+    source_lt, gsim_lt, rlz_lt = parse_logic_tree_branches(dstore.filename)
+
+    df_len = 0
+    df_len += len(source_lt.to_json())
+    df_len += len(gsim_lt.to_json())
+    df_len += len(rlz_lt.to_json())
+
+    if df_len >= 300e3:
+        print('WARNING: Dataframes for this job may be too large to store on DynamoDB.')
+
+    obj = model.ToshiOpenquakeMeta(
+        partition_key="ToshiOpenquakeMeta",
+        hazard_solution_id=toshi_hazard_id,
+        general_task_id=toshi_gt_id,
+        hazsol_vs30_rk=f"{toshi_hazard_id}:{str(int(oq.reference_vs30_value)).zfill(3)}",
+        # updated=dt.datetime.now(tzutc()),
+        # known at configuration
+        vs30=int(oq.reference_vs30_value),  # vs30 value
+        imts=list(oq.imtls.keys()),  # list of IMTs
+        loc_id=location_id,  # Location code or list ID
+        sources=json.dumps(sources),
+        inv_time=vars(oq)['investigation_time'],
+        src_lt=source_lt.to_json(),  # sources meta as DataFrame JSON
+        gsim_lt=gsim_lt.to_json(),  # gmpe meta as DataFrame JSON
+        rlz_lt=rlz_lt.to_json(),  # realization meta as DataFrame JSON
+    )
+    obj.save()
+    return obj

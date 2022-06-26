@@ -1,0 +1,168 @@
+import json
+import unittest
+
+from moto import mock_dynamodb
+
+from toshi_hazard_store import model
+from toshi_hazard_store.utils import CodedLocation
+
+
+def get_one_rlz():
+    imtvs = []
+    for t in ['PGA', 'SA(0.5)', 'SA(1.0)']:
+        levels = range(1, 51)
+        values = range(101, 151)
+        imtvs.append(model.IMTValuesAttribute(imt="PGA", lvls=levels, vals=values))
+
+    location = CodedLocation(code='WLG', lat=-41.3, lon=174.78)
+    rlz = model.OpenquakeRealization(
+        values=imtvs,
+        rlz=10,
+        vs30=450,
+        hazard_solution_id="AMCDEF",
+        source_tags=["hiktlck, b0.979, C3.9, s0.78", "puy, b0.882, C4, s1", "Cru_geol, b0.849, C4.1, s0.53"],
+        gmm_tectonic_region="Intraslab",
+        general_task_int_id=5e6,
+    )
+    rlz.set_location(location)
+    return rlz
+
+
+@mock_dynamodb
+class PynamoTestMeta(unittest.TestCase):
+    def setUp(self):
+
+        model.migrate_v3()
+        super(PynamoTestMeta, self).setUp()
+
+    def tearDown(self):
+        model.drop_tables_v3()
+        return super(PynamoTestMeta, self).tearDown()
+
+    def test_table_exists(self):
+        self.assertEqual(model.OpenquakeRealization.exists(), True)
+        self.assertEqual(model.ToshiOpenquakeMeta.exists(), True)
+
+    def test_save_one_meta_object(self):
+
+        obj = model.ToshiOpenquakeMeta(
+            partition_key="ToshiOpenquakeMeta",
+            hazard_solution_id="AMCDEF",
+            general_task_id="GBBSGG",
+            hazsol_vs30_rk="AMCDEF:350",
+            # updated=dt.datetime.now(tzutc()),
+            # known at configuration
+            vs30=350,  # vs30 value
+            imts=['PGA', 'SA(0.5)'],  # list of IMTs
+            loc_id='AKL',  # Location code or list ID
+            sources=['A', 'B'],  # list of source model ids
+            inv_time=1.0,
+            # extracted from the OQ HDF5
+            src_lt=json.dumps(dict(sources=[1, 2])),  # sources meta as DataFrame JSON
+            gsim_lt=json.dumps(dict(gsims=[1, 2])),  # gmpe meta as DataFrame JSON
+            rlz_lt=json.dumps(dict(rlzs=[1, 2])),  # realization meta as DataFrame JSON
+        )
+
+        print(f'obj: {obj} {obj.version}')
+        self.assertEqual(obj.version, None)
+
+        obj.save()
+        self.assertEqual(obj.version, 1)
+
+
+@mock_dynamodb
+class PynamoTestTwo(unittest.TestCase):
+    def setUp(self):
+
+        model.migrate_v3()
+        super(PynamoTestTwo, self).setUp()
+
+    def tearDown(self):
+        model.drop_tables_v3()
+        return super(PynamoTestTwo, self).tearDown()
+
+    def test_table_exists(self):
+        self.assertEqual(model.OpenquakeRealization.exists(), True)
+        self.assertEqual(model.ToshiOpenquakeMeta.exists(), True)
+
+    def test_save_one_new_realization_object(self):
+        """New realization handles all the IMT levels."""
+        rlz = get_one_rlz()
+
+        print(f'rlz: {rlz} {rlz.version}')
+        rlz.save()
+        print(f'rlz: {rlz} {rlz.version}')
+        print(dir(rlz))
+
+        self.assertEqual(rlz.values[0].lvls[0], 1)
+        self.assertEqual(rlz.values[0].vals[0], 101)
+        self.assertEqual(rlz.values[0].lvls[-1], 50)
+        self.assertEqual(rlz.values[0].vals[-1], 150)
+
+        self.assertEqual(rlz.partition_key, '-41.3~174.8')  # 0.1 degree res
+
+
+@mock_dynamodb
+class PynamoTestQuery(unittest.TestCase):
+    def setUp(self):
+
+        model.migrate_v3()
+        super(PynamoTestQuery, self).setUp()
+
+    def tearDown(self):
+        model.drop_tables_v3()
+        return super(PynamoTestQuery, self).tearDown()
+
+    def test_model_query_no_condition(self):
+
+        rlz = get_one_rlz()
+        rlz.save()
+
+        # query on model
+        res = list(model.OpenquakeRealization.query(rlz.partition_key))[0]
+        self.assertEqual(res.partition_key, rlz.partition_key)
+        self.assertEqual(res.sort_key, rlz.sort_key)
+
+    def test_model_query_equal_condition(self):
+
+        rlz = get_one_rlz()
+        rlz.save()
+
+        # query on model
+        res = list(
+            model.OpenquakeRealization.query(
+                rlz.partition_key, model.OpenquakeRealization.sort_key == '-41.300~174.780:05000000:000010'
+            )
+        )[0]
+        self.assertEqual(res.partition_key, rlz.partition_key)
+        self.assertEqual(res.sort_key, rlz.sort_key)
+
+    def test_secondary_index_one_query(self):
+
+        rlz = get_one_rlz()
+        rlz.save()
+
+        # query on model.index2
+        res2 = list(
+            model.OpenquakeRealization.index1.query(
+                rlz.partition_key, model.OpenquakeRealization.index1_rk == "450:-41.3~174.8:05000000:000010"
+            )
+        )[0]
+
+        self.assertEqual(res2.partition_key, rlz.partition_key)
+        self.assertEqual(res2.sort_key, rlz.sort_key)
+
+    def test_secondary_index_two_query(self):
+
+        rlz = get_one_rlz()
+        rlz.save()
+
+        # query on model.index2
+        res2 = list(
+            model.OpenquakeRealization.index2.query(
+                rlz.partition_key, model.OpenquakeRealization.index2_rk == "450:-41.300~174.780:05000000:000010"
+            )
+        )[0]
+
+        self.assertEqual(res2.partition_key, rlz.partition_key)
+        self.assertEqual(res2.sort_key, rlz.sort_key)
