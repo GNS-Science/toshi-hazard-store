@@ -16,6 +16,9 @@ except ImportError:
     HAVE_OQ = False
 
 
+HAVE_MOCK_SERVER = False  # todo set up the moto mock_server properly
+
+
 class TestOpenquakeVersion(unittest.TestCase):
     def test_alert_when_openquake_includes_base183(self):
         try:
@@ -73,7 +76,9 @@ class TestWithOpenquake(unittest.TestCase):
         model.drop_tables()
         return super(TestWithOpenquake, self).tearDown()
 
-    @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
+    @unittest.skipUnless(
+        HAVE_OQ and HAVE_MOCK_SERVER, "This test requires openquake and mock server (for multi-processing)"
+    )
     def test_export_rlzs_v2(self):
         from openquake.commonlib import datastore
 
@@ -103,7 +108,7 @@ class TestWithOpenquake(unittest.TestCase):
         self.assertEqual(round(saved[0].values[0].lvls[-1], 5), 5.0)
         self.assertEqual(saved[0].values[0].vals[-1], 0.0)
 
-    @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
+    @unittest.skipUnless(HAVE_OQ and HAVE_MOCK_SERVER, "This test requires openquake")
     def test_export_rlzs_v2_without_sitecode(self):
         from openquake.commonlib import datastore
 
@@ -129,7 +134,7 @@ class TestWithOpenquake(unittest.TestCase):
         self.assertEqual(saved[0].loc, '[-36.870~174.770]')
         self.assertEqual(saved[-1].loc, '[-45.870~170.500]')
 
-    @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
+    @unittest.skipUnless(HAVE_OQ and HAVE_MOCK_SERVER, "This test requires openquake")
     def test_export_rlzs_v2_force_normalized_sitecode(self):
         from openquake.commonlib import datastore
 
@@ -168,7 +173,7 @@ class TestStatsWithOpenquake(unittest.TestCase):
         model.drop_tables()
         return super(TestStatsWithOpenquake, self).tearDown()
 
-    @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
+    @unittest.skipUnless(HAVE_OQ and HAVE_MOCK_SERVER, "This test requires openquake")
     def test_export_stats_v2(self):
         from openquake.commonlib import datastore
 
@@ -209,7 +214,7 @@ class TestStatsWithOpenquake(unittest.TestCase):
         self.assertEqual(saved[0].values[0].vals[0], 0.03890583664178848)
         self.assertEqual(round(saved[0].values[0].lvls[-1], 5), 5.0)
 
-    @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
+    @unittest.skipUnless(HAVE_OQ and HAVE_MOCK_SERVER, "This test requires openquake")
     def test_export_stats_v2_force_normalized_sitecode(self):
         from openquake.commonlib import datastore
 
@@ -230,8 +235,8 @@ class TestStatsWithOpenquake(unittest.TestCase):
         self.assertEqual(saved[0].loc, '[-35.220~173.970]')
         self.assertEqual(saved[-1].loc, '[-46.430~168.360]')
 
-    @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
-    def test_export_stats_v2_keyword_only(self):
+    # @unittest.skipUnless(HAVE_OQ and HAVE_MOCK_SERVER, "This test requires openquake")
+    def test_export_stats_v2_keyword_arg_only(self):
         from openquake.commonlib import datastore
 
         from toshi_hazard_store import export
@@ -242,8 +247,8 @@ class TestStatsWithOpenquake(unittest.TestCase):
         with self.assertRaises(TypeError):
             export.export_stats_v2(dstore, TOSHI_ID, True)
 
-    @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
-    def test_export_stats_v2_valid_keyword_only(self):
+    # @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
+    def test_export_stats_v2_valid_keyword_arg_only(self):
         from openquake.commonlib import datastore
 
         from toshi_hazard_store import export

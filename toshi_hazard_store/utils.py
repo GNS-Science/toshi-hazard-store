@@ -1,5 +1,6 @@
 """Common utilities."""
 
+import decimal
 from collections import namedtuple
 
 CustomLocation = namedtuple("CustomLocation", "site_code lon lat")
@@ -30,8 +31,19 @@ def normalise_site_code(oq_site_object: tuple, force_normalized: bool = False):
         return CustomLocation(oq_site_object[0].decode(), lon=lon, lat=lat)
 
 
-def downsample_loc(location: CustomLocation):
+def downsample_loc(location: CustomLocation, grid_degrees: float = 0.5):
     '''For spreading partition keys (experimental).'''
-    d_lon = round(location.lon * 2, 0) / 2
-    d_lat = round(location.lat * 2, 0) / 2
-    return f'{d_lat:.1f}~{d_lon:.1f}'
+
+    grid_res = decimal.Decimal(str(grid_degrees).rstrip("0"))
+    places = abs(decimal.Decimal(grid_res).as_tuple().exponent)
+
+    display_places = max(abs(grid_res.as_tuple().exponent), 1)
+    div_res = 1 / float(grid_res)
+    places = abs(decimal.Decimal(div_res).as_tuple().exponent)
+
+    # print(f'grid_res {grid_res} => div_res {div_res} places {places}') #  round_res {round_res}
+
+    d_lon = round(location.lon * div_res, places) / div_res
+    d_lat = round(location.lat * div_res, places) / div_res
+
+    return CustomLocation(site_code=f'{d_lat:.{display_places}f}~{d_lon:.{display_places}f}', lat=d_lat, lon=d_lon)

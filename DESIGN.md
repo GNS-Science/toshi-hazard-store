@@ -102,7 +102,14 @@ pynamodb.exceptions.PutError: Failed to batch write items: An error occurred (In
 ```
 
 
-### Multi test using Toshi ID as hash key
+### Multi-proc 4 workers, using Toshi ID as hash key
+
+added pynamodb_settings to mitigate AWS errors:...
+
+```
+base_backoff_ms = 200  # default 25
+max_retry_attempts = 8  # default 3
+```
 
 run `NZSHM22_HAZARD_STORE_NUM_WORKERS=4 store_hazard /home/openquake/oqdata/calc_131.hdf5 131FAST=4 -n -v`
 

@@ -152,7 +152,9 @@ def export_meta(toshi_id, dstore, *, force_normalized_sites: bool = False):
     sitemesh = get_sites(dstore['sitecol'])
     source_lt, gsim_lt, rlz_lt = parse_logic_tree_branches(dstore.filename)
 
-    quantiles = [str(q) for q in vars(oq)['quantiles']] + ['mean']  # mean is default, other values come from the config
+    quantiles = [str(q) for q in vars(oq).get('quantiles', [])] + [
+        'mean'
+    ]  # mean is default, other values come from the config
 
     df_len = 0
     df_len += len(source_lt.to_json())
