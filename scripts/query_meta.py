@@ -19,7 +19,7 @@ def run_query(args):
             print(res)
         else:
             print(res.hazard_solution_id, res.created, res.vs30, res.source_tags, res.source_ids)
-
+        cnt += 1
     print(cnt, "Took %s secs" % (dt.datetime.utcnow() - t0).total_seconds())
 
 

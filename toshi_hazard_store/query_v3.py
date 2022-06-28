@@ -69,7 +69,7 @@ def get_rlz_curves_v3(
         first_vs30 = sorted(vs30s)[0]
         sort_key_first_val += f":{first_vs30}"
     if locs and vs30s and rlzs:
-        first_rlz = sorted(rlzs)[0]
+        first_rlz = str(sorted(rlzs)[0]).zfill(6)
         sort_key_first_val += f":{first_rlz}"
     if locs and vs30s and rlzs and tids:
         first_tid = sorted(tids)[0]

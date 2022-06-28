@@ -24,6 +24,7 @@ def run_query(args):
         if args.verbose:
             print(res)
             print(res, res.created, res.source_tags, res.source_ids)
+        cnt += 1
 
     print(cnt, "Took %s secs" % (dt.datetime.utcnow() - t0).total_seconds())
 
