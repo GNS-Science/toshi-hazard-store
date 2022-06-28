@@ -73,6 +73,7 @@ python = ">=3.7.2,<4.0"
 pynamodb = "^5.2.1"
 pynamodb-attributes = "^0.3.2"
 graphql-relay = "^3.2.0"
+nzshm-common = {git = "https://github.com/GNS-Science/nzshm-common-py.git", rev = "5aeef6a7deb41b3c8e915f9f8e1e4ba42fea3b7e"}
 
 
 [tool.poetry.extras]

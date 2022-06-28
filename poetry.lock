@@ -782,6 +782,21 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
+name = "nzshm-common"
+version = "1.0.2"
+description = "A small pure python library for shared NZ NSHM data like locations."
+category = "main"
+optional = false
+python-versions = "^3.7.0"
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/GNS-Science/nzshm-common-py.git"
+reference = "5aeef6a7deb41b3c8e915f9f8e1e4ba42fea3b7e"
+resolved_reference = "5aeef6a7deb41b3c8e915f9f8e1e4ba42fea3b7e"
+
+[[package]]
 name = "openquake.engine"
 version = "3.14.0"
 description = "Computes earthquake hazard and risk."
@@ -1507,7 +1522,7 @@ test = []
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.2,<4.0"
-content-hash = "c83cec10b2750436405327f2646c230150ec85637ccd4d16e6219c3767f3a5b2"
+content-hash = "52b47d157a973c24d34e85f8a161893899833ba2262f085152681726c77c2c17"
 
 [metadata.files]
 asgiref = [
@@ -2059,6 +2074,7 @@ numpy = [
     {file = "numpy-1.21.1-pp37-pypy37_pp73-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:2d4d1de6e6fb3d28781c73fbde702ac97f03d79e4ffd6598b880b2d95d62ead4"},
     {file = "numpy-1.21.1.zip", hash = "sha256:dff4af63638afcc57a3dfb9e4b26d434a7a602d225b42d746ea7fe2edf1342fd"},
 ]
+nzshm-common = []
 "openquake.engine" = [
     {file = "openquake.engine-3.14.0-py3-none-any.whl", hash = "sha256:90151e1f61c05f28eeb31620bfd6fdd5e5dc1078c83c024ca290d8c379294762"},
     {file = "openquake.engine-3.14.0.tar.gz", hash = "sha256:741ab0c69faa957e0ee8b3f0e26b1bfe1161ed9607607d264fc0a3ad2229c637"},

@@ -3,9 +3,9 @@ import unittest
 
 import pynamodb.exceptions
 from moto import mock_dynamodb
+from nzshm_common.location.code_location import CodedLocation
 
 from toshi_hazard_store import model
-from toshi_hazard_store.utils import CodedLocation
 
 
 def get_one_rlz():

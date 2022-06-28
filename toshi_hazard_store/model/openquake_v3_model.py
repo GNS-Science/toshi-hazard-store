@@ -4,6 +4,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
+from nzshm_common.location.code_location import CodedLocation
 from pynamodb.attributes import (
     JSONAttribute,
     ListAttribute,
@@ -18,7 +19,6 @@ from pynamodb_attributes import FloatAttribute, IntegerAttribute, TimestampAttri
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
 from toshi_hazard_store.model.openquake_v2_model import IMTValuesAttribute
-from toshi_hazard_store.utils import CodedLocation
 
 
 def datetime_now():
@@ -118,7 +118,7 @@ class OpenquakeRealization(Model):
     nloc_01 = UnicodeAttribute()  # 0.01
     nloc_1 = UnicodeAttribute()  # 0.1
     nloc_0 = UnicodeAttribute()  # 1.0
-    nloc_10 = UnicodeAttribute()  # 10.0
+    # nloc_10 = UnicodeAttribute()  # 10.0
 
     rlz = IntegerAttribute()  # index to the openquake realization
     vs30 = IntegerAttribute()  # vs30 in m/s
@@ -143,7 +143,7 @@ class OpenquakeRealization(Model):
         self.nloc_01 = location.downsample(0.01).code
         self.nloc_1 = location.downsample(0.1).code
         self.nloc_0 = location.downsample(1.0).code
-        self.nloc_10 = location.downsample(10.0).code
+        # self.nloc_10 = location.downsample(10.0).code
 
         self.partition_key = self.nloc_1
 

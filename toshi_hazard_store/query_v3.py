@@ -2,8 +2,10 @@
 import decimal
 from typing import Iterable, Iterator
 
+# from toshi_hazard_store.utils import CodedLocation
+from nzshm_common.location.code_location import CodedLocation
+
 import toshi_hazard_store.model as model
-from toshi_hazard_store.utils import CodedLocation
 
 mOQM = model.ToshiOpenquakeMeta
 mRLZ = model.OpenquakeRealization
@@ -40,10 +42,11 @@ def get_rlz_curves_v3(
     tids: Iterable[str] = [],  # toshi hazard_solution_ids
     imts: Iterable[str] = [],
 ) -> Iterator[mRLZ]:
+    """Use mRLZ.sort_key as much as possible.
 
-    """f'{nloc_001}:{vs30s}:{rlzs}:{self.hazard_solution_id}''
 
-    Use mRLZ.loc_agg_rk range key as much as possible."""
+    f'{nloc_001}:{vs30s}:{rlzs}:{self.hazard_solution_id}'
+    """
 
     sort_key_first_val = ""
     condition_expr = None
