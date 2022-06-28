@@ -35,7 +35,7 @@ class ToshiOpenquakeMeta(Model):
         """DynamoDB Metadata."""
 
         billing_mode = 'PAY_PER_REQUEST'
-        table_name = f"THS_OpenquakeMeta-{DEPLOYMENT_STAGE}"
+        table_name = f"THS_WIP_OpenquakeMeta-{DEPLOYMENT_STAGE}"
         region = REGION
         if IS_OFFLINE:
             host = "http://localhost:8000"  # pragma: no cover
@@ -103,7 +103,7 @@ class OpenquakeRealization(Model):
         """DynamoDB Metadata."""
 
         billing_mode = 'PAY_PER_REQUEST'
-        table_name = f"THS_OpenquakeRealization-{DEPLOYMENT_STAGE}"
+        table_name = f"THS_WIP_OpenquakeRealization-{DEPLOYMENT_STAGE}"
         region = REGION
         if IS_OFFLINE:
             host = "http://localhost:8000"  # pragma: no cover
@@ -113,6 +113,13 @@ class OpenquakeRealization(Model):
     version = VersionAttribute()
     uniq_id = UnicodeAttribute()
     hazard_solution_id = UnicodeAttribute()
+
+    nloc_001 = UnicodeAttribute()  # 0.001
+    nloc_01 = UnicodeAttribute()  # 0.01
+    nloc_1 = UnicodeAttribute()  # 0.1
+    nloc_0 = UnicodeAttribute()  # 1.0
+    nloc_10 = UnicodeAttribute()  # 10.0
+
     rlz = IntegerAttribute()  # index to the openquake realization
     vs30 = IntegerAttribute()  # vs30 in m/s
 
@@ -131,10 +138,14 @@ class OpenquakeRealization(Model):
 
     def set_location(self, location: CodedLocation):
         """Set internal fields, indices etc from the location."""
-        nloc_001 = location.downsample(0.001).code
-        nloc_1 = location.downsample(0.1).code
 
-        self.partition_key = nloc_1
+        self.nloc_001 = location.downsample(0.001).code
+        self.nloc_01 = location.downsample(0.01).code
+        self.nloc_1 = location.downsample(0.1).code
+        self.nloc_0 = location.downsample(1.0).code
+        self.nloc_10 = location.downsample(10.0).code
+
+        self.partition_key = self.nloc_1
 
         self.lat = location.lat
         self.lon = location.lon
@@ -142,8 +153,8 @@ class OpenquakeRealization(Model):
         rlzs = str(self.rlz).zfill(6)
         vs30s = str(self.vs30).zfill(3)
 
-        self.sort_key = f'{nloc_001}:{vs30s}:{rlzs}:{self.hazard_solution_id}'
-        self.index1_rk = f'{nloc_1}:{vs30s}:{rlzs}:{self.hazard_solution_id}'
+        self.sort_key = f'{self.nloc_001}:{vs30s}:{rlzs}:{self.hazard_solution_id}'
+        self.index1_rk = f'{self.nloc_1}:{vs30s}:{rlzs}:{self.hazard_solution_id}'
         self.uniq_id = str(uuid.uuid4())
 
 

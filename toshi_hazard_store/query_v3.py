@@ -1,4 +1,5 @@
 """Queries for saving and retrieving openquake hazard results with convenience."""
+import decimal
 from typing import Iterable, Iterator
 
 import toshi_hazard_store.model as model
@@ -47,14 +48,22 @@ def get_rlz_curves_v3(
     sort_key_first_val = ""
     condition_expr = None
 
-    # if imts:
-    #     first_imt = sorted(imts)[0]
-    #     sort_key_first_val += f"{first_imt}"
-    #     condition_expr = condition_expr & mOHCR.imt.is_in(*imts)
     if locs:
-        # condition_expr = condition_expr & mRLZ.loc.is_in(*locs)
-        # condition_expr = condition_expr & mRLZ.sort_key.startswith(locs[0])
-        pass  # nee to add nloc fields
+        ## TODO REFACTOR ME ... using the res of first loc is not ideal
+        grid_res = decimal.Decimal(str(list(locs)[0].split('~')[0]).rstrip("0"))
+        places = grid_res.as_tuple().exponent
+        # print(f'places {places} loc {locs[0]}')
+
+        res = float(decimal.Decimal(10) ** places)
+        locs = [downsample_code(loc, res) for loc in locs]
+
+        if places == -1:
+            condition_expr = condition_expr & mRLZ.nloc_1.is_in(*locs)
+        if places == -2:
+            condition_expr = condition_expr & mRLZ.nloc_01.is_in(*locs)
+        if places == -3:
+            condition_expr = condition_expr & mRLZ.nloc_001.is_in(*locs)
+
     if vs30s:
         condition_expr = condition_expr & mRLZ.vs30.is_in(*vs30s)
     if rlzs:
@@ -84,6 +93,8 @@ def get_rlz_curves_v3(
         return list(hashes)
 
     print('hashes', get_hashes(locs))
+
+    # TODO: use https://pypi.org/project/InPynamoDB/
 
     for hash_location_code in get_hashes(locs):
 
