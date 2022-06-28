@@ -1,6 +1,7 @@
 import json
 import unittest
 
+import pynamodb.exceptions
 from moto import mock_dynamodb
 
 from toshi_hazard_store import model
@@ -20,12 +21,32 @@ def get_one_rlz():
         rlz=10,
         vs30=450,
         hazard_solution_id="AMCDEF",
-        source_tags=["hiktlck, b0.979, C3.9, s0.78", "puy, b0.882, C4, s1", "Cru_geol, b0.849, C4.1, s0.53"],
-        gmm_tectonic_region="Intraslab",
-        general_task_int_id=5e6,
+        source_tags=["hiktlck", "b0.979", "C3.9", "s0.78"],
+        source_ids=["SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwODA3NQ==", "RmlsZToxMDY1MjU="],
     )
     rlz.set_location(location)
     return rlz
+
+
+def get_one_meta():
+    return model.ToshiOpenquakeMeta(
+        partition_key="ToshiOpenquakeMeta",
+        hazard_solution_id="AMCDEF",
+        general_task_id="GBBSGG",
+        hazsol_vs30_rk="AMCDEF:350",
+        # updated=dt.datetime.now(tzutc()),
+        # known at configuration
+        vs30=350,  # vs30 value
+        imts=['PGA', 'SA(0.5)'],  # list of IMTs
+        locations_id='AKL',  # Location code or list ID
+        source_tags=["hiktlck", "b0.979", "C3.9", "s0.78"],
+        source_ids=["SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwODA3NQ==", "RmlsZToxMDY1MjU="],
+        inv_time=1.0,
+        # extracted from the OQ HDF5
+        src_lt=json.dumps(dict(sources=[1, 2])),  # sources meta as DataFrame JSON
+        gsim_lt=json.dumps(dict(gsims=[1, 2])),  # gmpe meta as DataFrame JSON
+        rlz_lt=json.dumps(dict(rlzs=[1, 2])),  # realization meta as DataFrame JSON
+    )
 
 
 @mock_dynamodb
@@ -44,30 +65,20 @@ class PynamoTestMeta(unittest.TestCase):
         self.assertEqual(model.ToshiOpenquakeMeta.exists(), True)
 
     def test_save_one_meta_object(self):
-
-        obj = model.ToshiOpenquakeMeta(
-            partition_key="ToshiOpenquakeMeta",
-            hazard_solution_id="AMCDEF",
-            general_task_id="GBBSGG",
-            hazsol_vs30_rk="AMCDEF:350",
-            # updated=dt.datetime.now(tzutc()),
-            # known at configuration
-            vs30=350,  # vs30 value
-            imts=['PGA', 'SA(0.5)'],  # list of IMTs
-            loc_id='AKL',  # Location code or list ID
-            sources=['A', 'B'],  # list of source model ids
-            inv_time=1.0,
-            # extracted from the OQ HDF5
-            src_lt=json.dumps(dict(sources=[1, 2])),  # sources meta as DataFrame JSON
-            gsim_lt=json.dumps(dict(gsims=[1, 2])),  # gmpe meta as DataFrame JSON
-            rlz_lt=json.dumps(dict(rlzs=[1, 2])),  # realization meta as DataFrame JSON
-        )
+        obj = get_one_meta()
 
         print(f'obj: {obj} {obj.version}')
         self.assertEqual(obj.version, None)
-
         obj.save()
         self.assertEqual(obj.version, 1)
+
+    def test_save_duplicate_raises(self):
+        meta_a = get_one_meta()
+        meta_a.save()
+
+        meta_b = get_one_meta()
+        with self.assertRaises(pynamodb.exceptions.PutError):
+            meta_b.save()
 
 
 @mock_dynamodb
@@ -89,10 +100,10 @@ class PynamoTestTwo(unittest.TestCase):
         """New realization handles all the IMT levels."""
         rlz = get_one_rlz()
 
-        print(f'rlz: {rlz} {rlz.version}')
+        # print(f'rlz: {rlz} {rlz.version}')
         rlz.save()
-        print(f'rlz: {rlz} {rlz.version}')
-        print(dir(rlz))
+        # print(f'rlz: {rlz} {rlz.version}')
+        # print(dir(rlz))
 
         self.assertEqual(rlz.values[0].lvls[0], 1)
         self.assertEqual(rlz.values[0].vals[0], 101)
@@ -131,7 +142,7 @@ class PynamoTestQuery(unittest.TestCase):
         # query on model
         res = list(
             model.OpenquakeRealization.query(
-                rlz.partition_key, model.OpenquakeRealization.sort_key == '-41.300~174.780:05000000:000010'
+                rlz.partition_key, model.OpenquakeRealization.sort_key == '-41.300~174.780:450:000010:AMCDEF'
             )
         )[0]
         self.assertEqual(res.partition_key, rlz.partition_key)
@@ -145,24 +156,54 @@ class PynamoTestQuery(unittest.TestCase):
         # query on model.index2
         res2 = list(
             model.OpenquakeRealization.index1.query(
-                rlz.partition_key, model.OpenquakeRealization.index1_rk == "450:-41.3~174.8:05000000:000010"
+                rlz.partition_key, model.OpenquakeRealization.index1_rk == "-41.3~174.8:450:000010:AMCDEF"
             )
         )[0]
 
         self.assertEqual(res2.partition_key, rlz.partition_key)
         self.assertEqual(res2.sort_key, rlz.sort_key)
 
-    def test_secondary_index_two_query(self):
+    # def test_secondary_index_two_query(self):
 
-        rlz = get_one_rlz()
-        rlz.save()
+    #     rlz = get_one_rlz()
+    #     rlz.save()
 
-        # query on model.index2
-        res2 = list(
-            model.OpenquakeRealization.index2.query(
-                rlz.partition_key, model.OpenquakeRealization.index2_rk == "450:-41.300~174.780:05000000:000010"
-            )
-        )[0]
+    #     # query on model.index2
+    #     res2 = list(
+    #         model.OpenquakeRealization.index2.query(
+    #             rlz.partition_key, model.OpenquakeRealization.index2_rk == "450:-41.300~174.780:05000000:000010"
+    #         )
+    #     )[0]
 
-        self.assertEqual(res2.partition_key, rlz.partition_key)
-        self.assertEqual(res2.sort_key, rlz.sort_key)
+    #     self.assertEqual(res2.partition_key, rlz.partition_key)
+    #     self.assertEqual(res2.sort_key, rlz.sort_key)
+
+    def test_save_duplicate_raises(self):
+
+        rlza = get_one_rlz()
+        rlza.save()
+
+        rlzb = get_one_rlz()
+        with self.assertRaises(pynamodb.exceptions.PutError):
+            rlzb.save()
+
+    @unittest.skip("This test is invalid")
+    def test_batch_save_duplicate_raises(self):
+
+        rlza = get_one_rlz()
+        with model.OpenquakeRealization.batch_write() as batch:
+            batch.save(rlza)
+
+        with self.assertRaises(pynamodb.exceptions.PutError):
+            rlzb = get_one_rlz()
+            with model.OpenquakeRealization.batch_write() as batch:
+                batch.save(rlzb)
+
+    @unittest.skip("And this test is invalid")
+    def test_batch_save_internal_duplicate_raises(self):
+        with self.assertRaises(pynamodb.exceptions.PutError):
+            rlza = get_one_rlz()
+            rlzb = get_one_rlz()
+            with model.OpenquakeRealization.batch_write() as batch:
+                batch.save(rlzb)
+                batch.save(rlza)

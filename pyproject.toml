@@ -27,6 +27,7 @@ packages = [
 store_hazard = 'scripts.store_hazard:main'
 store_hazard_v3 = 'scripts.store_hazard_v3:main'
 get_hazard = 'scripts.get_hazard:main'
+query_meta = 'scripts.query_meta:main'
 
 [tool.poetry.dev-dependencies]
 

@@ -1,9 +1,9 @@
 """This module defines the pynamodb tables used to store openquake data. Third iteration"""
 
 import logging
+import uuid
 from datetime import datetime, timezone
 
-from graphql_relay import from_global_id
 from pynamodb.attributes import (
     JSONAttribute,
     ListAttribute,
@@ -51,8 +51,9 @@ class ToshiOpenquakeMeta(Model):
     vs30 = NumberAttribute()  # vs30 value
 
     imts = UnicodeSetAttribute()  # list of IMTs
-    loc_id = UnicodeAttribute()  # Location codes identifier (ENUM?)
-    sources = JSONAttribute()  # json map of source tags and model ids
+    locations_id = UnicodeAttribute()  # Location codes identifier (ENUM?)
+    source_ids = UnicodeSetAttribute()
+    source_tags = UnicodeSetAttribute()
     inv_time = NumberAttribute()  # Invesigation time in years
 
     # extracted from the OQ HDF5
@@ -60,13 +61,13 @@ class ToshiOpenquakeMeta(Model):
     gsim_lt = JSONAttribute()  # gmpe meta as DataFrame JSON
     rlz_lt = JSONAttribute()  # realization meta as DataFrame JSON
 
-    def hazard_solution_index(self):
-        _class, _id = from_global_id(self.hazard_solution_id)
-        return _id
+    # def hazard_solution_index(self):
+    #     _class, _id = from_global_id(self.hazard_solution_id)
+    #     return _id
 
-    def general_task_index(self):
-        _class, _id = from_global_id(self.general_task_id)
-        return _id
+    # def general_task_index(self):
+    #     _class, _id = from_global_id(self.general_task_id)
+    #     return _id
 
 
 class vs30_nloc1_gt_rlz_index(LocalSecondaryIndex):
@@ -109,38 +110,24 @@ class OpenquakeRealization(Model):
 
     partition_key = UnicodeAttribute(hash_key=True)  # For this we will use a downsampled location to 1.0 degree
     sort_key = UnicodeAttribute(range_key=True)  # TODO: check we can actually use this in queries!
-
+    version = VersionAttribute()
+    uniq_id = UnicodeAttribute()
+    hazard_solution_id = UnicodeAttribute()
     rlz = IntegerAttribute()  # index to the openquake realization
-
-    general_task_int_id = (
-        IntegerAttribute()
-    )  # integer component of the Toshi GeneralTask (for compactness) padded to 10 dec
-    hazard_solution_id = (
-        UnicodeAttribute()
-    )  # # integer component of the Toshi OpenquakeHazardSolution (for compactness) padded to 10 dec
-    # nloc_001 = UnicodeAttribute() # location string lat~lon rounded to 0.001 of a degree (or ~100m)
-    # nloc_01 = UnicodeAttribute()  # location string lat~lon rounded to 0.01 of a degree (or ~1km)
-    # nloc_1 = UnicodeAttribute()   # location string lat~lon rounded to 0.1 of a degree (or ~10km)
-    # nloc_0 = UnicodeAttribute()   # location string lat~lon rounded to 1 degree (or ~100km)
-    # nloc_10 = UnicodeAttribute()  # location string lat~lon rounded to 10 degree (or ~1000km)
+    vs30 = IntegerAttribute()  # vs30 in m/s
 
     lat = FloatAttribute()  # latitude decimal degrees
     lon = FloatAttribute()  # longitude decimal degrees
 
-    vs30 = IntegerAttribute()  # vs30 in m/s
-    source_tags = UnicodeSetAttribute()  # list of source tags for the sources
-    gmm_tectonic_region = UnicodeAttribute()  # n Volcanic, Intraslab, etc
+    source_tags = UnicodeSetAttribute()
+    source_ids = UnicodeSetAttribute()
 
     values = ListAttribute(of=IMTValuesAttribute)
     created = TimestampAttribute(default=datetime_now)
-    version = VersionAttribute()
 
-    # Index attributes
+    # Secondary Index attributes
     index1 = vs30_nloc1_gt_rlz_index()
-    index2 = vs30_nloc001_gt_rlz_index()
-
     index1_rk = UnicodeAttribute()
-    index2_rk = UnicodeAttribute()
 
     def set_location(self, location: CodedLocation):
         """Set internal fields, indices etc from the location."""
@@ -152,14 +139,12 @@ class OpenquakeRealization(Model):
         self.lat = location.lat
         self.lon = location.lon
 
-        gtid = str(int(self.general_task_int_id)).zfill(8)
         rlzs = str(self.rlz).zfill(6)
         vs30s = str(self.vs30).zfill(3)
 
-        self.sort_key = f'{nloc_001}:{gtid}:{rlzs}'
-        self.index1_rk = f'{vs30s}:{nloc_1}:{gtid}:{rlzs}'
-        self.index2_rk = f'{vs30s}:{nloc_001}:{gtid}:{rlzs}'
-        # print('set index2_rk', self.index2_rk)
+        self.sort_key = f'{nloc_001}:{vs30s}:{rlzs}:{self.hazard_solution_id}'
+        self.index1_rk = f'{nloc_1}:{vs30s}:{rlzs}:{self.hazard_solution_id}'
+        self.uniq_id = str(uuid.uuid4())
 
 
 tables = [OpenquakeRealization, ToshiOpenquakeMeta]
