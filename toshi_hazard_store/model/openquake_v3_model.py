@@ -96,6 +96,46 @@ class vs30_nloc001_gt_rlz_index(LocalSecondaryIndex):
     index2_rk = UnicodeAttribute(range_key=True)
 
 
+class HazardAggregation(Model):
+    """Stores the individual hazard realisation curves."""
+
+    class Meta:
+        """DynamoDB Metadata."""
+
+        billing_mode = 'PAY_PER_REQUEST'
+        table_name = f"THS_WIP_OpenquakeRealization-{DEPLOYMENT_STAGE}"
+        region = REGION
+        if IS_OFFLINE:
+            host = "http://localhost:8000"  # pragma: no cover
+
+    partition_key = UnicodeAttribute(hash_key=True)  # For this we will use a downsampled location to 1.0 degree
+    sort_key = UnicodeAttribute(range_key=True)
+    aggregation_id = UnicodeAttribute()
+
+    version = VersionAttribute()
+    uniq_id = UnicodeAttribute()
+
+    nloc_001 = UnicodeAttribute()  # 0.001
+    nloc_01 = UnicodeAttribute()  # 0.01
+    nloc_1 = UnicodeAttribute()  # 0.1
+    nloc_0 = UnicodeAttribute()  # 1.0
+    vs30 = IntegerAttribute()  # vs30 in m/s
+
+    lat = FloatAttribute()  # latitude decimal degrees
+    lon = FloatAttribute()  # longitude decimal degrees
+
+    # aggregation_info = # details about the aggregation
+    # count of aggregated items
+    # aggregation configuration: filtering, grouping
+    # subject: rlzs or aggregations
+    # requested
+    # time_seconds:
+    # started:
+
+    values = ListAttribute(of=IMTValuesAttribute)
+    created = TimestampAttribute(default=datetime_now)
+
+
 class OpenquakeRealization(Model):
     """Stores the individual hazard realisation curves."""
 
