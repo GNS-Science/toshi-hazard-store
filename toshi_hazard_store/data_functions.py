@@ -1,8 +1,8 @@
 import numpy as np
 
-def weighted_quantile(values, quantiles, sample_weight=None, 
-                      values_sorted=False, old_style=False):
-    """ Very close to numpy.percentile, but supports weights.
+
+def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False, old_style=False):
+    """Very close to numpy.percentile, but supports weights.
     NOTE: quantiles should be in [0, 1]!
     :param values: numpy.array with data
     :param quantiles: array-like with many quantiles needed. Can also be string 'mean' to calculate weighted mean
@@ -18,16 +18,14 @@ def weighted_quantile(values, quantiles, sample_weight=None,
     if sample_weight is None:
         sample_weight = np.ones(len(values))
     sample_weight = np.array(sample_weight)
-    sample_weight = sample_weight/sum(sample_weight)
-    
+    sample_weight = sample_weight / sum(sample_weight)
+
     if quantiles == 'mean':
         return np.sum(sample_weight * values)
 
-
     quantiles = np.array(quantiles)
 
-    assert np.all(quantiles >= 0) and np.all(quantiles <= 1), \
-        'quantiles should be in [0, 1]'
+    assert np.all(quantiles >= 0) and np.all(quantiles <= 1), 'quantiles should be in [0, 1]'
 
     if not values_sorted:
         sorter = np.argsort(values)
@@ -42,5 +40,3 @@ def weighted_quantile(values, quantiles, sample_weight=None,
     else:
         weighted_quantiles /= np.sum(sample_weight)
     return np.interp(quantiles, weighted_quantiles, values)
-
-    
