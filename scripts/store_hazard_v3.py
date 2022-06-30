@@ -36,7 +36,7 @@ def extract_and_save(args):
 
     print(tags, srcs)
 
-    meta = export_meta_v3(dstore, args.toshi_hazard_id, args.locations_id, args.toshi_gt_id, tags, srcs)
+    meta = export_meta_v3(dstore, args.toshi_hazard_id, args.toshi_gt_id, args.locations_id, tags, srcs)
 
     if args.verbose:
         print("Done saving meta, took %s secs" % (dt.datetime.utcnow() - t0).total_seconds())
