@@ -13,8 +13,7 @@ from toshi_hazard_store.data_functions import weighted_quantile
 from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v3
 
 inv_time = 1.0
-VERBOSE = True
-
+VERBOSE = False
 
 def get_imts(source_branches, vs30):
     
@@ -47,7 +46,7 @@ def cache_realization_values(source_branches, locs, vs30):
     return values
 
 
-def build_rlz_table(branch, vs30):
+def build_rlz_table(branch, vs30):  
 
     tic = time.perf_counter()
 
@@ -218,7 +217,10 @@ def build_branches(source_branches, values, imt, loc, vs30):
     weights = np.array([])
     for i, branch in enumerate(source_branches):
 
-        rlz_combs, weight_combs = build_rlz_table(branch, vs30)
+        # rlz_combs, weight_combs = build_rlz_table(branch, vs30)
+        rlz_combs = branch['rlz_combs']
+        weight_combs = branch['weight_combs']
+
         w = np.array(weight_combs) * branch['weight']
         weights = np.hstack((weights, w))
 
@@ -278,10 +280,10 @@ if __name__ == "__main__":
     # loc = "-41.300~174.780" #WLG
     loc = "-43.530~172.630" #CHC
     locs = read_locs()
-    locs = locs[0:2]
     vs30 = 750
+    # aggs = ['mean',0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]
     aggs = ['mean',0.1,0.5,0.9]
-    # agg = [0.5]
+    
 
     source_branches = load_source_branches()
 
@@ -289,25 +291,32 @@ if __name__ == "__main__":
     levels = get_levels(source_branches, locs, vs30)
 
     columns = ['lat','lon','imt','agg','level','hazard']
-    index = range(len(locs)*len(imts)*len(aggs))
+    index = range(len(locs)*len(imts)*len(aggs)*len(levels))
     aggregated_hazard = pd.DataFrame(columns=columns, index=index)
 
     values = cache_realization_values(source_branches, locs, vs30)
     
-    # this is a lot of loops! not very pythonic
-    i = 0
+
     tic = time.perf_counter()
-    
+
+    for i in range(len(source_branches)):
+        rlz_combs, weight_combs = build_rlz_table(source_branches[i], vs30)
+        source_branches[i]['rlz_combs'] = rlz_combs
+        source_branches[i]['weight_combs'] = weight_combs
+
+    i = 0    
     for imt in imts:
+        print(f'working on {imt}')
         for loc in locs:
             weights, branch_probs = build_branches(source_branches, values, imt, loc, vs30)
             for agg in aggs:
                 hazard = calculate_agg(branch_probs, agg, weights)
                 lat,lon = loc.split('~')
                 for j,level in enumerate(levels):
-                    i += 1
                     aggregated_hazard.loc[i,'lat':'agg'] = pd.Series({'lat':lat,'lon':lon,'imt':imt,'agg':agg})
-                    aggregated_hazard.loc[i,'level':'hazard'] = pd.Series({'level':level,'hazard':hazard[j]}) #TODO: more effcient to load array at once?
+                    aggregated_hazard.loc[i,'level':'hazard'] = pd.Series({'level':level,'hazard':hazard[j]}) 
+                    i += 1
+
                     
 
     toc = time.perf_counter()
@@ -317,6 +326,8 @@ if __name__ == "__main__":
     toc_total = time.perf_counter()
     print(f'total imts: {len(imts)}')
     print(f'total locations: {len(locs)}')
+    print(f'total aggregations: {len(aggs)}')
+    print(f'total levels: {len(levels)}')    
     print(f'total time: {toc_total-tic_total:.1f} seconds')
 
     print(aggregated_hazard)
