@@ -4,7 +4,7 @@ import itertools
 import time
 import pandas as pd
 
-
+from toshi_hazard_store.branch_combinator.branch_combinator import get_branches
 
 from functools import reduce
 from operator import mul
@@ -17,7 +17,7 @@ from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v
 from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned
 
 inv_time = 1.0
-VERBOSE = False
+VERBOSE = True
 
 
 def get_imts(source_branches, vs30):
@@ -30,20 +30,21 @@ def get_imts(source_branches, vs30):
     return imts
 
 
-def cache_realization_values(source_branches, binned_locs, vs30):
+def load_realization_values(source_branches, binned_locs, vs30):
 
     tic = time.perf_counter()
     unique_ids = []
     for branch in source_branches:
         unique_ids += branch['ids']
     unique_ids = list(set(unique_ids))
+    print(f'loading {len(unique_ids)} hazard IDs . . . ')
 
     values = {}
-    ct =  0
+    nlocs = 0
     for lk, locs in binned_locs.items():
+        nlocs += len(locs)
         print(f'loading {lk} with {len(locs)} locations')
         for res in get_rlz_curves_v3(locs, [vs30], None, unique_ids, None):
-            ct += 1
             key = ':'.join((res.hazard_solution_id, str(res.rlz)))
             if key not in values:
                 values[key] = {}
@@ -52,11 +53,20 @@ def cache_realization_values(source_branches, binned_locs, vs30):
                 values[key][res.nloc_001][val.imt] = np.array(val.vals)
 
     # check that the correct number of records came back
-    if ct != 
-
+    ids_ret = []
+    for k1, v1 in values.items():
+        nlocs_ret = len(v1.keys())
+        if nlocs_ret != nlocs:
+            print(f'!!!!!!!!! {k1} missing {nlocs-nlocs_ret} locations')
+        ids_ret += [k1.split(':')[0]]
+    ids_ret = set(ids_ret)
+    if len(ids_ret) != len(unique_ids):
+        print(f'!!!!!!!!! missing {len(unique_ids)-len(ids_ret)} IDs')
+        unique_ids = set(unique_ids)
+        print(f'!!!!!!!!! missing {unique_ids - ids_ret}')
+    
     toc = time.perf_counter()
     print(f'time to load realizations: {toc-tic:.1f} seconds')
-    breakpoint()
 
     return values
 
@@ -176,8 +186,8 @@ def build_source_branch(values, rlz_combs, imt, loc):
             prob_table = np.vstack((prob_table, np.array(prob)))
 
     toc = time.perf_counter()
-    if VERBOSE:
-        print(f'time to build source branch table: {toc-tic:.1f} seconds')
+    # if VERBOSE:
+    #     print(f'time to build source branch table: {toc-tic:.1f} seconds')
 
     return prob_table
 
@@ -218,8 +228,8 @@ def calculate_agg(branch_probs, agg, weight_combs):
         median = np.append(median, np.array(quantiles))
 
     toc = time.perf_counter()
-    if VERBOSE:
-        print(f'time to calulate single aggrigation: {toc-tic:.4f} seconds')
+    # if VERBOSE:
+    #     print(f'time to calulate single aggrigation: {toc-tic:.4f} seconds')
 
     return median
 
@@ -271,7 +281,7 @@ def read_locs():
 def load_source_branches():
         
     source_branches = [
-                        dict(name='test', ids=['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDE0'], weight=1.0)
+                        dict(name='test', ids=['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDE0','A'], weight=1.0)
                         # dict(name='A', ids=['A_CRU', 'A_HIK', 'A_PUY'], weight=0.25),
                         # dict(name='B', ids=['B_CRU', 'B_HIK', 'B_PUY'], weight=0.75),
                         ]
@@ -295,24 +305,23 @@ if __name__ == "__main__":
     # If that were not the case, I would have to add some interpolation
 
     locs, binned_locs = locations_nzpt2_and_nz34_binned(grid_res=1.0, point_res=0.001)
-        
-
-    vs30 = 750
-    aggs = ['mean',0.1,0.5,0.9]
     
-    source_branches = load_source_branches()
+    vs30 = 750
+    aggs = ['mean',0.05, 0.1,0.2, 0.5, 0.8, 0.9, 0.95]
+    
+    # source_branches = load_source_branches()
+    source_branches = get_branches()
 
     imts = get_imts(source_branches, vs30)
     levels = get_levels(source_branches, locs, vs30) #TODO: get seperate levels for every IMT
 
     columns = ['lat','lon','imt','agg','level','hazard']
     index = range(len(locs)*len(imts)*len(aggs)*len(levels))
-    aggregated_hazard = pd.DataFrame(columns=columns, index=index)
+    hazard_curves = pd.DataFrame(columns=columns, index=index)
 
     print(f'loading {len(locs)} locations . . . ')
-    values = cache_realization_values(source_branches, binned_locs, vs30)
-    breakpoint()
-
+    values = load_realization_values(source_branches, binned_locs, vs30)
+    
     tic = time.perf_counter()
 
     for i in range(len(source_branches)):
@@ -320,20 +329,19 @@ if __name__ == "__main__":
         source_branches[i]['rlz_combs'] = rlz_combs
         source_branches[i]['weight_combs'] = weight_combs
 
-    i = 0    
     for imt in imts:
         print(f'working on {imt}')
         for loc in locs:
             weights, branch_probs = build_branches(source_branches, values, imt, loc, vs30)
+            tic_agg = time.perf_counter()
             for agg in aggs:
                 hazard = calculate_agg(branch_probs, agg, weights)
                 lat,lon = loc.split('~')
                 for j,level in enumerate(levels):
-                    aggregated_hazard.loc[i,'lat':'agg'] = pd.Series({'lat':lat,'lon':lon,'imt':imt,'agg':agg})
-                    aggregated_hazard.loc[i,'level':'hazard'] = pd.Series({'level':level,'hazard':hazard[j]}) 
-                    i += 1
-
-                    
+                    hazard_curves.loc[i,'lat':'agg'] = pd.Series({'lat':lat,'lon':lon,'imt':imt,'agg':str(agg)})
+                    hazard_curves.loc[i,'level':'hazard'] = pd.Series({'level':level,'hazard':hazard[j]}) 
+            toc_agg = time.perf_counter()
+            print(f'time to perform all aggrigations for 1 location: {toc_agg-tic_agg:.4f} seconds')
 
     toc = time.perf_counter()
     print(f'agg time: {toc-tic:.1f} seconds')
@@ -343,5 +351,5 @@ if __name__ == "__main__":
     print(f'total levels: {len(levels)}')    
     print(f'total time: {toc-tic_total:.1f} seconds')
 
-    print(aggregated_hazard)
+    print(hazard_curves)
 
