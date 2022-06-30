@@ -103,7 +103,7 @@ class HazardAggregation(Model):
         """DynamoDB Metadata."""
 
         billing_mode = 'PAY_PER_REQUEST'
-        table_name = f"THS_WIP_OpenquakeRealization-{DEPLOYMENT_STAGE}"
+        table_name = f"THS_OpenquakeRealization-{DEPLOYMENT_STAGE}"
         region = REGION
         if IS_OFFLINE:
             host = "http://localhost:8000"  # pragma: no cover
@@ -143,7 +143,7 @@ class OpenquakeRealization(Model):
         """DynamoDB Metadata."""
 
         billing_mode = 'PAY_PER_REQUEST'
-        table_name = f"THS_WIP_OpenquakeRealization-{DEPLOYMENT_STAGE}"
+        table_name = f"THS_OpenquakeRealization-{DEPLOYMENT_STAGE}"
         region = REGION
         if IS_OFFLINE:
             host = "http://localhost:8000"  # pragma: no cover
