@@ -4,6 +4,8 @@ import itertools
 import time
 import pandas as pd
 
+
+
 from functools import reduce
 from operator import mul
 
@@ -12,8 +14,11 @@ import numpy as np
 from toshi_hazard_store.data_functions import weighted_quantile
 from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v3
 
+from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned
+
 inv_time = 1.0
 VERBOSE = False
+
 
 def get_imts(source_branches, vs30):
     
@@ -25,13 +30,20 @@ def get_imts(source_branches, vs30):
     return imts
 
 
-def cache_realization_values(source_branches, locs, vs30):
+def cache_realization_values(source_branches, binned_locs, vs30):
 
     tic = time.perf_counter()
+    unique_ids = []
+    for branch in source_branches:
+        unique_ids += branch['ids']
+    unique_ids = list(set(unique_ids))
 
     values = {}
-    for branch in source_branches:
-        for res in get_rlz_curves_v3(locs, [vs30], None, branch['ids'], None):
+    ct =  0
+    for lk, locs in binned_locs.items():
+        print(f'loading {lk} with {len(locs)} locations')
+        for res in get_rlz_curves_v3(locs, [vs30], None, unique_ids, None):
+            ct += 1
             key = ':'.join((res.hazard_solution_id, str(res.rlz)))
             if key not in values:
                 values[key] = {}
@@ -39,9 +51,12 @@ def cache_realization_values(source_branches, locs, vs30):
             for val in res.values:
                 values[key][res.nloc_001][val.imt] = np.array(val.vals)
 
+    # check that the correct number of records came back
+    if ct != 
+
     toc = time.perf_counter()
-    
     print(f'time to load realizations: {toc-tic:.1f} seconds')
+    breakpoint()
 
     return values
 
@@ -238,6 +253,7 @@ def build_branches(source_branches, values, imt, loc, vs30):
     return weights, branch_probs
 
 def read_locs():
+    '''DEPRECIATED'''
     
     csv_file_path = '/home/chrisdc/NSHM/DEV/toshi-hazard-store/data/hazard_curve-mean-PGA_35.csv'
     with open(csv_file_path) as csvfile:
@@ -253,12 +269,13 @@ def read_locs():
     return location_codes            
     
 def load_source_branches():
-    
+        
     source_branches = [
-                        dict(name='A', ids=['A_CRU', 'A_HIK', 'A_PUY'], weight=0.25),
-                        dict(name='B', ids=['B_CRU', 'B_HIK', 'B_PUY'], weight=0.75),
+                        dict(name='test', ids=['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDE0'], weight=1.0)
+                        # dict(name='A', ids=['A_CRU', 'A_HIK', 'A_PUY'], weight=0.25),
+                        # dict(name='B', ids=['B_CRU', 'B_HIK', 'B_PUY'], weight=0.75),
                         ]
-
+   
     return source_branches
 
 def get_levels(source_branches, locs, vs30):
@@ -277,25 +294,24 @@ if __name__ == "__main__":
     # TODO: I'm making assumptions that the levels array is the same for every realization, imt, run, etc.
     # If that were not the case, I would have to add some interpolation
 
-    # loc = "-41.300~174.780" #WLG
-    loc = "-43.530~172.630" #CHC
-    locs = read_locs()
+    locs, binned_locs = locations_nzpt2_and_nz34_binned(grid_res=1.0, point_res=0.001)
+        
+
     vs30 = 750
-    # aggs = ['mean',0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]
     aggs = ['mean',0.1,0.5,0.9]
     
-
     source_branches = load_source_branches()
 
     imts = get_imts(source_branches, vs30)
-    levels = get_levels(source_branches, locs, vs30)
+    levels = get_levels(source_branches, locs, vs30) #TODO: get seperate levels for every IMT
 
     columns = ['lat','lon','imt','agg','level','hazard']
     index = range(len(locs)*len(imts)*len(aggs)*len(levels))
     aggregated_hazard = pd.DataFrame(columns=columns, index=index)
 
-    values = cache_realization_values(source_branches, locs, vs30)
-    
+    print(f'loading {len(locs)} locations . . . ')
+    values = cache_realization_values(source_branches, binned_locs, vs30)
+    breakpoint()
 
     tic = time.perf_counter()
 
@@ -321,14 +337,11 @@ if __name__ == "__main__":
 
     toc = time.perf_counter()
     print(f'agg time: {toc-tic:.1f} seconds')
-
-
-    toc_total = time.perf_counter()
     print(f'total imts: {len(imts)}')
     print(f'total locations: {len(locs)}')
     print(f'total aggregations: {len(aggs)}')
     print(f'total levels: {len(levels)}')    
-    print(f'total time: {toc_total-tic_total:.1f} seconds')
+    print(f'total time: {toc-tic_total:.1f} seconds')
 
     print(aggregated_hazard)
 
