@@ -2,6 +2,8 @@ import csv
 import ast
 import itertools
 import time
+import pandas as pd
+
 from functools import reduce
 from operator import mul
 
@@ -11,7 +13,7 @@ from toshi_hazard_store.data_functions import weighted_quantile
 from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v3
 
 inv_time = 1.0
-VERBOSE = False
+VERBOSE = True
 
 
 def get_imts(source_branches, vs30):
@@ -257,6 +259,14 @@ def load_source_branches():
 
     return source_branches
 
+def get_levels(source_branches, locs, vs30):
+
+    id = source_branches[0]['ids'][0]
+    
+    hazard = next(get_rlz_curves_v3([locs[0]], [vs30], None, [id], None))
+
+    return hazard.values[0].lvls
+
 
 if __name__ == "__main__":
 
@@ -268,6 +278,7 @@ if __name__ == "__main__":
     # loc = "-41.300~174.780" #WLG
     loc = "-43.530~172.630" #CHC
     locs = read_locs()
+    locs = locs[0:2]
     vs30 = 750
     aggs = ['mean',0.1,0.5,0.9]
     # agg = [0.5]
@@ -275,24 +286,38 @@ if __name__ == "__main__":
     source_branches = load_source_branches()
 
     imts = get_imts(source_branches, vs30)
+    levels = get_levels(source_branches, locs, vs30)
+
+    columns = ['lat','lon','imt','agg','level','hazard']
+    index = range(len(locs)*len(imts)*len(aggs))
+    aggregated_hazard = pd.DataFrame(columns=columns, index=index)
 
     values = cache_realization_values(source_branches, locs, vs30)
+    
+    # this is a lot of loops! not very pythonic
+    i = 0
+    tic = time.perf_counter()
+    
+    for imt in imts:
+        for loc in locs:
+            weights, branch_probs = build_branches(source_branches, values, imt, loc, vs30)
+            for agg in aggs:
+                hazard = calculate_agg(branch_probs, agg, weights)
+                lat,lon = loc.split('~')
+                for j,level in enumerate(levels):
+                    i += 1
+                    aggregated_hazard.loc[i,'lat':'agg'] = pd.Series({'lat':lat,'lon':lon,'imt':imt,'agg':agg})
+                    aggregated_hazard.loc[i,'level':'hazard'] = pd.Series({'level':level,'hazard':hazard[j]}) #TODO: more effcient to load array at once?
+                    
 
-    median = {}
-    for agg in aggs:
-        for imt in imts:
-            median[imt] = {}
-            for loc in locs:
-                weights, branch_probs = build_branches(source_branches, values, imt, loc, vs30)
-                median[imt][loc] = calculate_agg(branch_probs, agg, weights)  # TODO: could be stored in pandas DataFrame
+    toc = time.perf_counter()
+    print(f'agg time: {toc-tic:.1f} seconds')
+
 
     toc_total = time.perf_counter()
     print(f'total imts: {len(imts)}')
     print(f'total locations: {len(locs)}')
     print(f'total time: {toc_total-tic_total:.1f} seconds')
 
-    for imt, vimt in median.items():
-        for loc, vloc in vimt.items():
-            print('=' * 100)
-            print(f'imt: {imt}, loc: {loc}')
-            print(vloc[:4], '...', vloc[-4:])
+    print(aggregated_hazard)
+
