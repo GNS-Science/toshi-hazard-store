@@ -1,32 +1,39 @@
-from toshi_hazard_store.branch_combinator.SLT_test1 import *
+# rom toshi_hazard_store.branch_combinator.SLT_test1 import *
 import itertools
 import math
 
-
 DTOL = 1.0e-6
 
-def get_branches():
 
-    #TODO: only handles one combined job and one permutation set
-    permute = logic_tree_permutations[0][0]['permute']
+def get_branches():
+    assert 0
+
+
+def get_weighted_branches(grouped_ltbs):
+
+    # TODO: only handles one combined job and one permutation set
+    permute = grouped_ltbs  # tree_permutations[0][0]['permute']
 
     # check that each permute group weights sum to 1.0
-    for group in permute:
+    for key, group in permute.items():
         group_weight = 0
-        for member in group['members']:
-            group_weight += member['weight']
-        if (group_weight < 1.0-DTOL) | (group_weight > 1.0+DTOL):
-            raise Exception(f'group {group["group"]} weight does not sum to 1.0')
-    
+        for member in group:
+            group_weight += member.weight
+        if (group_weight < 1.0 - DTOL) | (group_weight > 1.0 + DTOL):
+            print(len(group), 'items', group_weight)
+            print(group)
+            raise Exception(f'group {key} weight does not sum to 1.0')
 
     # do the thing
     id_groups = []
-    for group in permute:
+    for key, group in permute.items():
         id_group = []
-        for member in group['members']:
-            id_group.append( {'id':member['hazard_id'], 'weight':member['weight']} )
+        for member in group:
+            id_group.append({'id': member.hazard_solution_id, 'weight': member.weight})
         id_groups.append(id_group)
-    
+
+    print(id_groups)
+
     branches = itertools.product(*id_groups)
     source_branches = []
     for i, branch in enumerate(branches):
@@ -38,15 +45,12 @@ def get_branches():
         source_branches.append(branch_dict)
 
     # double check that the weights are done correctly
-    
+
     weight = 0
     for branch in source_branches:
         weight += branch['weight']
-    if not ((weight > 1.0-DTOL) & (weight < 1.0+DTOL)):
+    if not ((weight > 1.0 - DTOL) & (weight < 1.0 + DTOL)):
         print(weight)
         raise Exception('weights do not sum to 1')
 
     return source_branches
-    
-
-

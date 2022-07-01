@@ -20,8 +20,12 @@ def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False
     sample_weight = np.array(sample_weight)
     sample_weight = sample_weight / sum(sample_weight)
 
-    if quantiles == 'mean':
-        return np.sum(sample_weight * values)
+    get_mean = False
+    if 'mean' in quantiles:
+        get_mean = True
+        mean_ind = quantiles.index('mean')
+        quantiles = quantiles[0:mean_ind] + quantiles[mean_ind + 1 :]
+        mean = np.sum(sample_weight * values)
 
     quantiles = np.array(quantiles)
 
@@ -39,4 +43,9 @@ def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False
         weighted_quantiles /= weighted_quantiles[-1]
     else:
         weighted_quantiles /= np.sum(sample_weight)
-    return np.interp(quantiles, weighted_quantiles, values)
+
+    wq = np.interp(quantiles, weighted_quantiles, values)
+    if get_mean:
+        wq = np.append(np.append(wq[0:mean_ind], np.array([mean])), wq[mean_ind:])
+
+    return wq
