@@ -297,11 +297,13 @@ def get_levels(source_branches, locs, vs30):
     return hazard.values[0].lvls
 
 
-def process_location_list(locs, toshi_ids, source_branches, aggs, vs30):
+# process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, vs30)
+def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, vs30):
     print(f'get values for {len(locs)} locations and {len(toshi_ids)} hazard_solutions')
     values = load_realization_values(toshi_ids, locs, [vs30])
 
     tic = time.perf_counter()
+    columns = ['lat', 'lon', 'imt', 'agg', 'level', 'hazard']
     index = range(len(locs) * len(imts) * len(aggs) * len(levels))
     binned_hazard_curves = pd.DataFrame(columns=columns, index=index)
     cnt = 0
@@ -321,7 +323,7 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, vs30):
                     binned_hazard_curves.loc[cnt, 'level':'hazard'] = pd.Series(
                         {'level': level, 'hazard': hazard[j, aggind]}
                     )
-                cnt += 1
+                    cnt += 1
 
             toc_agg = time.perf_counter()
             print(f'time to perform all aggregations for 1 location {loc}: {toc_agg-tic_agg:.4f} seconds')
