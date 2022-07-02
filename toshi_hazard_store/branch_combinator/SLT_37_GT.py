@@ -1,3 +1,6 @@
+import json
+from collections import namedtuple
+
 data = {
     "data": {
         "node1": {
@@ -843,8 +846,6 @@ data = {
     }
 }
 
-import json
-from collections import namedtuple
 
 # from SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
 
@@ -863,33 +864,6 @@ def weight_and_ids(data):
         tag = get_tag(obj['node']['child']['arguments'])
         hazard_solution_id = obj['node']['child']['hazard_solution']['id']
         yield Member(**tag[0]['members'][0], group=None, hazard_solution_id=hazard_solution_id)
-
-
-# def all_members_dict(ltbs):
-#     """LTBS from ther toshi GT - NB some may be failed jobs..."""
-#     res = {}
-#     def members():
-#         for grp in ltbs[0][0]['permute']:
-#           #print(grp['group'])
-#           for m in grp['members']:
-#             yield Member(**m, group=grp['group'], hazard_solution_id=None)
-
-#     for m in members():
-#         res[m.tag] = m
-#     return res
-
-
-# def merge_ltbs(logic_tree_permutations, omit):
-#     members = all_members_dict(logic_tree_permutations)
-#     #weights are the actual Hazard weight @ 1.0
-#     for toshi_ltb in weight_and_ids(data):
-#         if toshi_ltb.hazard_solution_id in omit:
-#             print(f'skipping {toshi_ltb}')
-#             continue
-#         d = toshi_ltb._asdict()
-#         d['weight'] = members[toshi_ltb.tag].weight
-#         d['group'] = members[toshi_ltb.tag].group
-#         yield Member(**d)
 
 
 def all_members_dict(ltbs):
@@ -923,7 +897,7 @@ def merge_ltbs(logic_tree_permutations, gtdata, omit):
 def grouped_ltbs(merged_ltbs):
     grouped = {}
     for ltb in merged_ltbs:
-        if not ltb.group in grouped:
+        if ltb.group not in grouped:
             grouped[ltb.group] = []
         grouped[ltb.group].append(ltb)
     return grouped

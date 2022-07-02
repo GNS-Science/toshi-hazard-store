@@ -1,16 +1,15 @@
 import multiprocessing
-import time
 from collections import namedtuple
 from pathlib import Path
 
-from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_imts, get_levels, process_location_list
+from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_levels, process_location_list
 from toshi_hazard_store.branch_combinator.branch_combinator import get_weighted_branches
 from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
 from toshi_hazard_store.branch_combinator.SLT_37_GT import grouped_ltbs, merge_ltbs
 from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_DATA import data as gtdata
 
 # from toshi_hazard_store.data_functions import weighted_quantile
-from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned, locations_nzpt2_and_nz34_chunked
+from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked
 
 
 class HardWorker(multiprocessing.Process):
@@ -27,7 +26,6 @@ class HardWorker(multiprocessing.Process):
     def run(self):
         print(f"worker {self.name} running.")
         proc_name = self.name
-        models = []
 
         while True:
             nt = self.task_queue.get()
@@ -69,10 +67,6 @@ def process(num_workers=12):
     # imts = get_imts(source_branches, vs30)
     binned_locs = locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001)
     levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
-
-    columns = ['lat', 'lon', 'imt', 'agg', 'level', 'hazard']
-    # index = range(len(locs)*len(imts)*len(aggs)*len(levels))
-    # hazard_curves = pd.DataFrame(columns=columns)
 
     for i in range(len(source_branches)):
         rlz_combs, weight_combs = build_rlz_table(source_branches[i], vs30)
