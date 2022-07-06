@@ -12,11 +12,11 @@ from toshi_hazard_store.branch_combinator.branch_combinator import get_branches,
 from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
 from toshi_hazard_store.branch_combinator.SLT_37_GT import grouped_ltbs, merge_ltbs
 from toshi_hazard_store.data_functions import weighted_quantile
-from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned
+from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned, locations_nzpt2_and_nz34_chunked
 from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v3
 
 inv_time = 1.0
-VERBOSE = True
+VERBOSE = False
 
 
 def get_imts(source_branches, vs30):
@@ -30,6 +30,8 @@ def get_imts(source_branches, vs30):
 
 
 def load_realization_values(toshi_ids, locs, vs30s):
+
+    print(f'getting values for {len(locs)} locations and {len(toshi_ids)} hazard_solutions')
 
     tic = time.perf_counter()
     # unique_ids = []
@@ -61,13 +63,12 @@ def load_realization_values(toshi_ids, locs, vs30s):
         print(f'!!!!!!!!! missing {toshi_ids - ids_ret}')
 
     toc = time.perf_counter()
-    print(f'time to load realizations: {toc-tic:.1f} seconds')
+    print(f'time to load data: {toc-tic:.1f} seconds')
 
     return values
 
 
 def build_rlz_table(branch, vs30):
-
     tic = time.perf_counter()
 
     ids = branch['ids']
@@ -86,6 +87,7 @@ def build_rlz_table(branch, vs30):
         for trt in rlz_sets.keys():
             if trt in rlz_lt:
                 gsims = list(set(rlz_lt[trt].values()))
+                breakpoint()
                 gsims.sort()
                 for gsim in gsims:
                     rlz_sets[trt][gsim] = []
@@ -297,8 +299,8 @@ def get_levels(source_branches, locs, vs30):
     return hazard.values[0].lvls
 
 
-def process_location_list(locs, toshi_ids, source_branches, aggs, vs30):
-    print(f'get values for {len(locs)} locations and {len(toshi_ids)} hazard_solutions')
+def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, vs30):
+    
     values = load_realization_values(toshi_ids, locs, [vs30])
 
     tic = time.perf_counter()
@@ -314,18 +316,32 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, vs30):
             for aggind, agg in enumerate(aggs):
                 lat, lon = loc.split('~')
                 for j, level in enumerate(levels):
-                    # breakpoint()
                     binned_hazard_curves.loc[cnt, 'lat':'agg'] = pd.Series(
                         {'lat': lat, 'lon': lon, 'imt': imt, 'agg': str(agg)}
                     )
                     binned_hazard_curves.loc[cnt, 'level':'hazard'] = pd.Series(
                         {'level': level, 'hazard': hazard[j, aggind]}
                     )
-                cnt += 1
+                    cnt += 1
 
             toc_agg = time.perf_counter()
-            print(f'time to perform all aggregations for 1 location {loc}: {toc_agg-tic_agg:.4f} seconds')
+            # print(f'time to perform all aggregations for 1 location {loc}: {toc_agg-tic_agg:.4f} seconds')
     return binned_hazard_curves
+
+def select_branches(source_branches, source_whitelist):
+
+    filtered_source_branches = []
+    for branch in source_branches:
+        if not (False in [keepid in branch['ids'] for keepid in source_whitelist]):
+            filtered_source_branches.append(branch)
+
+    total_weight = 0
+    for branch in filtered_source_branches:
+        total_weight += branch['weight']
+    for branch in filtered_source_branches:
+        branch['weight'] /= total_weight
+
+    return filtered_source_branches
 
 
 if __name__ == "__main__":
@@ -336,9 +352,9 @@ if __name__ == "__main__":
     # If that were not the case, I would have to add some interpolation
 
     binned_locs = locations_nzpt2_and_nz34_binned(grid_res=1.0, point_res=0.001)
-
+    
     vs30 = 750
-    aggs = ['mean', 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95]
+    # aggs = ['mean', 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95]
 
     # source_branches = load_source_branches()
     omit = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDEy']  # this is the failed/clonded job
@@ -346,25 +362,47 @@ if __name__ == "__main__":
 
     grouped_ltbs = grouped_ltbs(merge_ltbs(logic_tree_permutations, omit))
     source_branches = get_weighted_branches(grouped_ltbs)
-
+    
+    
+    output_prefix = 'SBsource_400'
+    # source_whitelist = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDQ5','T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDMx','T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDM2']
+    # source_branches = select_branches(source_branches, source_whitelist)
+    # source_branches = [
+    #     {'name': '0', 
+    #     'ids': ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MTM5', 'T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MTI4', 'T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MTI1'],
+    #     'weight': 1.0}
+    #     ]
+    # toshi_ids = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MTM5', 'T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MTI4', 'T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MTI1']
+    
     # print(source_branches)
 
-    imts = get_imts(source_branches, vs30)
+    # imts = get_imts(source_branches, vs30)
+    aggs = ['mean', .025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975]
+    imts = ['PGA', 'SA(0.5)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)']
     levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
 
     columns = ['lat', 'lon', 'imt', 'agg', 'level', 'hazard']
     # index = range(len(locs)*len(imts)*len(aggs)*len(levels))
     hazard_curves = pd.DataFrame(columns=columns)
 
+    print('building realization tables . . .')
+    tic = time.perf_counter()
     for i in range(len(source_branches)):
         rlz_combs, weight_combs = build_rlz_table(source_branches[i], vs30)
         source_branches[i]['rlz_combs'] = rlz_combs
         source_branches[i]['weight_combs'] = weight_combs
+    toc = time.perf_counter()
+    print(f'time to build realization table: {toc-tic:.1f} seconds')
 
-    for key, locs in locations_nzpt2_and_nz34_binned(grid_res=1.0, point_res=0.001).items():
-        binned_hazard_curves = process_location_list(locs[:1], toshi_ids, source_branches, aggs, vs30)
-        binned_hazard_curves.to_json(f"./df_{key}_aggregates.json")
-        hazard_curves = pd.concat([hazard_curves, binned_hazard_curves])
+    for key, locs in locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001):
+        tic = time.perf_counter()
+        binned_hazard_curves = process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, vs30)
+        binned_hazard_curves.to_json(f"./{output_prefix}_{key}_aggregates.json")
+        hazard_curves = pd.concat([hazard_curves, binned_hazard_curves],ignore_index=True)
+        i += 1
+        toc = time.perf_counter()
+        print(f'time to process {len(locs)} locations: {toc-tic:.1f} seconds')
+    
 
     toc = time.perf_counter()
     print(f'agg time: {toc-tic:.1f} seconds')
@@ -374,4 +412,5 @@ if __name__ == "__main__":
     print(f'total levels: {len(levels)}')
     print(f'total time: {toc-tic_total:.1f} seconds')
 
-    print(hazard_curves)
+    hazard_curves.to_json(f'./{output_prefix}_all_aggregates.json')
+
