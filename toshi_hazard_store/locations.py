@@ -28,7 +28,7 @@ def locations_by_chunk(grid_points: List[Tuple[float, float]], point_res: float)
     #     print(n, chunk)
     #     chunked[n] = [CodedLocation(*pt).downsample(point_res).code for pt in chunk]
 
-    for ni in range(int(len(grid_points) / 25) + 1):
+    for ni in range(int( (len(grid_points)-1) / 25) + 1):
         pts = grid_points[ni * 25 : ni * 25 + 25]
         coded_pts = []
         if pts:
