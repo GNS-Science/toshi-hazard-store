@@ -16,7 +16,7 @@ from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned
 from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v3
 
 inv_time = 1.0
-VERBOSE = True
+VERBOSE = False
 
 
 def get_imts(source_branches, vs30):
@@ -326,9 +326,22 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
                     cnt += 1
 
             toc_agg = time.perf_counter()
-            print(f'time to perform all aggregations for 1 location {loc}: {toc_agg-tic_agg:.4f} seconds')
+            if VERBOSE:
+                print(f'time to perform all aggregations for 1 location {loc}: {toc_agg-tic_agg:.4f} seconds')
     return binned_hazard_curves
 
+def concat_df_files(df_file_names, file_name):
+    columns = ['lat', 'lon', 'imt', 'agg', 'level', 'hazard']
+    
+    hazard_curves = pd.DataFrame(columns=columns)
+
+    dtype = {'lat':str,'lon':str}
+
+    for df_file_name in df_file_names:
+        binned_hazard_curves = pd.read_json(df_file_name,dtype=dtype)
+        hazard_curves = pd.concat([hazard_curves, binned_hazard_curves],ignore_index=True)
+    
+    hazard_curves.to_json(file_name)
 
 if __name__ == "__main__":
 

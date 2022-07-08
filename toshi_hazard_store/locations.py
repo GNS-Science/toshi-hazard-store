@@ -51,10 +51,10 @@ def locations_nzpt2_and_nz34_binned(grid_res=1.0, point_res=0.001):
 def locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001):
 
     # wlg_grid_0_01 = load_grid("WLG_0_01_nb_1_1")
-    # nz_0_2 = load_grid("NZ_0_2_NB_1_1")
+    nz_0_2 = load_grid("NZ_0_2_NB_1_1")
     nz34 = [(o['latitude'], o['longitude']) for o in LOCATIONS_BY_ID.values()]
-    # grid_points = nz34 + nz_0_2
-    return locations_by_chunk(nz34, point_res)
+    grid_points = nz34 + nz_0_2
+    return locations_by_chunk(grid_points, point_res)
 
 
 if __name__ == "__main__":
