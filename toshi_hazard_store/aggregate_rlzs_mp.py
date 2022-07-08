@@ -7,7 +7,8 @@ from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_levels, proce
 from toshi_hazard_store.branch_combinator.branch_combinator import get_weighted_branches
 from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
 from toshi_hazard_store.branch_combinator.SLT_37_GT import grouped_ltbs, merge_ltbs
-from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_gsim_DATA import data as gtdata
+# from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_gsim_DATA import data as gtdata
+from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_DATA import data as gtdata
 
 # from toshi_hazard_store.data_functions import weighted_quantile
 from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked
@@ -74,15 +75,7 @@ def process(num_workers=12):
 
     
     # imts = get_imts(source_branches, vs30)
-    binned_locs_all = locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001)
-    binned_locs = {}
-    i = 0
-    for k,v in binned_locs_all.items():
-        i += 1
-        if i>10:
-            break
-        binned_locs[k] = v
-
+    binned_locs = locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001)
     levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
 
     for i in range(len(source_branches)):
@@ -132,7 +125,9 @@ def process(num_workers=12):
     print(f'time to run aggregations: {toc-tic:.0f} seconds')
 
     file_name = '_'.join( (output_prefix,'all_aggregates.json') )
-    concat_df_files(df_file_names,file_name)
+    hazard_curves = concat_df_files(df_file_names)
+
+    hazard_curves.to_json(file_name)
 
     # hazard_curves = pd.concat([hazard_curves, binned_hazard_curves])
     # print(hazard_curves)
