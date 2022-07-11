@@ -339,10 +339,10 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
             for aggind, agg in enumerate(aggs):
 
                 stop_agg = start_agg + nlevels
-                binned_hazard_curves.loc[start_agg:stop_agg, 'agg'] = agg
+                binned_hazard_curves.loc[start_agg:stop_agg, 'agg'] = str(agg)
                 start_agg = stop_agg
 
-                tic = time.perf_counter()
+                # tic = time.perf_counter()
                 for j, level in enumerate(levels):
 
                     # binned_hazard_curves.loc[cnt, 'lat':'agg'] = pd.Series(
@@ -352,8 +352,8 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
                         {'level': level, 'hazard': hazard[j, aggind]}
                     )
                     cnt += 1
-                toc = time.perf_counter()
-                print(f'time to store in df {toc-tic} seconds')
+                # toc = time.perf_counter()
+                # print(f'time to store in df {toc-tic} seconds')
 
             toc_agg = time.perf_counter()
             if VERBOSE:
