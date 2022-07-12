@@ -3,12 +3,14 @@ import time
 from collections import namedtuple
 from pathlib import Path
 
-from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_levels, process_location_list, concat_df_files
+from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_levels, process_location_list, concat_df_files, get_imts
 from toshi_hazard_store.branch_combinator.branch_combinator import get_weighted_branches
-from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
-from toshi_hazard_store.branch_combinator.SLT_37_GT import grouped_ltbs, merge_ltbs
+# from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
+from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs, merge_ltbs
 # from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_gsim_DATA import data as gtdata
-from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_DATA import data as gtdata
+# from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_DATA import data as gtdata
+from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import logic_tree_permutations
+from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import data as gtdata
 
 # from toshi_hazard_store.data_functions import weighted_quantile
 from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked
@@ -59,10 +61,10 @@ TaskArgs = namedtuple("TaskArgs", "grid_loc locs toshi_ids source_branches aggs 
 
 def process(num_workers=12):
     vs30 = 400
-    aggs = ['mean', 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975]
+    aggs = ['mean', 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975, 0.99]
     # imts = ['PGA', 'SA(0.5)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)']
-    imts = ['PGA']
-    output_prefix = 'test'
+    # imts = ['PGA']
+    output_prefix = 'NB_test_fg_allimts'
 
     # source_branches = load_source_branches()
     # omit = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDEy']  # this is the failed/clonded job in first GT_37
@@ -74,10 +76,10 @@ def process(num_workers=12):
     source_branches = get_weighted_branches(grouped)
 
     
-    # imts = get_imts(source_branches, vs30)
+    imts = get_imts(source_branches, vs30)
     binned_locs = locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001)
     levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
-
+    
     for i in range(len(source_branches)):
         rlz_combs, weight_combs = build_rlz_table(source_branches[i], vs30)
         source_branches[i]['rlz_combs'] = rlz_combs
@@ -134,4 +136,4 @@ def process(num_workers=12):
 
 
 if __name__ == "__main__":
-    process(10)
+    process(20)

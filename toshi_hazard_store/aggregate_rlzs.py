@@ -10,7 +10,7 @@ import pandas as pd
 
 from toshi_hazard_store.branch_combinator.branch_combinator import get_branches, get_weighted_branches
 from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
-from toshi_hazard_store.branch_combinator.SLT_37_GT import grouped_ltbs, merge_ltbs
+from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs, merge_ltbs
 from toshi_hazard_store.data_functions import weighted_quantile
 from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned
 from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v3
