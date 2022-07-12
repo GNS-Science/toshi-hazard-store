@@ -20,7 +20,7 @@ def locations_by_degree(
     return binned
 
 
-def locations_by_chunk(grid_points: List[Tuple[float, float]], point_res: float) -> Dict[str, List[str]]:
+def locations_by_chunk(grid_points: List[Tuple[float, float]], point_res: float, chunk_size: int) -> Dict[str, List[str]]:
     chunked = dict()
     # chunk_size=25
     # for n in range(int(len(grid_points)/chunk_size) +2):
@@ -28,8 +28,8 @@ def locations_by_chunk(grid_points: List[Tuple[float, float]], point_res: float)
     #     print(n, chunk)
     #     chunked[n] = [CodedLocation(*pt).downsample(point_res).code for pt in chunk]
 
-    for ni in range(int( (len(grid_points)-1) / 25) + 1):
-        pts = grid_points[ni * 25 : ni * 25 + 25]
+    for ni in range(int( (len(grid_points)-1) / chunk_size) + 1):
+        pts = grid_points[ni * chunk_size : ni * chunk_size + chunk_size]
         coded_pts = []
         if pts:
             for pt in pts:
@@ -50,11 +50,12 @@ def locations_nzpt2_and_nz34_binned(grid_res=1.0, point_res=0.001):
 
 def locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001):
 
+    chunk_size = 25
     # wlg_grid_0_01 = load_grid("WLG_0_01_nb_1_1")
     nz_0_2 = load_grid("NZ_0_2_NB_1_1")
     nz34 = [(o['latitude'], o['longitude']) for o in LOCATIONS_BY_ID.values()]
     grid_points = nz34 + nz_0_2
-    return locations_by_chunk(grid_points, point_res)
+    return locations_by_chunk(grid_points, point_res, chunk_size)
 
 
 if __name__ == "__main__":
