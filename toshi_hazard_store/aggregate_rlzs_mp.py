@@ -1,9 +1,11 @@
+from dis import dis
+import json
 import multiprocessing
 import time
 from collections import namedtuple
 from pathlib import Path
 
-from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_levels, process_location_list, concat_df_files, get_imts
+from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_levels, process_location_list, concat_df_files, get_imts, process_disagg_location_list
 from toshi_hazard_store.branch_combinator.branch_combinator import get_weighted_branches
 # from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
 from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs, merge_ltbs
@@ -13,7 +15,7 @@ from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import logi
 from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import data as gtdata
 
 # from toshi_hazard_store.data_functions import weighted_quantile
-from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked
+from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked, locations_nz34_chunked, locations_nz2_chunked
 
 
 class HardWorker(multiprocessing.Process):
@@ -55,19 +57,11 @@ class HardWorker(multiprocessing.Process):
 TaskArgs = namedtuple("TaskArgs", "grid_loc locs toshi_ids source_branches aggs imts levels vs30")
 
 
-
-
-
-
-def process(num_workers=12):
-    vs30 = 400
-    aggs = ['mean', 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975, 0.99]
-    # imts = ['PGA', 'SA(0.5)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)']
-    # imts = ['PGA']
-    output_prefix = 'NB_test_fg_allimts'
-
+def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num_workers=12):    
+    
     # source_branches = load_source_branches()
     # omit = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDEy']  # this is the failed/clonded job in first GT_37
+
     omit = []
     toshi_ids = [b.hazard_solution_id for b in merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit)]
 
@@ -75,16 +69,16 @@ def process(num_workers=12):
     grouped = grouped_ltbs(merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit))
     source_branches = get_weighted_branches(grouped)
 
-    
-    imts = get_imts(source_branches, vs30)
-    binned_locs = locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001)
+    if not imts:
+        imts = get_imts(source_branches, vs30)
+
+    binned_locs = location_generator()
     levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
     
     for i in range(len(source_branches)):
         rlz_combs, weight_combs = build_rlz_table(source_branches[i], vs30)
         source_branches[i]['rlz_combs'] = rlz_combs
         source_branches[i]['weight_combs'] = weight_combs
-
 
     ###########
     #
@@ -102,7 +96,7 @@ def process(num_workers=12):
     tic = time.perf_counter()
     # Enqueue jobs
     num_jobs = 0
-    for key, locs in locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001).items():
+    for key, locs in location_generator().items():
         t = TaskArgs(key, locs, toshi_ids, source_branches, aggs, imts, levels, vs30)
         task_queue.put(t)
         num_jobs += 1
@@ -131,9 +125,70 @@ def process(num_workers=12):
 
     hazard_curves.to_json(file_name)
 
+    return hazard_curves, source_branches
+
     # hazard_curves = pd.concat([hazard_curves, binned_hazard_curves])
     # print(hazard_curves)
 
 
+def process_disaggs(hazard_curves, source_branches, poes, inv_time, vs30, location_generator, aggs, imts, num_workers=12):
+
+    # write serial code for now, parallelize once it works 
+    omit = []
+    toshi_ids = [b.hazard_solution_id for b in merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit)]
+
+    disagg_configs = []
+    for key, locs in location_generator().items():
+        disagg_configs += process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes, inv_time, vs30, locs, aggs, imts)
+
+    return disagg_configs
+
+
 if __name__ == "__main__":
-    process(20)
+
+    nproc = 20
+
+    classical = False
+
+    output_prefix = 'NB_test_fg_allimts'
+    vs30 = 400
+    aggs = ['mean', 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975, 0.99]
+    imts = ['PGA', 'SA(0.5)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)']
+    location_generator = locations_nzpt2_and_nz34_chunked
+    
+    
+    if classical:
+        hazard_curves, source_branches = process_agg(vs30, location_generator, aggs, imts, output_prefix=output_prefix, num_workers=nproc)
+
+    # if running classical and dissag you must make sure that the requested locations, imts, vs30, aggs for dissags are in what was requested for the classical calculation
+    dissags = True
+    poes = [0.1]
+    aggs = ['mean']
+    inv_time = 50
+    imts = ['PGA']
+    location_generator = locations_nz34_chunked
+    # location_generator = locations_nz2_chunked
+
+    if dissags and classical:
+        dissag_configs = process_disaggs(hazard_curves, source_branches, vs30, location_generator, aggs, imts, num_workers=nproc)
+    elif dissags:
+        hazard_curves, source_branches = process_agg(vs30, location_generator, aggs, imts, output_prefix='for_disaggs', num_workers=nproc)
+        disagg_configs = process_disaggs(hazard_curves, source_branches, poes, inv_time, vs30, location_generator, aggs, imts, num_workers=nproc)
+
+    # add location code for sites that have them
+    from nzshm_common.location.location import LOCATIONS_BY_ID
+    from nzshm_common.location.code_location import CodedLocation
+    for disagg_config in disagg_configs:
+        for loc in LOCATIONS_BY_ID.values():
+            location = CodedLocation(loc['latitude'],loc['longitude']).downsample(.001).code
+            if location == disagg_config['location']:
+                disagg_config['site_code'] = loc['id']
+                disagg_config['site_name'] = loc['name']
+
+
+    with open('dissag_configs.json','w') as json_file:
+        json.dump(disagg_configs,json_file)
+
+
+
+
