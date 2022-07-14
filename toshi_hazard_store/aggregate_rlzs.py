@@ -5,7 +5,7 @@ import itertools
 import time
 import math
 from functools import reduce
-from operator import mul
+from operator import inv, mul
 
 import numpy as np
 import pandas as pd
@@ -436,6 +436,7 @@ def process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes
                     disagg_rlzs.append( dict( 
                                             vs30 = vs30,
                                             source_ids=source_ids,
+                                            inv_time=inv_time,
                                             imt=imt,
                                             agg=agg,
                                             poe=poe,

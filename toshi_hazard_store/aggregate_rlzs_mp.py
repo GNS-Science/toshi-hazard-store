@@ -1,9 +1,11 @@
 from dis import dis
 import json
 import multiprocessing
+from operator import inv
 import time
 from collections import namedtuple
 from pathlib import Path
+
 
 from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_levels, process_location_list, concat_df_files, get_imts, process_disagg_location_list
 from toshi_hazard_store.branch_combinator.branch_combinator import get_weighted_branches
@@ -17,8 +19,40 @@ from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import data
 # from toshi_hazard_store.data_functions import weighted_quantile
 from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked, locations_nz34_chunked, locations_nz2_chunked
 
+class DisaggHardWorker(multiprocessing.Process):
+    """A worker that batches and saves records to DynamoDB.
 
-class HardWorker(multiprocessing.Process):
+    based on https://pymotw.com/2/multiprocessing/communication.html example 2.
+    """
+
+    def __init__(self, task_queue, result_queue):
+        multiprocessing.Process.__init__(self)
+        self.task_queue = task_queue
+        self.result_queue = result_queue
+
+    def run(self):
+        print(f"worker {self.name} running.")
+        proc_name = self.name
+
+        while True:
+            nt = self.task_queue.get()
+            if nt is None:
+                # Poison pill means shutdown
+                self.task_queue.task_done()
+                print('%s: Exiting' % proc_name)
+                break
+
+            # tic = time.perf_counter()
+            disagg_configs = process_disagg_location_list(
+                nt.hazard_curves, nt.source_branches, nt.toshi_ids, nt.poes, nt.inv_time, nt.vs30, nt.locs, nt.aggs, nt.imts
+            )
+            self.task_queue.task_done()
+            self.result_queue.put(disagg_configs)
+
+        return
+
+
+class AggHardWorker(multiprocessing.Process):
     """A worker that batches and saves records to DynamoDB.
 
     based on https://pymotw.com/2/multiprocessing/communication.html example 2.
@@ -54,7 +88,8 @@ class HardWorker(multiprocessing.Process):
         return
 
 
-TaskArgs = namedtuple("TaskArgs", "grid_loc locs toshi_ids source_branches aggs imts levels vs30")
+AggTaskArgs = namedtuple("AggTaskArgs", "grid_loc locs toshi_ids source_branches aggs imts levels vs30")
+DisaggTaskArgs = namedtuple("DisaggTaskArgs", "grid_loc hazard_curves source_branches toshi_ids poes inv_time vs30 locs aggs imts")
 
 
 def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num_workers=12):    
@@ -89,7 +124,7 @@ def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num
     result_queue: multiprocessing.Queue = multiprocessing.Queue()
 
     print('Creating %d workers' % num_workers)
-    workers = [HardWorker(task_queue, result_queue) for i in range(num_workers)]
+    workers = [AggHardWorker(task_queue, result_queue) for i in range(num_workers)]
     for w in workers:
         w.start()
 
@@ -97,7 +132,7 @@ def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num
     # Enqueue jobs
     num_jobs = 0
     for key, locs in location_generator().items():
-        t = TaskArgs(key, locs, toshi_ids, source_branches, aggs, imts, levels, vs30)
+        t = AggTaskArgs(key, locs, toshi_ids, source_branches, aggs, imts, levels, vs30)
         task_queue.put(t)
         num_jobs += 1
 
@@ -137,11 +172,52 @@ def process_disaggs(hazard_curves, source_branches, poes, inv_time, vs30, locati
     omit = []
     toshi_ids = [b.hazard_solution_id for b in merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit)]
 
-    disagg_configs = []
+    task_queue: multiprocessing.JoinableQueue = multiprocessing.JoinableQueue()
+    result_queue: multiprocessing.Queue = multiprocessing.Queue()
+
+    print('Starting Disaggregations')
+    print('Creating %d workers' % num_workers)
+    workers = [DisaggHardWorker(task_queue, result_queue) for i in range(num_workers)]
+    for w in workers:
+        w.start()
+
+    tic = time.perf_counter()
+    # Enqueue jobs
+    num_jobs = 0
     for key, locs in location_generator().items():
-        disagg_configs += process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes, inv_time, vs30, locs, aggs, imts)
+        t = DisaggTaskArgs(key, hazard_curves, source_branches, toshi_ids, poes, inv_time, vs30, locs, aggs, imts)
+        task_queue.put(t)
+        num_jobs += 1
+
+    # Add a poison pill for each to signal we've done everything
+    for i in range(num_workers):
+        task_queue.put(None)
+
+    # Wait for all of the tasks to finish
+    task_queue.join()
+
+    # Start printing results
+    print('Results:')
+    disagg_configs = []
+    while num_jobs:
+        result = result_queue.get()
+        disagg_configs += result
+        print(str(result))
+        num_jobs -= 1
+    
+    toc = time.perf_counter()
+    print(f'time to run disaggregations: {toc-tic:.0f} seconds')
 
     return disagg_configs
+
+
+    #========================================#
+
+    # disagg_configs = []
+    # for key, locs in location_generator().items():
+    #     disagg_configs += process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes, inv_time, vs30, locs, aggs, imts)
+
+    # return disagg_configs
 
 
 if __name__ == "__main__":
@@ -160,18 +236,18 @@ if __name__ == "__main__":
     if classical:
         hazard_curves, source_branches = process_agg(vs30, location_generator, aggs, imts, output_prefix=output_prefix, num_workers=nproc)
 
-    # if running classical and dissag you must make sure that the requested locations, imts, vs30, aggs for dissags are in what was requested for the classical calculation
-    dissags = True
-    poes = [0.1]
+    # if running classical and disagg you must make sure that the requested locations, imts, vs30, aggs for disaggs are in what was requested for the classical calculation
+    disaggs = True
+    poes = [0.02]
     aggs = ['mean']
     inv_time = 50
-    imts = ['PGA']
+    imts = ['PGA','SA(0.5)','SA(1.5)']
     location_generator = locations_nz34_chunked
     # location_generator = locations_nz2_chunked
 
-    if dissags and classical:
-        dissag_configs = process_disaggs(hazard_curves, source_branches, vs30, location_generator, aggs, imts, num_workers=nproc)
-    elif dissags:
+    if disaggs and classical:
+        disagg_configs = process_disaggs(hazard_curves, source_branches, vs30, location_generator, aggs, imts, num_workers=nproc)
+    elif disaggs:
         hazard_curves, source_branches = process_agg(vs30, location_generator, aggs, imts, output_prefix='for_disaggs', num_workers=nproc)
         disagg_configs = process_disaggs(hazard_curves, source_branches, poes, inv_time, vs30, location_generator, aggs, imts, num_workers=nproc)
 
@@ -186,7 +262,7 @@ if __name__ == "__main__":
                 disagg_config['site_name'] = loc['name']
 
 
-    with open('dissag_configs.json','w') as json_file:
+    with open('disagg_configs.json','w') as json_file:
         json.dump(disagg_configs,json_file)
 
 
