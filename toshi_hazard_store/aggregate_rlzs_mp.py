@@ -11,10 +11,10 @@ from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_levels, proce
 from toshi_hazard_store.branch_combinator.branch_combinator import get_weighted_branches
 # from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
 from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs, merge_ltbs
-# from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_gsim_DATA import data as gtdata
-# from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_DATA import data as gtdata
-from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import logic_tree_permutations
-from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import data as gtdata
+# from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import logic_tree_permutations
+# from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import data as gtdata
+from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import logic_tree_permutations
+from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import data as gtdata
 
 # from toshi_hazard_store.data_functions import weighted_quantile
 from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked, locations_nz34_chunked, locations_nz2_chunked
@@ -100,7 +100,6 @@ def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num
     omit = []
     toshi_ids = [b.hazard_solution_id for b in merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit)]
 
-
     grouped = grouped_ltbs(merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit))
     source_branches = get_weighted_branches(grouped)
 
@@ -185,6 +184,7 @@ def process_disaggs(hazard_curves, source_branches, poes, inv_time, vs30, locati
     # Enqueue jobs
     num_jobs = 0
     for key, locs in location_generator().items():
+        print(locs)
         t = DisaggTaskArgs(key, hazard_curves, source_branches, toshi_ids, poes, inv_time, vs30, locs, aggs, imts)
         task_queue.put(t)
         num_jobs += 1
@@ -224,46 +224,51 @@ if __name__ == "__main__":
 
     nproc = 20
 
-    classical = False
+    classical = True
 
-    output_prefix = 'NB_test_fg_allimts'
+    output_prefix = 'TD_sensivitiy'
     vs30 = 400
-    aggs = ['mean', 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975, 0.99]
-    imts = ['PGA', 'SA(0.5)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)']
-    location_generator = locations_nzpt2_and_nz34_chunked
+    aggs = ['mean', 0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975, 0.99, 0.995]
+    # imts = ['PGA', 'SA(0.5)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)']
+    imts = ['PGA', 'SA(0.5)', 'SA(1.5)', 'SA(3.0)']
+    # imts = None
+    # location_generator = locations_nzpt2_and_nz34_chunked
+    location_generator = locations_nz34_chunked
     
     
     if classical:
         hazard_curves, source_branches = process_agg(vs30, location_generator, aggs, imts, output_prefix=output_prefix, num_workers=nproc)
 
     # if running classical and disagg you must make sure that the requested locations, imts, vs30, aggs for disaggs are in what was requested for the classical calculation
-    disaggs = True
-    poes = [0.02]
+    disaggs = False
+    poes = [0.1,0.02]
     aggs = ['mean']
     inv_time = 50
     imts = ['PGA','SA(0.5)','SA(1.5)']
-    location_generator = locations_nz34_chunked
-    # location_generator = locations_nz2_chunked
+    # location_generator = locations_nz34_chunked
+    location_generator = locations_nz2_chunked
+    # breakpoint()
 
-    if disaggs and classical:
-        disagg_configs = process_disaggs(hazard_curves, source_branches, vs30, location_generator, aggs, imts, num_workers=nproc)
-    elif disaggs:
-        hazard_curves, source_branches = process_agg(vs30, location_generator, aggs, imts, output_prefix='for_disaggs', num_workers=nproc)
-        disagg_configs = process_disaggs(hazard_curves, source_branches, poes, inv_time, vs30, location_generator, aggs, imts, num_workers=nproc)
+    if disaggs:
+        if classical:
+            disagg_configs = process_disaggs(hazard_curves, source_branches, vs30, location_generator, aggs, imts, num_workers=nproc)
+        else:
+            hazard_curves, source_branches = process_agg(vs30, location_generator, aggs, imts, output_prefix='for_disaggs', num_workers=nproc)
+            disagg_configs = process_disaggs(hazard_curves, source_branches, poes, inv_time, vs30, location_generator, aggs, imts, num_workers=nproc)
 
-    # add location code for sites that have them
-    from nzshm_common.location.location import LOCATIONS_BY_ID
-    from nzshm_common.location.code_location import CodedLocation
-    for disagg_config in disagg_configs:
-        for loc in LOCATIONS_BY_ID.values():
-            location = CodedLocation(loc['latitude'],loc['longitude']).downsample(.001).code
-            if location == disagg_config['location']:
-                disagg_config['site_code'] = loc['id']
-                disagg_config['site_name'] = loc['name']
+        # add location code for sites that have them
+        from nzshm_common.location.location import LOCATIONS_BY_ID
+        from nzshm_common.location.code_location import CodedLocation
+        for disagg_config in disagg_configs:
+            for loc in LOCATIONS_BY_ID.values():
+                location = CodedLocation(loc['latitude'],loc['longitude']).downsample(.001).code
+                if location == disagg_config['location']:
+                    disagg_config['site_code'] = loc['id']
+                    disagg_config['site_name'] = loc['name']
 
 
-    with open('disagg_configs.json','w') as json_file:
-        json.dump(disagg_configs,json_file)
+        with open('disagg_configs.json','w') as json_file:
+            json.dump(disagg_configs,json_file)
 
 
 
