@@ -72,9 +72,13 @@ def locations_nz2_chunked(grid_res=1.0, point_res=0.001):
 
     chunk_size = 1
     # wlg_grid_0_01 = load_grid("WLG_0_01_nb_1_1")
-    nz34 = [(o['latitude'], o['longitude']) for o in LOCATIONS_BY_ID.values()]
-    grid_points = nz34[0:2]
+    cities = ['WLG','CHC','KBZ']
+    nz34 = [(o['latitude'], o['longitude']) for o in LOCATIONS_BY_ID.values() if o['id'] in cities]
+    # breakpoint()
+    grid_points = nz34
     return locations_by_chunk(grid_points, point_res, chunk_size)
+
+
 
 
 if __name__ == "__main__":
