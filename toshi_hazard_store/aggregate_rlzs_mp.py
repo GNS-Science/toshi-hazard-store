@@ -6,16 +6,15 @@ import time
 from collections import namedtuple
 from pathlib import Path
 
-
 from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_levels, process_location_list, concat_df_files, get_imts, process_disagg_location_list
 from toshi_hazard_store.branch_combinator.branch_combinator import get_weighted_branches
 from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs, merge_ltbs, merge_ltbs_fromLT
 
-from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import logic_tree_permutations
-from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import data as gtdata
+# from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import logic_tree_permutations
+# from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import data as gtdata
 
-# from toshi_hazard_store.branch_combinator.SLT_TAG_TD import logic_tree_permutations
-# from toshi_hazard_store.branch_combinator.SLT_TAG_TD import data as gtdata
+from toshi_hazard_store.branch_combinator.SLT_TAG_TD import logic_tree_permutations
+from toshi_hazard_store.branch_combinator.SLT_TAG_TD import data as gtdata
 
 # from toshi_hazard_store.branch_combinator.SLT_TAG_TI import logic_tree_permutations
 # from toshi_hazard_store.branch_combinator.SLT_TAG_TI import data as gtdata
@@ -23,7 +22,7 @@ from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import data as gtdata
 
 
 # from toshi_hazard_store.data_functions import weighted_quantile
-from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked, locations_nz34_chunked, locations_nz2_chunked
+from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked, locations_nz34_chunked, locations_nz2_chunked, locations_nzpt2_chunked
 
 class DisaggHardWorker(multiprocessing.Process):
     """A worker that batches and saves records to DynamoDB.
@@ -98,7 +97,7 @@ AggTaskArgs = namedtuple("AggTaskArgs", "grid_loc locs toshi_ids source_branches
 DisaggTaskArgs = namedtuple("DisaggTaskArgs", "grid_loc hazard_curves source_branches toshi_ids poes inv_time vs30 locs aggs imts")
 
 
-def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num_workers=12):    
+def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num_workers=12, location_range=None):    
     
     # source_branches = load_source_branches()
     # omit = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDEy']  # this is the failed/clonded job in first GT_37
@@ -112,7 +111,7 @@ def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num
     if not imts:
         imts = get_imts(source_branches, vs30)
 
-    binned_locs = location_generator()
+    binned_locs = location_generator(range=location_range)
     levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
     
     for i in range(len(source_branches)):
@@ -136,7 +135,7 @@ def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num
     tic = time.perf_counter()
     # Enqueue jobs
     num_jobs = 0
-    for key, locs in location_generator().items():
+    for key, locs in location_generator(range=location_range).items():
         t = AggTaskArgs(key, locs, toshi_ids, source_branches, aggs, imts, levels, vs30)
         task_queue.put(t)
         num_jobs += 1
@@ -230,23 +229,30 @@ if __name__ == "__main__":
 
     nproc = 20
 
-    classical = False
+    classical = True
 
-    output_prefix = 'TI_sensivitiy'
     vs30 = 400
     aggs = ['mean', 0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975, 0.99, 0.995]
+
     # imts = ['PGA', 'SA(0.5)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)']
     imts = ['PGA', 'SA(0.5)', 'SA(1.5)', 'SA(3.0)']
     # imts = None
+
     # location_generator = locations_nzpt2_and_nz34_chunked
-    location_generator = locations_nz34_chunked
-    
+    # location_generator = locations_nz34_chunked
+    location_generator = locations_nzpt2_chunked
+
+    loc_keyrange = (0,29) # CDC
+    loc_keyrange = (30,45) # CBC (there are 43, but just in case I miss counted)
+
+    output_prefix = f'FullLT_{loc_keyrange[0]}_{loc_keyrange[1]}'
+
     
     if classical:
-        hazard_curves, source_branches = process_agg(vs30, location_generator, aggs, imts, output_prefix=output_prefix, num_workers=nproc)
+        hazard_curves, source_branches = process_agg(vs30, location_generator, aggs, imts, output_prefix=output_prefix, num_workers=nproc, location_range=loc_keyrange)
 
     # if running classical and disagg you must make sure that the requested locations, imts, vs30, aggs for disaggs are in what was requested for the classical calculation
-    disaggs = True
+    disaggs = False
     poes = [0.1,0.02]
     aggs = ['mean']
     inv_time = 50

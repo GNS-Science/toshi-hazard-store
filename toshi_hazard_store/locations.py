@@ -48,6 +48,23 @@ def locations_nzpt2_and_nz34_binned(grid_res=1.0, point_res=0.001):
     return locations_by_degree(grid_points, grid_res, point_res)
 
 
+def locations_nzpt2_chunked(grid_res=1.0, point_res=0.001, range=None):
+
+    chunk_size = 25
+    # wlg_grid_0_01 = load_grid("WLG_0_01_nb_1_1")
+    nz_0_2 = load_grid("NZ_0_2_NB_1_1")
+    nz34 = [(o['latitude'], o['longitude']) for o in LOCATIONS_BY_ID.values()]
+    grid_points = nz_0_2
+    lbc = {}
+    if range:
+        for i,(k,v) in enumerate(locations_by_chunk(grid_points, point_res, chunk_size).items()):
+            if (i>=range[0]) & (i<=range[1]):
+                lbc[k] = v
+    else:
+        lbc = locations_by_chunk(grid_points, point_res, chunk_size)
+    return lbc
+
+
 def locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001):
 
     chunk_size = 25
@@ -74,7 +91,6 @@ def locations_nz2_chunked(grid_res=1.0, point_res=0.001):
     # wlg_grid_0_01 = load_grid("WLG_0_01_nb_1_1")
     cities = ['WLG','CHC','KBZ']
     nz34 = [(o['latitude'], o['longitude']) for o in LOCATIONS_BY_ID.values() if o['id'] in cities]
-    # breakpoint()
     grid_points = nz34
     return locations_by_chunk(grid_points, point_res, chunk_size)
 
