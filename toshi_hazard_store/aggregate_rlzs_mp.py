@@ -9,12 +9,18 @@ from pathlib import Path
 
 from toshi_hazard_store.aggregate_rlzs import build_rlz_table, get_levels, process_location_list, concat_df_files, get_imts, process_disagg_location_list
 from toshi_hazard_store.branch_combinator.branch_combinator import get_weighted_branches
-# from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
-from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs, merge_ltbs
-# from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import logic_tree_permutations
-# from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_NB import data as gtdata
+from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs, merge_ltbs, merge_ltbs_fromLT
+
 from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import logic_tree_permutations
 from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import data as gtdata
+
+# from toshi_hazard_store.branch_combinator.SLT_TAG_TD import logic_tree_permutations
+# from toshi_hazard_store.branch_combinator.SLT_TAG_TD import data as gtdata
+
+# from toshi_hazard_store.branch_combinator.SLT_TAG_TI import logic_tree_permutations
+# from toshi_hazard_store.branch_combinator.SLT_TAG_TI import data as gtdata
+
+
 
 # from toshi_hazard_store.data_functions import weighted_quantile
 from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked, locations_nz34_chunked, locations_nz2_chunked
@@ -98,9 +104,9 @@ def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num
     # omit = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDEy']  # this is the failed/clonded job in first GT_37
 
     omit = []
-    toshi_ids = [b.hazard_solution_id for b in merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit)]
-
-    grouped = grouped_ltbs(merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit))
+    toshi_ids = [b.hazard_solution_id for b in merge_ltbs_fromLT(logic_tree_permutations, gtdata=gtdata, omit=omit)]
+    
+    grouped = grouped_ltbs(merge_ltbs_fromLT(logic_tree_permutations, gtdata=gtdata, omit=omit))
     source_branches = get_weighted_branches(grouped)
 
     if not imts:
@@ -169,7 +175,7 @@ def process_disaggs(hazard_curves, source_branches, poes, inv_time, vs30, locati
 
     # write serial code for now, parallelize once it works 
     omit = []
-    toshi_ids = [b.hazard_solution_id for b in merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit)]
+    toshi_ids = [b.hazard_solution_id for b in merge_ltbs_fromLT(logic_tree_permutations, gtdata=gtdata, omit=omit)]
 
     task_queue: multiprocessing.JoinableQueue = multiprocessing.JoinableQueue()
     result_queue: multiprocessing.Queue = multiprocessing.Queue()
@@ -224,9 +230,9 @@ if __name__ == "__main__":
 
     nproc = 20
 
-    classical = True
+    classical = False
 
-    output_prefix = 'TD_sensivitiy'
+    output_prefix = 'TI_sensivitiy'
     vs30 = 400
     aggs = ['mean', 0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975, 0.99, 0.995]
     # imts = ['PGA', 'SA(0.5)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)']
@@ -240,13 +246,14 @@ if __name__ == "__main__":
         hazard_curves, source_branches = process_agg(vs30, location_generator, aggs, imts, output_prefix=output_prefix, num_workers=nproc)
 
     # if running classical and disagg you must make sure that the requested locations, imts, vs30, aggs for disaggs are in what was requested for the classical calculation
-    disaggs = False
+    disaggs = True
     poes = [0.1,0.02]
     aggs = ['mean']
     inv_time = 50
     imts = ['PGA','SA(0.5)','SA(1.5)']
-    # location_generator = locations_nz34_chunked
-    location_generator = locations_nz2_chunked
+    output_prefix = 'fullLT_dissags'
+    location_generator = locations_nz34_chunked
+    # location_generator = locations_nz2_chunked
     # breakpoint()
 
     if disaggs:

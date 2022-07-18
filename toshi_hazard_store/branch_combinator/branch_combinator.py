@@ -103,6 +103,20 @@ def merge_ltbs(logic_tree_permutations, gtdata, omit):
         yield Member(**d)
 
 
+def merge_ltbs_fromLT(logic_tree_permutations, gtdata, omit):
+    members = all_members_dict(logic_tree_permutations)
+    # weights are the actual Hazard weight @ 1.0
+    for toshi_ltb in weight_and_ids(gtdata):
+        if toshi_ltb.hazard_solution_id in omit:
+            print(f'skipping {toshi_ltb}')
+            continue
+        if members.get(f'{toshi_ltb.inv_id}{toshi_ltb.bg_id}'):
+            d = toshi_ltb._asdict()
+            d['weight'] = members[f'{toshi_ltb.inv_id}{toshi_ltb.bg_id}'].weight
+            d['group'] = members[f'{toshi_ltb.inv_id}{toshi_ltb.bg_id}'].group
+            yield Member(**d)
+
+
 def grouped_ltbs(merged_ltbs):
     grouped = {}
     for ltb in merged_ltbs:
