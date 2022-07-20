@@ -1,7 +1,7 @@
 # rom toshi_hazard_store.branch_combinator.SLT_test1 import *
 import itertools
-import math
 import json
+import math
 from collections import namedtuple
 
 DTOL = 1.0e-6
@@ -124,4 +124,3 @@ def grouped_ltbs(merged_ltbs):
             grouped[ltb.group] = []
         grouped[ltb.group].append(ltb)
     return grouped
-

@@ -1,25 +1,28 @@
 import ast
 import csv
-from dis import dis
 import itertools
-import time
 import math
+import time
+from dis import dis
 from functools import reduce
 from operator import inv, mul
 
 import numpy as np
 import pandas as pd
 
-from toshi_hazard_store.branch_combinator.branch_combinator import get_branches, get_weighted_branches
+from toshi_hazard_store.branch_combinator.branch_combinator import (
+    get_branches,
+    get_weighted_branches,
+    grouped_ltbs,
+    merge_ltbs,
+)
 from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
-from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs, merge_ltbs
-from toshi_hazard_store.data_functions import weighted_quantile
-from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned
-from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v3
+
 # from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_DATA import data as gtdata
 from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_gsim_DATA import data as gtdata
-
-from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked
+from toshi_hazard_store.data_functions import weighted_quantile
+from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned, locations_nzpt2_and_nz34_chunked
+from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v3
 
 inv_time = 1.0
 VERBOSE = False
@@ -325,7 +328,7 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
         stop_imt = start_imt + nlocs * naggs * nlevels
         binned_hazard_curves.loc[start_imt:stop_imt, 'imt'] = imt
         start_imt = stop_imt
-        
+
         for loc in locs:
             lat, lon = loc.split('~')
             start_agg = start_loc
@@ -360,33 +363,32 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
             toc_agg = time.perf_counter()
             if VERBOSE:
                 print(f'time to perform all aggregations for 1 location {loc}: {toc_agg-tic_agg:.4f} seconds')
-    
+
     return binned_hazard_curves
+
 
 def concat_df_files(df_file_names):
     columns = ['lat', 'lon', 'imt', 'agg', 'level', 'hazard']
-    
+
     hazard_curves = pd.DataFrame(columns=columns)
 
-    dtype = {'lat':str,'lon':str}
+    dtype = {'lat': str, 'lon': str}
 
     for df_file_name in df_file_names:
-        binned_hazard_curves = pd.read_json(df_file_name,dtype=dtype)
-        hazard_curves = pd.concat([hazard_curves, binned_hazard_curves],ignore_index=True)
-    
+        binned_hazard_curves = pd.read_json(df_file_name, dtype=dtype)
+        hazard_curves = pd.concat([hazard_curves, binned_hazard_curves], ignore_index=True)
+
     return hazard_curves
 
-def compute_hazard_at_poe(levels,values,poe,inv_time):
 
-    rp = -inv_time/np.log(1-poe)
-    haz = np.exp( np.interp( np.log(1/rp), np.flip(np.log(values)), np.flip(np.log(levels)) ) )
+def compute_hazard_at_poe(levels, values, poe, inv_time):
+
+    rp = -inv_time / np.log(1 - poe)
+    haz = np.exp(np.interp(np.log(1 / rp), np.flip(np.log(values)), np.flip(np.log(levels))))
     return haz
 
 
-
-
-def process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes, inv_time, vs30, locs, aggs, imts):    
-    
+def process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes, inv_time, vs30, locs, aggs, imts):
 
     values = load_realization_values(toshi_ids, locs, [vs30])
     k1 = next(iter(values.keys()))
@@ -400,17 +402,18 @@ def process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes
         for poe in poes:
             for agg in aggs:
                 for imt in imts:
-                    disagg_key = ':'.join( (loc,str(poe),str(agg),imt) )
-                    
+                    disagg_key = ':'.join((loc, str(poe), str(agg), imt))
 
                     # get target level of shaking
-                    hc = hazard_curves.loc[(hazard_curves['agg'] == agg) & \
-                                            (hazard_curves['imt'] == imt) & \
-                                            (hazard_curves['lat'] == lat) & \
-                                            (hazard_curves['lon'] == lon)]
+                    hc = hazard_curves.loc[
+                        (hazard_curves['agg'] == agg)
+                        & (hazard_curves['imt'] == imt)
+                        & (hazard_curves['lat'] == lat)
+                        & (hazard_curves['lon'] == lon)
+                    ]
                     levels = hc['level'].to_numpy()
                     hazard_vals = hc['hazard'].to_numpy()
-                    target_level = compute_hazard_at_poe(levels,hazard_vals,poe,inv_time)
+                    target_level = compute_hazard_at_poe(levels, hazard_vals, poe, inv_time)
                     min_dist = math.inf
 
                     # find realization with nearest level of shaking
@@ -423,7 +426,7 @@ def process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes
                             for rlz in rlz_comb:
                                 rate += prob_to_rate(values[rlz][loc][imt])
                             prob = rate_to_prob(rate)
-                            rlz_level = compute_hazard_at_poe(levels,prob,poe,inv_time)
+                            rlz_level = compute_hazard_at_poe(levels, prob, poe, inv_time)
                             dist = abs(rlz_level - target_level)
                             if dist < min_dist:
                                 nearest_rlz = rlz_comb
@@ -432,23 +435,24 @@ def process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes
 
                     hazard_ids = [id.split(':')[0] for id in nearest_rlz]
                     source_ids, gsims = get_source_and_gsim(nearest_rlz, vs30)
-                    
-                    disagg_rlzs.append( dict( 
-                                            vs30 = vs30,
-                                            source_ids=source_ids,
-                                            inv_time=inv_time,
-                                            imt=imt,
-                                            agg=agg,
-                                            poe=poe,
-                                            level=nearest_level,
-                                            location=loc,
-                                            gsims=gsims,
-                                            dist=min_dist,
-                                            nearest_rlz=nearest_rlz,
-                                            target_level=target_level,
-                                            hazard_ids=hazard_ids
-                                            )
-                                        )
+
+                    disagg_rlzs.append(
+                        dict(
+                            vs30=vs30,
+                            source_ids=source_ids,
+                            inv_time=inv_time,
+                            imt=imt,
+                            agg=agg,
+                            poe=poe,
+                            level=nearest_level,
+                            location=loc,
+                            gsims=gsims,
+                            dist=min_dist,
+                            nearest_rlz=nearest_rlz,
+                            target_level=target_level,
+                            hazard_ids=hazard_ids,
+                        )
+                    )
     return disagg_rlzs
 
 
@@ -468,7 +472,7 @@ def get_source_and_gsim(rlz, vs30):
         gsims[trt] = rlz_lt[trt][gsim_rlz]
         source_ids += (rlz_lt['source combination'][gsim_rlz]).split('|')
 
-    source_ids = [sid for sid in source_ids if sid] #remove empty strings
+    source_ids = [sid for sid in source_ids if sid]  # remove empty strings
 
     return source_ids, gsims
 
@@ -493,7 +497,7 @@ if __name__ == "__main__":
     grouped = grouped_ltbs(merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit))
     source_branches = get_weighted_branches(grouped)
 
-     # imts = get_imts(source_branches, vs30)
+    # imts = get_imts(source_branches, vs30)
     binned_locs = locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001)
     levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
 
