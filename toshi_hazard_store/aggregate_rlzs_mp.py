@@ -1,4 +1,5 @@
 import json
+import logging
 import multiprocessing
 import time
 from collections import namedtuple
@@ -174,6 +175,7 @@ def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num
         t = AggTaskArgs(key, locs, toshi_ids, source_branches, aggs, imts, levels, vs30)
         task_queue.put(t)
         num_jobs += 1
+        break
 
     # Add a poison pill for each to signal we've done everything
     for i in range(num_workers):
@@ -264,12 +266,19 @@ def process_disaggs(
 
 if __name__ == "__main__":
 
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger('pynamodb').setLevel(logging.DEBUG)
+    logging.getLogger('toshi_hazard_store').setLevel(logging.DEBUG)
+
     nproc = 20
 
     classical = True
 
     vs30 = 400
-    aggs = ['mean', 0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975, 0.99, 0.995]
+    aggs = [
+        'mean',
+        0.005,
+    ]  # 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975, 0.99, 0.995]
 
     # imts = ['PGA', 'SA(0.5)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)']
     imts = ['PGA', 'SA(0.5)', 'SA(1.5)', 'SA(3.0)']
@@ -277,10 +286,11 @@ if __name__ == "__main__":
 
     # location_generator = locations_nzpt2_and_nz34_chunked
     # location_generator = locations_nz34_chunked
-    location_generator = locations_nzpt2_chunked
+    location_generator = locations_nzpt2_chunked  ### TODO: RANGED
 
     loc_keyrange = (0, 29)  # CDC
     loc_keyrange = (30, 45)  # CBC (there are 43, but just in case I miss counted)
+    loc_keyrange = (0, 1)
 
     output_prefix = f'FullLT_{loc_keyrange[0]}_{loc_keyrange[1]}'
 
@@ -295,40 +305,40 @@ if __name__ == "__main__":
             location_range=loc_keyrange,
         )
 
-    # if running classical and disagg you must make sure that the requested locations, imts, vs30, aggs for disaggs are in what was requested for the classical calculation
-    disaggs = False
-    poes = [0.1, 0.02]
-    aggs = ['mean']
-    inv_time = 50
-    imts = ['PGA', 'SA(0.5)', 'SA(1.5)']
-    output_prefix = 'fullLT_dissags'
-    location_generator = locations_nz34_chunked
-    # location_generator = locations_nz2_chunked
-    # breakpoint()
+    # # if running classical and disagg you must make sure that the requested locations, imts, vs30, aggs for disaggs are in what was requested for the classical calculation
+    # disaggs = False
+    # poes = [0.1, 0.02]
+    # aggs = ['mean']
+    # inv_time = 50
+    # imts = ['PGA', 'SA(0.5)', 'SA(1.5)']
+    # output_prefix = 'fullLT_dissags'
+    # location_generator = locations_nz34_chunked
+    # # location_generator = locations_nz2_chunked
+    # # breakpoint()
 
-    if disaggs:
-        if classical:
-            disagg_configs = process_disaggs(
-                hazard_curves, source_branches, vs30, location_generator, aggs, imts, num_workers=nproc
-            )
-        else:
-            hazard_curves, source_branches = process_agg(
-                vs30, location_generator, aggs, imts, output_prefix='for_disaggs', num_workers=nproc
-            )
-            disagg_configs = process_disaggs(
-                hazard_curves, source_branches, poes, inv_time, vs30, location_generator, aggs, imts, num_workers=nproc
-            )
+    # if disaggs:
+    #     if classical:
+    #         disagg_configs = process_disaggs(
+    #             hazard_curves, source_branches, vs30, location_generator, aggs, imts, num_workers=nproc
+    #         )
+    #     else:
+    #         hazard_curves, source_branches = process_agg(
+    #             vs30, location_generator, aggs, imts, output_prefix='for_disaggs', num_workers=nproc
+    #         )
+    #         disagg_configs = process_disaggs(
+    #             hazard_curves, source_branches, poes, inv_time, vs30, location_generator, aggs, imts, num_workers=nproc
+    #         )
 
-        # add location code for sites that have them
-        from nzshm_common.location.code_location import CodedLocation
-        from nzshm_common.location.location import LOCATIONS_BY_ID
+    #     # add location code for sites that have them
+    #     from nzshm_common.location.code_location import CodedLocation
+    #     from nzshm_common.location.location import LOCATIONS_BY_ID
 
-        for disagg_config in disagg_configs:
-            for loc in LOCATIONS_BY_ID.values():
-                location = CodedLocation(loc['latitude'], loc['longitude']).downsample(0.001).code
-                if location == disagg_config['location']:
-                    disagg_config['site_code'] = loc['id']
-                    disagg_config['site_name'] = loc['name']
+    #     for disagg_config in disagg_configs:
+    #         for loc in LOCATIONS_BY_ID.values():
+    #             location = CodedLocation(loc['latitude'], loc['longitude']).downsample(0.001).code
+    #             if location == disagg_config['location']:
+    #                 disagg_config['site_code'] = loc['id']
+    #                 disagg_config['site_name'] = loc['name']
 
-        with open('disagg_configs.json', 'w') as json_file:
-            json.dump(disagg_configs, json_file)
+    #     with open('disagg_configs.json', 'w') as json_file:
+    #         json.dump(disagg_configs, json_file)

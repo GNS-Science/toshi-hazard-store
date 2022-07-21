@@ -27,7 +27,10 @@ def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False
         quantiles = quantiles[0:mean_ind] + quantiles[mean_ind + 1 :]
         mean = np.sum(sample_weight * values)
 
-    quantiles = np.array(quantiles)
+    quantiles = np.array(
+        [float(q) for q in quantiles]
+    )  # TODO this section is hacky, need to tighten up API with typing
+    # print(f'QUANTILES: {quantiles}')
 
     assert np.all(quantiles >= 0) and np.all(quantiles <= 1), 'quantiles should be in [0, 1]'
 

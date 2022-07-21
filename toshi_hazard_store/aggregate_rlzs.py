@@ -1,6 +1,7 @@
 import ast
 import csv
 import itertools
+import logging
 import math
 import time
 from dis import dis
@@ -26,6 +27,8 @@ from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v
 
 inv_time = 1.0
 VERBOSE = False
+
+log = logging.getLogger(__name__)
 
 
 def get_imts(source_branches, vs30):
@@ -301,6 +304,7 @@ def get_levels(source_branches, locs, vs30):
 
     id = source_branches[0]['ids'][0]
 
+    log.info(f"{locs[0]} {vs30}, {id}")
     hazard = next(get_rlz_curves_v3([locs[0]], [vs30], None, [id], None))
 
     return hazard.values[0].lvls
@@ -308,10 +312,16 @@ def get_levels(source_branches, locs, vs30):
 
 # process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, vs30)
 def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, vs30):
-    print(f'get values for {len(locs)} locations and {len(toshi_ids)} hazard_solutions')
+    log.info('get values for %s locations and %s hazard_solutions' % (len(locs), len(toshi_ids)))
+    log.debug('aggs: %s' % (aggs))
+    log.debug('source_branches: %s' % (source_branches))
+
     values = load_realization_values(toshi_ids, locs, [vs30])
 
-    tic = time.perf_counter()
+    if not values:
+        log.info('missing values: %s'(values))
+        return
+
     columns = ['lat', 'lon', 'imt', 'agg', 'level', 'hazard']
     index = range(len(locs) * len(imts) * len(aggs) * len(levels))
     binned_hazard_curves = pd.DataFrame(columns=columns, index=index)
@@ -337,6 +347,7 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
             binned_hazard_curves.loc[start_loc:stop_loc, 'lon'] = lon
             start_loc = stop_loc
 
+            log.debug('build_branches imt: %s, loc: %s, vs30: %s' % (imt, loc, vs30))
             weights, branch_probs = build_branches(source_branches, values, imt, loc, vs30)
 
             tic_agg = time.perf_counter()
