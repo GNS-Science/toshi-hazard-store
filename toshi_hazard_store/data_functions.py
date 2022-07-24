@@ -14,6 +14,11 @@ def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False
     :return: numpy.array with computed quantiles.
     """
 
+    indgt0 = sample_weight>0
+    sample_weight = sample_weight[indgt0]
+    values = values[indgt0]
+
+    
     values = np.array(values)
     if sample_weight is None:
         sample_weight = np.ones(len(values))
@@ -47,5 +52,5 @@ def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False
     wq = np.interp(quantiles, weighted_quantiles, values)
     if get_mean:
         wq = np.append(np.append(wq[0:mean_ind], np.array([mean])), wq[mean_ind:])
-
+    
     return wq

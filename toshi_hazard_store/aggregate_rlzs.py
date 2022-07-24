@@ -1,6 +1,7 @@
 import ast
 import csv
 from dis import dis
+from heapq import merge
 import itertools
 import time
 import math
@@ -12,12 +13,20 @@ import pandas as pd
 
 from toshi_hazard_store.branch_combinator.branch_combinator import get_branches, get_weighted_branches
 from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
-from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs, merge_ltbs
+from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs, merge_ltbs, merge_ltbs_fromLT
 from toshi_hazard_store.data_functions import weighted_quantile
-from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned
+from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned, just_akl
 from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v3
-# from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_DATA import data as gtdata
-from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_gsim_DATA import data as gtdata
+
+# from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import logic_tree_permutations
+# from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import data as gtdata
+
+# from toshi_hazard_store.branch_combinator.SLT_TAG_TI import logic_tree_permutations
+# from toshi_hazard_store.branch_combinator.SLT_TAG_TI import data as gtdata
+
+from toshi_hazard_store.branch_combinator.SLT_NBsens_1 import logic_tree_permutations
+from toshi_hazard_store.branch_combinator.SLT_NBsens_1 import data as gtdata
+
 
 from toshi_hazard_store.locations import locations_nzpt2_and_nz34_chunked
 
@@ -67,49 +76,63 @@ def load_realization_values(toshi_ids, locs, vs30s):
         print(f'!!!!!!!!! missing {toshi_ids - ids_ret}')
 
     toc = time.perf_counter()
-    print(f'time to load realizations: {toc-tic:.1f} seconds')
+    # print(f'time to load realizations: {toc-tic:.1f} seconds')
 
     return values
 
 
-def build_rlz_table(branch, vs30):
+def get_trts(gsim_lt, merged_trt):
+    trts = list(set(gsim_lt['trt'].values()))
+    trts.sort()
+    return trts
+
+
+def build_rlz_table(branch, vs30, merge_trts=[]):
+
+    #TODO: trim 'Slab' and 'Inter' off gsim names, this is not very generalized
+
+    div = '+++'
+    merged_trt = div.join(merge_trts)
 
     tic = time.perf_counter()
-
+    
     ids = branch['ids']
     rlz_sets = {}
     weight_sets = {}
     for meta in get_hazard_metadata_v3(ids, [vs30]):
         gsim_lt = ast.literal_eval(meta.gsim_lt)
-        trts = list(set(gsim_lt['trt'].values()))
-        trts.sort()
+        trts = get_trts(gsim_lt, merged_trt)
         for trt in trts:
-            rlz_sets[trt] = {}
-            weight_sets[trt] = {}
+            mtrt = merged_trt if trt in merged_trt else trt
+            rlz_sets[mtrt] = {}
+            weight_sets[mtrt] = {}
 
     for meta in get_hazard_metadata_v3(ids, [vs30]):
         rlz_lt = ast.literal_eval(meta.rlz_lt)
-        for trt in rlz_sets.keys():
-            if trt in rlz_lt:
-                gsims = list(set(rlz_lt[trt].values()))
-                gsims.sort()
-                for gsim in gsims:
-                    rlz_sets[trt][gsim] = []
+        for mtrt in rlz_sets.keys():
+            for trt in mtrt.split(div):
+                if trt in rlz_lt:
+                    gsims = list(set(rlz_lt[trt].values()))
+                    gsims.sort()
+                    for gsim in gsims:
+                        rlz_sets[mtrt][gsim] = []
 
     for meta in get_hazard_metadata_v3(ids, [vs30]):
         rlz_lt = ast.literal_eval(meta.rlz_lt)
         gsim_lt = ast.literal_eval(meta.gsim_lt)
         hazard_id = meta.hazard_solution_id
-        trts = list(set(gsim_lt['trt'].values()))
-        trts.sort()
+        trts = get_trts(gsim_lt, merged_trt)
         for trt in trts:
+            mtrt = merged_trt if trt in merged_trt else trt
             for rlz, gsim in rlz_lt[trt].items():
                 rlz_key = ':'.join((hazard_id, rlz))
-                rlz_sets[trt][gsim].append(rlz_key)
-                weight_sets[trt][gsim] = gsim_lt['weight'][
+                rlz_sets[mtrt][gsim].append(rlz_key)
+                weight_sets[mtrt][gsim] = gsim_lt['weight'][
                     rlz
                 ]  # this depends on only one source per run and the same gsim weights in every run
 
+    breakpoint()
+  
     rlz_sets_tmp = rlz_sets.copy()
     weight_sets_tmp = weight_sets.copy()
     for k, v in rlz_sets.items():
@@ -473,6 +496,9 @@ def get_source_and_gsim(rlz, vs30):
     return source_ids, gsims
 
 
+
+
+
 if __name__ == "__main__":
 
     tic_total = time.perf_counter()
@@ -480,41 +506,36 @@ if __name__ == "__main__":
     # TODO: I'm making assumptions that the levels array is the same for every realization, imt, run, etc.
     # If that were not the case, I would have to add some interpolation
 
-    binned_locs = locations_nzpt2_and_nz34_binned(grid_res=1.0, point_res=0.001)
-
     vs30 = 400
-    aggs = ['mean', 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95]
+    aggs = ['mean', 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.975, 0.99]
 
-    # source_branches = load_source_branches()
-    # omit = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDEy']  # this is the failed/clonded job
+    binned_locs = just_akl()
+    
     omit = []
-    toshi_ids = [b.hazard_solution_id for b in merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit)]
+    toshi_ids = [b.hazard_solution_id for b in merge_ltbs_fromLT(logic_tree_permutations, gtdata=gtdata, omit=omit)]
 
-    grouped = grouped_ltbs(merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit))
+    
+    grouped = grouped_ltbs(merge_ltbs_fromLT(logic_tree_permutations, gtdata=gtdata, omit=omit))
     source_branches = get_weighted_branches(grouped)
 
-     # imts = get_imts(source_branches, vs30)
-    binned_locs = locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001)
-    levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
-
-    # print(source_branches)
     imts = ['PGA']
     # imts = get_imts(source_branches, vs30)
     levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
 
     columns = ['lat', 'lon', 'imt', 'agg', 'level', 'hazard']
-    # index = range(len(locs)*len(imts)*len(aggs)*len(levels))
     hazard_curves = pd.DataFrame(columns=columns)
 
+    merge_trts = ['Subduction Interface', 'Subduction Intraslab']
     tic = time.perf_counter()
     for i in range(len(source_branches)):
-        rlz_combs, weight_combs = build_rlz_table(source_branches[i], vs30)
+        rlz_combs, weight_combs = build_rlz_table(source_branches[i], vs30, merge_trts=merge_trts)
         source_branches[i]['rlz_combs'] = rlz_combs
         source_branches[i]['weight_combs'] = weight_combs
     toc = time.perf_counter()
     print(f'time to build all realization tables {toc-tic:.1f} seconds')
+    
 
-    for key, locs in locations_nzpt2_and_nz34_binned(grid_res=1.0, point_res=0.001).items():
+    for key, locs in just_akl().items():
         binned_hazard_curves = process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, vs30)
         binned_hazard_curves.to_json(f"./df_{key}_aggregates.json")
         hazard_curves = pd.concat([hazard_curves, binned_hazard_curves])

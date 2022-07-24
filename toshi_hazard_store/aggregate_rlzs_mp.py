@@ -1,4 +1,3 @@
-from dis import dis
 import json
 import multiprocessing
 from operator import inv
@@ -13,11 +12,17 @@ from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs,
 # from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import logic_tree_permutations
 # from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import data as gtdata
 
-from toshi_hazard_store.branch_combinator.SLT_TAG_TD import logic_tree_permutations
-from toshi_hazard_store.branch_combinator.SLT_TAG_TD import data as gtdata
+# from toshi_hazard_store.branch_combinator.SLT_TAG_TD import logic_tree_permutations
+# from toshi_hazard_store.branch_combinator.SLT_TAG_TD import data as gtdata
 
 # from toshi_hazard_store.branch_combinator.SLT_TAG_TI import logic_tree_permutations
 # from toshi_hazard_store.branch_combinator.SLT_TAG_TI import data as gtdata
+
+# from toshi_hazard_store.branch_combinator.SLT_0poly_TI import logic_tree_permutations
+# from toshi_hazard_store.branch_combinator.SLT_0poly_TI import data as gtdata
+
+from toshi_hazard_store.branch_combinator.SLT_NBsens_1b  import logic_tree_permutations
+from toshi_hazard_store.branch_combinator.SLT_NBsens_1b import data as gtdata
 
 
 
@@ -112,6 +117,7 @@ def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num
         imts = get_imts(source_branches, vs30)
 
     binned_locs = location_generator(range=location_range)
+    
     levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
     
     for i in range(len(source_branches)):
@@ -227,7 +233,7 @@ def process_disaggs(hazard_curves, source_branches, poes, inv_time, vs30, locati
 
 if __name__ == "__main__":
 
-    nproc = 20
+    nproc = 34
 
     classical = True
 
@@ -237,15 +243,18 @@ if __name__ == "__main__":
     # imts = ['PGA', 'SA(0.5)', 'SA(1.0)', 'SA(1.5)', 'SA(2.0)', 'SA(3.0)']
     imts = ['PGA', 'SA(0.5)', 'SA(1.5)', 'SA(3.0)']
     # imts = None
+    # imts = ['PGA','SA(0.5)','SA(1.5)']
+    # imts = ['PGA']
 
     # location_generator = locations_nzpt2_and_nz34_chunked
     # location_generator = locations_nz34_chunked
     location_generator = locations_nzpt2_chunked
 
-    loc_keyrange = (0,29) # CDC
-    loc_keyrange = (30,45) # CBC (there are 43, but just in case I miss counted)
+    loc_keyrange = None # CDC
+    # loc_keyrange = (30,45) # CBC (there are 43, but just in case I miss counted)
 
-    output_prefix = f'FullLT_{loc_keyrange[0]}_{loc_keyrange[1]}'
+    # output_prefix = f'FullLT_{loc_keyrange[0]}_{loc_keyrange[1]}'
+    output_prefix = 'basline_NBandNs_C4p2_gridp2deg'
 
     
     if classical:
@@ -258,10 +267,9 @@ if __name__ == "__main__":
     inv_time = 50
     imts = ['PGA','SA(0.5)','SA(1.5)']
     output_prefix = 'fullLT_dissags'
-    location_generator = locations_nz34_chunked
+    # location_generator = locations_nz34_chunked
     # location_generator = locations_nz2_chunked
-    # breakpoint()
-
+    
     if disaggs:
         if classical:
             disagg_configs = process_disaggs(hazard_curves, source_branches, vs30, location_generator, aggs, imts, num_workers=nproc)

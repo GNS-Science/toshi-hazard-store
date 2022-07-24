@@ -75,9 +75,9 @@ def locations_nzpt2_and_nz34_chunked(grid_res=1.0, point_res=0.001):
     return locations_by_chunk(grid_points, point_res, chunk_size)
 
 
-def locations_nz34_chunked(grid_res=1.0, point_res=0.001):
+def locations_nz34_chunked(grid_res=1.0, point_res=0.001, range=None):
 
-    chunk_size = 2
+    chunk_size = 1
     # wlg_grid_0_01 = load_grid("WLG_0_01_nb_1_1")
     nz34 = [(o['latitude'], o['longitude']) for o in LOCATIONS_BY_ID.values()]
     grid_points = nz34
@@ -94,7 +94,10 @@ def locations_nz2_chunked(grid_res=1.0, point_res=0.001):
     grid_points = nz34
     return locations_by_chunk(grid_points, point_res, chunk_size)
 
-
+def just_akl():
+    pt = ( LOCATIONS_BY_ID['AKL']['latitude'], LOCATIONS_BY_ID['AKL']['longitude'] )
+    latlon = CodedLocation(*pt).downsample(0.001).code
+    return {0:[latlon]}
 
 
 if __name__ == "__main__":
@@ -105,3 +108,5 @@ if __name__ == "__main__":
     # Settings for the THS rlz_query
     for key, locs in locations_nzpt2_and_nz34_binned(grid_res=1.0, point_res=0.001):
         print(f"{key} => {locs}")
+
+
