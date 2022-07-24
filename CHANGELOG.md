@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.1] - 2022-06-22
+### Added
+ - multi_batch module for parallelised batch saves
+ - DESIGN.md capture notes on the experiments, test and mods to the package
+ - new switch on V2 queries to force normalised_location_id
+ - new '-f' switch on store_hazard script to force normalised_location_id
+ - lat, lon Float fields to support numeric range filtering in queries
+ - created timestamp field on stas, rlzs v2
+ - added pynamodb_attributes for FloatAttribute, TimestampAttribute types
+
+### Changed
+ - V2 store queries will automatically use nomralised location if custom sites aren't available.
+ - refactored model modules.
+
 ## [0.4.0] - 2022-06-10
 ### Added
  - new V2 models for stats and rlzs.
