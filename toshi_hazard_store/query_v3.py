@@ -9,6 +9,7 @@ import toshi_hazard_store.model as model
 
 mOQM = model.ToshiOpenquakeMeta
 mRLZ = model.OpenquakeRealization
+mHAG = model.HazardAggregation
 
 
 def get_hazard_metadata_v3(
@@ -33,6 +34,15 @@ def downsample_code(loc_code, res):
     lt = loc_code.split('~')
     assert len(lt) == 2
     return CodedLocation(lat=float(lt[0]), lon=float(lt[1])).downsample(res).code
+
+
+def get_hashes(locs: Iterable[str]):
+    hashes = set()
+    for loc in locs:
+        lt = loc.split('~')
+        assert len(lt) == 2
+        hashes.add(downsample_code(loc, 0.1))
+    return list(hashes)
 
 
 def get_rlz_curves_v3(
@@ -97,14 +107,6 @@ def get_rlz_curves_v3(
             sort_key_first_val += f":{first_tid}"
         return sort_key_first_val
 
-    def get_hashes(locs):
-        hashes = set()
-        for loc in locs:
-            lt = loc.split('~')
-            assert len(lt) == 2
-            hashes.add(downsample_code(loc, 0.1))
-        return list(hashes)
-
     # print('hashes', get_hashes(locs))
     # TODO: use https://pypi.org/project/InPynamoDB/
     for hash_location_code in get_hashes(locs):
@@ -136,6 +138,90 @@ def get_rlz_curves_v3(
             )
 
         # print(f"get_hazard_rlz_curves_v3: qry {qry}")
+        for hit in qry:
+            if imts:
+                hit.values = list(filter(lambda x: x.imt in imts, hit.values))
+            yield (hit)
+
+
+def get_hazard_curves(
+    locs: Iterable[str] = [],  # nloc_001
+    vs30s: Iterable[int] = [],  # vs30s
+    hazard_model_ids: Iterable[str] = [],  # hazard_model_ids
+    imts: Iterable[str] = [],
+) -> Iterator[mHAG]:
+    """Use mHAG.sort_key as much as possible.
+
+
+    f'{nloc_001}:{vs30s}:{hazard_model_id}'
+    """
+
+    def build_condition_expr(locs, vs30s, hids):
+        """Build filter condition."""
+        ## TODO REFACTOR ME ... using the res of first loc is not ideal
+        grid_res = decimal.Decimal(str(list(locs)[0].split('~')[0]))
+        places = grid_res.as_tuple().exponent
+
+        # print()
+        # print(f'places {places} loc[0] {locs[0]}')
+
+        res = float(decimal.Decimal(10) ** places)
+        locs = [downsample_code(loc, res) for loc in locs]
+
+        condition_expr = None
+
+        if places == -1:
+            condition_expr = condition_expr & mHAG.nloc_1.is_in(*locs)
+        if places == -2:
+            condition_expr = condition_expr & mHAG.nloc_01.is_in(*locs)
+        if places == -3:
+            condition_expr = condition_expr & mHAG.nloc_001.is_in(*locs)
+
+        if vs30s:
+            condition_expr = condition_expr & mHAG.vs30.is_in(*vs30s)
+        if hids:
+            condition_expr = condition_expr & mHAG.hazard_model_id.is_in(*hids)
+
+        return condition_expr
+
+    def build_sort_key(locs, vs30s, hids):
+        """Build sort_key."""
+        sort_key_first_val = ""
+        first_loc = sorted(locs)[0]  # these need to be formatted to match the sort key 0.001 ?
+        sort_key_first_val += f"{first_loc}"
+
+        if vs30s:
+            first_vs30 = sorted(vs30s)[0]
+            sort_key_first_val += f":{first_vs30}"
+        if vs30s and hids:
+            first_hid = sorted(hids)[0]
+            sort_key_first_val += f":{first_hid}"
+        return sort_key_first_val
+
+    # print('hashes', get_hashes(locs))
+    # TODO: use https://pypi.org/project/InPynamoDB/
+    for hash_location_code in get_hashes(locs):
+
+        print(f'hash_key {hash_location_code}')
+
+        hash_locs = list(filter(lambda loc: downsample_code(loc, 0.1) == hash_location_code, locs))
+
+        sort_key_first_val = build_sort_key(hash_locs, vs30s, hazard_model_ids)
+        condition_expr = build_condition_expr(hash_locs, vs30s, hazard_model_ids)
+
+        print(f'sort_key_first_val {sort_key_first_val}')
+        print(f'condition_expr {condition_expr}')
+
+        if sort_key_first_val:
+            qry = mHAG.query(hash_location_code, mHAG.sort_key >= sort_key_first_val, filter_condition=condition_expr)
+        else:
+            qry = mHAG.query(
+                hash_location_code,
+                mHAG.sort_key >= " ",  # lowest printable char in ascii table is SPACE. (NULL is first control)
+                filter_condition=condition_expr,
+            )
+
+        print(f"get_hazard_rlz_curves_v3: qry {qry}")
         for hit in qry:
             if imts:
                 hit.values = list(filter(lambda x: x.imt in imts, hit.values))
