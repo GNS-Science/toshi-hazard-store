@@ -1,10 +1,7 @@
-import json
 import logging
 import multiprocessing
 import time
 from collections import namedtuple
-from dis import dis
-from operator import inv
 from pathlib import Path
 
 from toshi_hazard_store.aggregate_rlzs import (
@@ -18,19 +15,13 @@ from toshi_hazard_store.aggregate_rlzs import (
 from toshi_hazard_store.branch_combinator.branch_combinator import (
     get_weighted_branches,
     grouped_ltbs,
-    merge_ltbs,
     merge_ltbs_fromLT,
 )
 from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import data as gtdata
 from toshi_hazard_store.branch_combinator.SLT_TAG_FINAL import logic_tree_permutations
 
 # from toshi_hazard_store.data_functions import weighted_quantile
-from toshi_hazard_store.locations import (
-    locations_nz2_chunked,
-    locations_nz34_chunked,
-    locations_nzpt2_and_nz34_chunked,
-    locations_nzpt2_chunked,
-)
+from toshi_hazard_store.locations import locations_nzpt2_chunked
 
 # from toshi_hazard_store.branch_combinator.SLT_TAG_TD import logic_tree_permutations
 # from toshi_hazard_store.branch_combinator.SLT_TAG_TD import data as gtdata
@@ -259,8 +250,8 @@ def process_disaggs(
 
     # disagg_configs = []
     # for key, locs in location_generator().items():
-    #     disagg_configs += process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes, inv_time, vs30, locs, aggs, imts)
-
+    #     disagg_configs += process_disagg_location_list(hazard_curves, source_branches, toshi_ids,
+    #         poes, inv_time, vs30, locs, aggs, imts)
     # return disagg_configs
 
 
@@ -286,7 +277,7 @@ if __name__ == "__main__":
 
     # location_generator = locations_nzpt2_and_nz34_chunked
     # location_generator = locations_nz34_chunked
-    location_generator = locations_nzpt2_chunked  ### TODO: RANGED
+    location_generator = locations_nzpt2_chunked  # TODO: RANGED
 
     loc_keyrange = (0, 29)  # CDC
     loc_keyrange = (30, 45)  # CBC (there are 43, but just in case I miss counted)
@@ -305,7 +296,8 @@ if __name__ == "__main__":
             location_range=loc_keyrange,
         )
 
-    # # if running classical and disagg you must make sure that the requested locations, imts, vs30, aggs for disaggs are in what was requested for the classical calculation
+    # # if running classical and disagg you must make sure that the requested locations, imts, vs30, aggs for disaggs
+    # # are in what was requested for the classical calculation
     # disaggs = False
     # poes = [0.1, 0.02]
     # aggs = ['mean']
@@ -326,7 +318,8 @@ if __name__ == "__main__":
     #             vs30, location_generator, aggs, imts, output_prefix='for_disaggs', num_workers=nproc
     #         )
     #         disagg_configs = process_disaggs(
-    #             hazard_curves, source_branches, poes, inv_time, vs30, location_generator, aggs, imts, num_workers=nproc
+    #             hazard_curves, source_branches, poes, inv_time, vs30, location_generator, aggs,
+    #                imts, num_workers=nproc
     #         )
 
     #     # add location code for sites that have them

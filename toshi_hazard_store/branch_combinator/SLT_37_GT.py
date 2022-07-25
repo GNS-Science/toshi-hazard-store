@@ -1,5 +1,6 @@
-import json
-from collections import namedtuple
+"""Define the data used for SLT_37_GT."""
+
+omit = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDEy']  # this is the failed/clonded job
 
 data = {
     "data": {
@@ -845,20 +846,3 @@ data = {
         }
     }
 }
-
-
-# from SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
-
-
-if __name__ == '__main__':
-    cnt = 0
-    omit = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDEy']  # this is the failed/clonded job
-    # for m in merge_ltbs(logic_tree_permutations, omit):
-    #     res = (m.group, m.hazard_solution_id, m.weight, m.tag)
-    #     cnt +=1
-    #     # print(res)
-    grouped = grouped_ltbs(merge_ltbs(logic_tree_permutations, omit))
-
-    for ky, vals in grouped.items():
-        print(ky)
-        print(len(grouped[ky]))

@@ -6,6 +6,9 @@ import time
 import tracemalloc  # see https://stackoverflow.com/questions/552744/how-do-i-profile-memory-usage-in-python
 
 import numpy as np
+from nz_binned_demo import locations_nzpt2_and_nz34_binned
+from SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
+from SLT_37_GT import merge_ltbs
 
 from toshi_hazard_store import aggregate_rlzs as ag
 from toshi_hazard_store.query_v3 import get_rlz_curves_v3
@@ -44,7 +47,7 @@ def display_top(snapshot, key_type='lineno', limit=3):
 # from nzshm_common.location.code_location import CodedLocation
 # from typing import List, Tuple, Dict
 
-# def locations_by_degree(grid_points:List[Tuple[float,float]], grid_res:float, point_res:float) -> Dict[str, List[str]]:
+# def locations_by_degree(grid_points:List[Tuple[float,float]], grid_res:float, point_res:float) -> Dict[str, List[str]]: # noqa
 #     """Produce a dict of key_location:"""
 #     binned = dict()
 #     for pt in grid_points:
@@ -77,7 +80,7 @@ def process():
 
     loc = "-43.530~172.630"  # CHC
     vs30 = 750
-    rlzs = None
+    # rlzs = None
     agg = 'mean'
     # agg = [0.5]
 
@@ -109,10 +112,6 @@ def process():
     # snapshot = tracemalloc.take_snapshot()
     # display_top(snapshot)
 
-
-from nz_binned_demo import locations_nzpt2_and_nz34_binned
-from SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
-from SLT_37_GT import merge_ltbs
 
 if __name__ == "__main__":
     omit = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDEy']  # this is the failed/clonded job

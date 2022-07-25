@@ -97,13 +97,13 @@ class vs30_nloc001_gt_rlz_index(LocalSecondaryIndex):
 
 
 class HazardAggregation(Model):
-    """Stores the individual hazard realisation curves."""
+    """Stores aggregate hazard curves."""
 
     class Meta:
         """DynamoDB Metadata."""
 
         billing_mode = 'PAY_PER_REQUEST'
-        table_name = f"THS_OpenquakeRealization-{DEPLOYMENT_STAGE}"
+        table_name = f"THS_OpenquakeAggregation-{DEPLOYMENT_STAGE}"
         region = REGION
         if IS_OFFLINE:
             host = "http://localhost:8000"  # pragma: no cover
@@ -148,19 +148,21 @@ class OpenquakeRealization(Model):
         if IS_OFFLINE:
             host = "http://localhost:8000"  # pragma: no cover
 
-    partition_key = UnicodeAttribute(hash_key=True)  # For this we will use a downsampled location to 1.0 degree
+    partition_key = UnicodeAttribute(
+        hash_key=True
+    )  # For this we will use a downsampled location to 1.0 degree (see self.set_location)
     sort_key = UnicodeAttribute(range_key=True)  # TODO: check we can actually use this in queries!
     version = VersionAttribute()
     uniq_id = UnicodeAttribute()
     hazard_solution_id = UnicodeAttribute()
 
-    nloc_001 = UnicodeAttribute()  # 0.001
-    nloc_01 = UnicodeAttribute()  # 0.01
-    nloc_1 = UnicodeAttribute()  # 0.1
-    nloc_0 = UnicodeAttribute()  # 1.0
+    nloc_001 = UnicodeAttribute()  # 0.001deg ~100m grid
+    nloc_01 = UnicodeAttribute()  # 0.01deg ~1km grid
+    nloc_1 = UnicodeAttribute()  # 0.1deg ~10km grid
+    nloc_0 = UnicodeAttribute()  # 1.0deg ~100km grid
     # nloc_10 = UnicodeAttribute()  # 10.0
 
-    rlz = IntegerAttribute()  # index to the openquake realization
+    rlz = IntegerAttribute()  # index of the openquake realization
     vs30 = IntegerAttribute()  # vs30 in m/s
 
     lat = FloatAttribute()  # latitude decimal degrees

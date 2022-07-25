@@ -4,19 +4,14 @@ import itertools
 import logging
 import math
 import time
-from dis import dis
 from functools import reduce
-from operator import inv, mul
+from operator import mul
+from typing import List
 
 import numpy as np
 import pandas as pd
 
-from toshi_hazard_store.branch_combinator.branch_combinator import (
-    get_branches,
-    get_weighted_branches,
-    grouped_ltbs,
-    merge_ltbs,
-)
+from toshi_hazard_store.branch_combinator.branch_combinator import get_weighted_branches, grouped_ltbs, merge_ltbs
 from toshi_hazard_store.branch_combinator.SLT_37_GRANULAR_RELEASE_1 import logic_tree_permutations
 
 # from toshi_hazard_store.branch_combinator.SLT_37_GT_VS400_DATA import data as gtdata
@@ -193,37 +188,35 @@ def build_source_branch(values, rlz_combs, imt, loc):
             prob_table = np.vstack((prob_table, np.array(prob)))
 
     toc = time.perf_counter()
-    # if VERBOSE:
-    #     print(f'time to build source branch table: {toc-tic:.1f} seconds')
-
+    log.debug('build_source_branch took: %s' % (toc - tic))
     return prob_table
 
 
-def build_source_branch_ws(values, rlz_combs, weights):
-    '''DEPRECIATED'''
+# def build_source_branch_ws(values, rlz_combs, weights):
+#     '''DEPRECIATED'''
 
-    branch_weights = []
-    for i, rlz_comb in enumerate(rlz_combs):
-        branch_weight = 1
-        rate = np.zeros(next(iter(values.values())).shape)
-        for rlz in rlz_comb:
-            print(rlz)
-            rate += prob_to_rate(values[rlz]) * weights[rlz]
-            branch_weight *= weights[rlz]
+#     branch_weights = []
+#     for i, rlz_comb in enumerate(rlz_combs):
+#         branch_weight = 1
+#         rate = np.zeros(next(iter(values.values())).shape)
+#         for rlz in rlz_comb:
+#             print(rlz)
+#             rate += prob_to_rate(values[rlz]) * weights[rlz]
+#             branch_weight *= weights[rlz]
 
-        prob = rate_to_prob(rate)
-        print(rate)
-        print('-' * 50)
-        print(prob)
-        print('=' * 50)
+#         prob = rate_to_prob(rate)
+#         print(rate)
+#         print('-' * 50)
+#         print(prob)
+#         print('=' * 50)
 
-        if i == 0:
-            prob_table = np.array(prob)
-        else:
-            prob_table = np.vstack((prob_table, np.array(prob)))
-        branch_weights.append(branch_weight)
+#         if i == 0:
+#             prob_table = np.array(prob)
+#         else:
+#             prob_table = np.vstack((prob_table, np.array(prob)))
+#         branch_weights.append(branch_weight)
 
-    return prob_table, branch_weights
+#     return prob_table, branch_weights
 
 
 def calculate_aggs(branch_probs, aggs, weight_combs):
@@ -237,9 +230,7 @@ def calculate_aggs(branch_probs, aggs, weight_combs):
         else:
             median = np.vstack((median, quantiles))
     toc = time.perf_counter()
-    # if VERBOSE:
-    #     print(f'time to calulate single aggrigation: {toc-tic:.4f} seconds')
-
+    log.debug('calculate_aggs took: %s' % (toc - tic))
     return median
 
 
@@ -266,20 +257,19 @@ def build_branches(source_branches, values, imt, loc, vs30):
             branch_probs = np.vstack((branch_probs, build_source_branch(values, rlz_combs, imt, loc)))
 
     toc = time.perf_counter()
-    if VERBOSE:
-        print(f'time to build branches: {toc-tic:.4f} seconds')
+    log.debug('build_branches took: %s ' % (toc - tic))
 
     return weights, branch_probs
 
 
 def read_locs():
-    '''DEPRECIATED'''
+    '''DEPRECATED'''
 
     csv_file_path = '/home/chrisdc/NSHM/DEV/toshi-hazard-store/data/hazard_curve-mean-PGA_35.csv'
     with open(csv_file_path) as csvfile:
         reader = csv.reader(csvfile, delimiter=',')
-        header = next(reader)
-        header = next(reader)
+        _ = next(reader)
+        _ = next(reader)
         location_codes = []
         for row in reader:
             lon = float(row[1])
@@ -413,7 +403,7 @@ def process_disagg_location_list(hazard_curves, source_branches, toshi_ids, poes
         for poe in poes:
             for agg in aggs:
                 for imt in imts:
-                    disagg_key = ':'.join((loc, str(poe), str(agg), imt))
+                    # disagg_key = ':'.join((loc, str(poe), str(agg), imt))
 
                     # get target level of shaking
                     hc = hazard_curves.loc[
@@ -502,7 +492,7 @@ if __name__ == "__main__":
 
     # source_branches = load_source_branches()
     # omit = ['T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTA2MDEy']  # this is the failed/clonded job
-    omit = []
+    omit: List[str] = []
     toshi_ids = [b.hazard_solution_id for b in merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit)]
 
     grouped = grouped_ltbs(merge_ltbs(logic_tree_permutations, gtdata=gtdata, omit=omit))
