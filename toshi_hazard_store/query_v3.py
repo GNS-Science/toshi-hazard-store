@@ -42,7 +42,7 @@ def get_hashes(locs: Iterable[str]):
         lt = loc.split('~')
         assert len(lt) == 2
         hashes.add(downsample_code(loc, 0.1))
-    return list(hashes)
+    return sorted(list(hashes))
 
 
 def get_rlz_curves_v3(
