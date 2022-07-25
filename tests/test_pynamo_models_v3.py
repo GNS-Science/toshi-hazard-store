@@ -28,6 +28,17 @@ def get_one_rlz():
     return rlz
 
 
+def get_one_hazard_aggregate():
+    imtvs = []
+    for t in ['PGA', 'SA(0.5)', 'SA(1.0)']:
+        levels = range(1, 51)
+        values = range(101, 151)
+        imtvs.append(model.IMTValuesAttribute(imt="PGA", lvls=levels, vals=values))
+
+    location = CodedLocation(code='WLG', lat=-41.3, lon=174.78)
+    return model.HazardAggregation(values=imtvs, vs30=450, hazard_model_id="HAZ_MODEL_ONE").set_location(location)
+
+
 def get_one_meta():
     return model.ToshiOpenquakeMeta(
         partition_key="ToshiOpenquakeMeta",
@@ -114,15 +125,15 @@ class PynamoTestTwo(unittest.TestCase):
 
 
 @mock_dynamodb
-class PynamoTestQuery(unittest.TestCase):
+class PynamoTestOpenquakeRealizationQuery(unittest.TestCase):
     def setUp(self):
 
         model.migrate_v3()
-        super(PynamoTestQuery, self).setUp()
+        super(PynamoTestOpenquakeRealizationQuery, self).setUp()
 
     def tearDown(self):
         model.drop_tables_v3()
-        return super(PynamoTestQuery, self).tearDown()
+        return super(PynamoTestOpenquakeRealizationQuery, self).tearDown()
 
     def test_model_query_no_condition(self):
 
@@ -207,3 +218,39 @@ class PynamoTestQuery(unittest.TestCase):
             with model.OpenquakeRealization.batch_write() as batch:
                 batch.save(rlzb)
                 batch.save(rlza)
+
+
+@mock_dynamodb
+class PynamoTestHazardAggregationQuery(unittest.TestCase):
+    def setUp(self):
+
+        model.migrate_v3()
+        super(PynamoTestHazardAggregationQuery, self).setUp()
+
+    def tearDown(self):
+        model.drop_tables_v3()
+        return super(PynamoTestHazardAggregationQuery, self).tearDown()
+
+    def test_model_query_no_condition(self):
+
+        rlz = get_one_hazard_aggregate()
+        rlz.save()
+
+        # query on model
+        res = list(model.HazardAggregation.query(rlz.partition_key))[0]
+        self.assertEqual(res.partition_key, rlz.partition_key)
+        self.assertEqual(res.sort_key, rlz.sort_key)
+
+    def test_model_query_equal_condition(self):
+
+        rlz = get_one_hazard_aggregate()
+        rlz.save()
+
+        # query on model
+        res = list(
+            model.HazardAggregation.query(
+                rlz.partition_key, model.HazardAggregation.sort_key == '-41.300~174.780:450:HAZ_MODEL_ONE'
+            )
+        )[0]
+        self.assertEqual(res.partition_key, rlz.partition_key)
+        self.assertEqual(res.sort_key, rlz.sort_key)

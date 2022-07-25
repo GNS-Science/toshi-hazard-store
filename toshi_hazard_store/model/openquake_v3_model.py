@@ -96,33 +96,55 @@ class vs30_nloc001_gt_rlz_index(LocalSecondaryIndex):
     index2_rk = UnicodeAttribute(range_key=True)
 
 
-class HazardAggregation(Model):
+class LocationIndexedModel(Model):
+    """Model base class."""
+
+    partition_key = UnicodeAttribute(hash_key=True)  # For this we will use a downsampled location to 1.0 degree
+    sort_key = UnicodeAttribute(range_key=True)
+
+    nloc_001 = UnicodeAttribute()  # 0.001deg ~100m grid
+    nloc_01 = UnicodeAttribute()  # 0.01deg ~1km grid
+    nloc_1 = UnicodeAttribute()  # 0.1deg ~10km grid
+    nloc_0 = UnicodeAttribute()  # 1.0deg ~100km grid
+
+    version = VersionAttribute()
+    uniq_id = UnicodeAttribute()
+
+    lat = FloatAttribute()  # latitude decimal degrees
+    lon = FloatAttribute()  # longitude decimal degrees
+    vs30 = FloatAttribute()
+
+    values = ListAttribute(of=IMTValuesAttribute)
+    created = TimestampAttribute(default=datetime_now)
+
+    def set_location(self, location: CodedLocation):
+        """Set internal fields, indices etc from the location."""
+
+        self.nloc_001 = location.downsample(0.001).code
+        self.nloc_01 = location.downsample(0.01).code
+        self.nloc_1 = location.downsample(0.1).code
+        self.nloc_0 = location.downsample(1.0).code
+        # self.nloc_10 = location.downsample(10.0).code
+
+        self.lat = location.lat
+        self.lon = location.lon
+        self.uniq_id = str(uuid.uuid4())
+        return self
+
+
+class HazardAggregation(LocationIndexedModel):
     """Stores aggregate hazard curves."""
 
     class Meta:
         """DynamoDB Metadata."""
 
         billing_mode = 'PAY_PER_REQUEST'
-        table_name = f"THS_OpenquakeAggregation-{DEPLOYMENT_STAGE}"
+        table_name = f"THS_HazardAggregation-{DEPLOYMENT_STAGE}"
         region = REGION
         if IS_OFFLINE:
             host = "http://localhost:8000"  # pragma: no cover
 
-    partition_key = UnicodeAttribute(hash_key=True)  # For this we will use a downsampled location to 1.0 degree
-    sort_key = UnicodeAttribute(range_key=True)
-    aggregation_id = UnicodeAttribute()
-
-    version = VersionAttribute()
-    uniq_id = UnicodeAttribute()
-
-    nloc_001 = UnicodeAttribute()  # 0.001
-    nloc_01 = UnicodeAttribute()  # 0.01
-    nloc_1 = UnicodeAttribute()  # 0.1
-    nloc_0 = UnicodeAttribute()  # 1.0
-    vs30 = IntegerAttribute()  # vs30 in m/s
-
-    lat = FloatAttribute()  # latitude decimal degrees
-    lon = FloatAttribute()  # longitude decimal degrees
+    hazard_model_id = UnicodeAttribute()
 
     # aggregation_info = # details about the aggregation
     # count of aggregated items
@@ -135,8 +157,22 @@ class HazardAggregation(Model):
     values = ListAttribute(of=IMTValuesAttribute)
     created = TimestampAttribute(default=datetime_now)
 
+    # Secondary Index attributes
+    # index1 = vs30_nloc1_gt_rlz_index()
+    # index1_rk = UnicodeAttribute()
 
-class OpenquakeRealization(Model):
+    def set_location(self, location: CodedLocation):
+        """Set internal fields, indices etc from the location."""
+        super().set_location(location)
+
+        # update the indices
+        vs30s = str(self.vs30).zfill(3)
+        self.partition_key = self.nloc_1
+        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.hazard_model_id}'
+        return self
+
+
+class OpenquakeRealization(LocationIndexedModel):
     """Stores the individual hazard realisation curves."""
 
     class Meta:
@@ -148,31 +184,11 @@ class OpenquakeRealization(Model):
         if IS_OFFLINE:
             host = "http://localhost:8000"  # pragma: no cover
 
-    partition_key = UnicodeAttribute(
-        hash_key=True
-    )  # For this we will use a downsampled location to 1.0 degree (see self.set_location)
-    sort_key = UnicodeAttribute(range_key=True)  # TODO: check we can actually use this in queries!
-    version = VersionAttribute()
-    uniq_id = UnicodeAttribute()
     hazard_solution_id = UnicodeAttribute()
-
-    nloc_001 = UnicodeAttribute()  # 0.001deg ~100m grid
-    nloc_01 = UnicodeAttribute()  # 0.01deg ~1km grid
-    nloc_1 = UnicodeAttribute()  # 0.1deg ~10km grid
-    nloc_0 = UnicodeAttribute()  # 1.0deg ~100km grid
-    # nloc_10 = UnicodeAttribute()  # 10.0
-
-    rlz = IntegerAttribute()  # index of the openquake realization
-    vs30 = IntegerAttribute()  # vs30 in m/s
-
-    lat = FloatAttribute()  # latitude decimal degrees
-    lon = FloatAttribute()  # longitude decimal degrees
-
     source_tags = UnicodeSetAttribute()
     source_ids = UnicodeSetAttribute()
 
-    values = ListAttribute(of=IMTValuesAttribute)
-    created = TimestampAttribute(default=datetime_now)
+    rlz = IntegerAttribute()  # index of the openquake realization
 
     # Secondary Index attributes
     index1 = vs30_nloc1_gt_rlz_index()
@@ -180,27 +196,19 @@ class OpenquakeRealization(Model):
 
     def set_location(self, location: CodedLocation):
         """Set internal fields, indices etc from the location."""
+        super().set_location(location)
 
-        self.nloc_001 = location.downsample(0.001).code
-        self.nloc_01 = location.downsample(0.01).code
-        self.nloc_1 = location.downsample(0.1).code
-        self.nloc_0 = location.downsample(1.0).code
-        # self.nloc_10 = location.downsample(10.0).code
-
-        self.partition_key = self.nloc_1
-
-        self.lat = location.lat
-        self.lon = location.lon
-
+        # update the indices
         rlzs = str(self.rlz).zfill(6)
-        vs30s = str(self.vs30).zfill(3)
 
+        vs30s = str(self.vs30).zfill(3)
+        self.partition_key = self.nloc_1
         self.sort_key = f'{self.nloc_001}:{vs30s}:{rlzs}:{self.hazard_solution_id}'
         self.index1_rk = f'{self.nloc_1}:{vs30s}:{rlzs}:{self.hazard_solution_id}'
-        self.uniq_id = str(uuid.uuid4())
+        return self
 
 
-tables = [OpenquakeRealization, ToshiOpenquakeMeta]
+tables = [OpenquakeRealization, ToshiOpenquakeMeta, HazardAggregation]
 
 
 def migrate():
