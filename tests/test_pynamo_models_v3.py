@@ -36,7 +36,9 @@ def get_one_hazard_aggregate():
         imtvs.append(model.IMTValuesAttribute(imt="PGA", lvls=levels, vals=values))
 
     location = CodedLocation(code='WLG', lat=-41.3, lon=174.78)
-    return model.HazardAggregation(values=imtvs, vs30=450, hazard_model_id="HAZ_MODEL_ONE").set_location(location)
+    return model.HazardAggregation(values=imtvs, agg='mean', vs30=450, hazard_model_id="HAZ_MODEL_ONE").set_location(
+        location
+    )
 
 
 def get_one_meta():
@@ -249,7 +251,7 @@ class PynamoTestHazardAggregationQuery(unittest.TestCase):
         # query on model
         res = list(
             model.HazardAggregation.query(
-                rlz.partition_key, model.HazardAggregation.sort_key == '-41.300~174.780:450:HAZ_MODEL_ONE'
+                rlz.partition_key, model.HazardAggregation.sort_key == '-41.300~174.780:450:mean:HAZ_MODEL_ONE'
             )
         )[0]
         self.assertEqual(res.partition_key, rlz.partition_key)

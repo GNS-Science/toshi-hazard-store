@@ -149,6 +149,7 @@ def get_hazard_curves(
     vs30s: Iterable[int] = [],  # vs30s
     hazard_model_ids: Iterable[str] = [],  # hazard_model_ids
     imts: Iterable[str] = [],
+    aggs: Iterable[str] = [],
 ) -> Iterator[mHAG]:
     """Use mHAG.sort_key as much as possible.
 
@@ -179,6 +180,8 @@ def get_hazard_curves(
 
         if vs30s:
             condition_expr = condition_expr & mHAG.vs30.is_in(*vs30s)
+        if aggs:
+            condition_expr = condition_expr & mHAG.agg.is_in(*aggs)
         if hids:
             condition_expr = condition_expr & mHAG.hazard_model_id.is_in(*hids)
 
@@ -193,7 +196,10 @@ def get_hazard_curves(
         if vs30s:
             first_vs30 = sorted(vs30s)[0]
             sort_key_first_val += f":{first_vs30}"
-        if vs30s and hids:
+        if vs30s and aggs:
+            first_agg = sorted(aggs)[0]
+            sort_key_first_val += f":{first_agg}"
+        if vs30s and aggs and hids:
             first_hid = sorted(hids)[0]
             sort_key_first_val += f":{first_hid}"
         return sort_key_first_val

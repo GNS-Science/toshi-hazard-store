@@ -145,6 +145,7 @@ class HazardAggregation(LocationIndexedModel):
             host = "http://localhost:8000"  # pragma: no cover
 
     hazard_model_id = UnicodeAttribute()
+    agg = UnicodeAttribute()
 
     # aggregation_info = # details about the aggregation
     # count of aggregated items
@@ -153,9 +154,6 @@ class HazardAggregation(LocationIndexedModel):
     # requested
     # time_seconds:
     # started:
-
-    values = ListAttribute(of=IMTValuesAttribute)
-    created = TimestampAttribute(default=datetime_now)
 
     # Secondary Index attributes
     # index1 = vs30_nloc1_gt_rlz_index()
@@ -168,7 +166,7 @@ class HazardAggregation(LocationIndexedModel):
         # update the indices
         vs30s = str(self.vs30).zfill(3)
         self.partition_key = self.nloc_1
-        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.hazard_model_id}'
+        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.agg}:{self.hazard_model_id}'
         return self
 
 
