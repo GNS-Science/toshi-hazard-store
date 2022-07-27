@@ -43,7 +43,7 @@ def load_realization_values(toshi_ids, locs, vs30s):
     # for branch in source_branches:
     #     unique_ids += branch['ids']
     # unique_ids = list(set(unique_ids))
-    print(f'loading {len(toshi_ids)} hazard IDs . . . ')
+    log.info('loading %s hazard IDs ... ' % len(toshi_ids))
 
     values = {}
     for res in get_rlz_curves_v3(locs, vs30s, None, toshi_ids, None):
@@ -309,7 +309,7 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
     values = load_realization_values(toshi_ids, locs, [vs30])
 
     if not values:
-        log.info('missing values: %s'(values))
+        log.info('missing values: %s' % (values))
         return
 
     columns = ['lat', 'lon', 'imt', 'agg', 'level', 'hazard']
