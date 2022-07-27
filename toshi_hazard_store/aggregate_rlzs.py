@@ -21,7 +21,7 @@ from toshi_hazard_store.locations import locations_nzpt2_and_nz34_binned, locati
 from toshi_hazard_store.query_v3 import get_hazard_metadata_v3, get_rlz_curves_v3
 
 inv_time = 1.0
-VERBOSE = False
+VERBOSE = True
 
 log = logging.getLogger(__name__)
 
@@ -338,10 +338,14 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
             start_loc = stop_loc
 
             log.debug('build_branches imt: %s, loc: %s, vs30: %s' % (imt, loc, vs30))
+
+            # tic1 = time.perf_counter()
             weights, branch_probs = build_branches(source_branches, values, imt, loc, vs30)
+            hazard = calculate_aggs(branch_probs, aggs, weights)
+            # toc1 = time.perf_counter()
+            # print(f'time to calculate_aggs {toc1-tic1} seconds')
 
             tic_agg = time.perf_counter()
-            hazard = calculate_aggs(branch_probs, aggs, weights)
             for aggind, agg in enumerate(aggs):
 
                 stop_agg = start_agg + nlevels

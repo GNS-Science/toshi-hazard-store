@@ -56,8 +56,6 @@ class AggregationWorkerMP(multiprocessing.Process):
             print(f"worker {self.name} saved {df_name} for {len(nt.locs)} locations.")
             self.result_queue.put(str(df_name))
 
-        return
-
 
 AggTaskArgs = namedtuple("AggTaskArgs", "grid_loc locs toshi_ids source_branches aggs imts levels vs30")
 
@@ -167,8 +165,8 @@ if __name__ == "__main__":
     # location_generator = locations_nz34_chunked
     location_generator = locations_nzpt2_chunked  # TODO: RANGED
 
-    loc_keyrange = (0, 29)  # CDC
-    loc_keyrange = (30, 45)  # CBC (there are 43, but just in case I miss counted)
+    # loc_keyrange = (0, 29)  # CDC
+    # loc_keyrange = (30, 45)  # CBC (there are 43, but just in case I miss counted)
     loc_keyrange = (0, 1)
 
     output_prefix = f'FullLT_{loc_keyrange[0]}_{loc_keyrange[1]}'
