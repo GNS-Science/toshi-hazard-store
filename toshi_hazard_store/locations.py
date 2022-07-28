@@ -9,20 +9,20 @@ MODE = 'TEST'
 
 def locations_by_degree(
     grid_points: List[Tuple[float, float]], grid_res: float, point_res: float
-) -> Dict[str, List[str]]:
+) -> Dict[str, List[CodedLocation]]:
     """Produce a dict of key_location:"""
     binned: Dict[str, CodedLocation] = dict()
     for pt in grid_points:
         bc = CodedLocation(*pt).downsample(grid_res).code
         if not binned.get(bc):
             binned[bc] = []
-        binned[bc].append(CodedLocation(*pt).downsample(point_res).code)
+        binned[bc].append(CodedLocation(*pt).downsample(point_res))
     return binned
 
 
 def locations_by_chunk(
     grid_points: List[Tuple[float, float]], point_res: float, chunk_size: int
-) -> Dict[int, List[str]]:
+) -> Dict[int, List[CodedLocation]]:
     chunked = dict()
     # chunk_size=25
     # for n in range(int(len(grid_points)/chunk_size) +2):
@@ -35,7 +35,7 @@ def locations_by_chunk(
         coded_pts = []
         if pts:
             for pt in pts:
-                coded_pts.append(CodedLocation(*pt).downsample(point_res).code)
+                coded_pts.append(CodedLocation(*pt).downsample(point_res))
         chunked[ni] = coded_pts
     return chunked
 
