@@ -18,6 +18,7 @@ from pynamodb.models import Model
 from pynamodb_attributes import FloatAttribute, IntegerAttribute, TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
+from toshi_hazard_store.model.openquake_v1_model import LevelValuePairAttribute
 from toshi_hazard_store.model.openquake_v2_model import IMTValuesAttribute
 
 
@@ -114,7 +115,6 @@ class LocationIndexedModel(Model):
     lon = FloatAttribute()  # longitude decimal degrees
     vs30 = FloatAttribute()
 
-    values = ListAttribute(of=IMTValuesAttribute)
     created = TimestampAttribute(default=datetime_now)
 
     def set_location(self, location: CodedLocation):
@@ -145,7 +145,10 @@ class HazardAggregation(LocationIndexedModel):
             host = "http://localhost:8000"  # pragma: no cover
 
     hazard_model_id = UnicodeAttribute()
+    imt = UnicodeAttribute()
     agg = UnicodeAttribute()
+
+    values = ListAttribute(of=LevelValuePairAttribute)
 
     # aggregation_info = # details about the aggregation
     # count of aggregated items
@@ -166,7 +169,7 @@ class HazardAggregation(LocationIndexedModel):
         # update the indices
         vs30s = str(self.vs30).zfill(3)
         self.partition_key = self.nloc_1
-        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.agg}:{self.hazard_model_id}'
+        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.agg}:{self.hazard_model_id}'
         return self
 
 
@@ -187,6 +190,7 @@ class OpenquakeRealization(LocationIndexedModel):
     source_ids = UnicodeSetAttribute()
 
     rlz = IntegerAttribute()  # index of the openquake realization
+    values = ListAttribute(of=IMTValuesAttribute)
 
     # Secondary Index attributes
     index1 = vs30_nloc1_gt_rlz_index()

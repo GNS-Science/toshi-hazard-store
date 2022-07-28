@@ -17,22 +17,16 @@ locs = [CodedLocation(o['latitude'], o['longitude']) for o in LOCATIONS_BY_ID.va
 def build_hazard_aggregation_models():
 
     n_lvls = 29
+    lvps = list(map(lambda x: model.LevelValuePairAttribute(lvl=x / 1e3, val=(x / 1e6)), range(1, n_lvls)))
     for (loc, vs30, agg) in itertools.product(locs[:5], vs30s, aggs):
-        values = []
         for imt, val in enumerate(imts):
-            values.append(
-                model.IMTValuesAttribute(
-                    imt=val,
-                    lvls=[x / 1e3 for x in range(1, n_lvls)],
-                    vals=[x / 1e6 for x in range(1, n_lvls)],
-                )
-            )
-        yield model.HazardAggregation(
-            values=values,
-            vs30=vs30,
-            agg=agg,
-            hazard_model_id=HAZARD_MODEL_ID,
-        ).set_location(loc)
+            yield model.HazardAggregation(
+                values=lvps,
+                vs30=vs30,
+                agg=agg,
+                imt=val,
+                hazard_model_id=HAZARD_MODEL_ID,
+            ).set_location(loc)
 
 
 @mock_dynamodb
@@ -53,14 +47,14 @@ class QueryHazardAggregationV3Test(unittest.TestCase):
         print(f'qlocs {qlocs}')
         res = list(query_v3.get_hazard_curves(qlocs, vs30s, [HAZARD_MODEL_ID], imts))
         print(res)
-        self.assertEqual(len(res), len(aggs) * len(vs30s) * len(locs[:2]))
+        self.assertEqual(len(res), len(imts) * len(aggs) * len(vs30s) * len(locs[:2]))
         self.assertEqual(res[0].nloc_001, qlocs[0])
 
     def test_query_hazard_aggr_2(self):
         qlocs = [loc.downsample(0.001).code for loc in locs[:2]]
         res = list(query_v3.get_hazard_curves(qlocs, vs30s, [HAZARD_MODEL_ID, 'FAKE_ID'], imts))
         print(res)
-        self.assertEqual(len(res), len(aggs) * len(vs30s) * len(locs[:2]))
+        self.assertEqual(len(res), len(imts) * len(aggs) * len(vs30s) * len(locs[:2]))
         self.assertEqual(res[0].nloc_001, qlocs[0])
 
     # def test_query_hazard_aggr_3(self):

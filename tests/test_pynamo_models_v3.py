@@ -7,6 +7,8 @@ from nzshm_common.location.code_location import CodedLocation
 
 from toshi_hazard_store import model
 
+# from toshi_hazard_store.model.openquake_v1_model import LevelValuePairAttribute
+
 
 def get_one_rlz():
     imtvs = []
@@ -29,16 +31,11 @@ def get_one_rlz():
 
 
 def get_one_hazard_aggregate():
-    imtvs = []
-    for t in ['PGA', 'SA(0.5)', 'SA(1.0)']:
-        levels = range(1, 51)
-        values = range(101, 151)
-        imtvs.append(model.IMTValuesAttribute(imt="PGA", lvls=levels, vals=values))
-
+    lvps = list(map(lambda x: model.LevelValuePairAttribute(lvl=x / 1e3, val=(x / 1e6)), range(1, 51)))
     location = CodedLocation(code='WLG', lat=-41.3, lon=174.78)
-    return model.HazardAggregation(values=imtvs, agg='mean', vs30=450, hazard_model_id="HAZ_MODEL_ONE").set_location(
-        location
-    )
+    return model.HazardAggregation(
+        values=lvps, agg="mean", imt="PGA", vs30=450, hazard_model_id="HAZ_MODEL_ONE"
+    ).set_location(location)
 
 
 def get_one_meta():
@@ -235,24 +232,24 @@ class PynamoTestHazardAggregationQuery(unittest.TestCase):
 
     def test_model_query_no_condition(self):
 
-        rlz = get_one_hazard_aggregate()
-        rlz.save()
+        hag = get_one_hazard_aggregate()
+        hag.save()
 
         # query on model
-        res = list(model.HazardAggregation.query(rlz.partition_key))[0]
-        self.assertEqual(res.partition_key, rlz.partition_key)
-        self.assertEqual(res.sort_key, rlz.sort_key)
+        res = list(model.HazardAggregation.query(hag.partition_key))[0]
+        self.assertEqual(res.partition_key, hag.partition_key)
+        self.assertEqual(res.sort_key, hag.sort_key)
 
     def test_model_query_equal_condition(self):
 
-        rlz = get_one_hazard_aggregate()
-        rlz.save()
+        hag = get_one_hazard_aggregate()
+        hag.save()
 
         # query on model
         res = list(
             model.HazardAggregation.query(
-                rlz.partition_key, model.HazardAggregation.sort_key == '-41.300~174.780:450:mean:HAZ_MODEL_ONE'
+                hag.partition_key, model.HazardAggregation.sort_key == '-41.300~174.780:450:PGA:mean:HAZ_MODEL_ONE'
             )
         )[0]
-        self.assertEqual(res.partition_key, rlz.partition_key)
-        self.assertEqual(res.sort_key, rlz.sort_key)
+        self.assertEqual(res.partition_key, hag.partition_key)
+        self.assertEqual(res.sort_key, hag.sort_key)

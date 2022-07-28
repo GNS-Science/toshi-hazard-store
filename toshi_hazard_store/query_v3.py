@@ -180,6 +180,8 @@ def get_hazard_curves(
 
         if vs30s:
             condition_expr = condition_expr & mHAG.vs30.is_in(*vs30s)
+        if imts:
+            condition_expr = condition_expr & mHAG.imt.is_in(*imts)
         if aggs:
             condition_expr = condition_expr & mHAG.agg.is_in(*aggs)
         if hids:
@@ -196,10 +198,13 @@ def get_hazard_curves(
         if vs30s:
             first_vs30 = sorted(vs30s)[0]
             sort_key_first_val += f":{first_vs30}"
-        if vs30s and aggs:
+        if vs30s and imts:
+            first_imt = sorted(imts)[0]
+            sort_key_first_val += f":{first_imt}"
+        if vs30s and imts and aggs:
             first_agg = sorted(aggs)[0]
             sort_key_first_val += f":{first_agg}"
-        if vs30s and aggs and hids:
+        if vs30s and imts and aggs and hids:
             first_hid = sorted(hids)[0]
             sort_key_first_val += f":{first_hid}"
         return sort_key_first_val
@@ -229,6 +234,4 @@ def get_hazard_curves(
 
         print(f"get_hazard_rlz_curves_v3: qry {qry}")
         for hit in qry:
-            if imts:
-                hit.values = list(filter(lambda x: x.imt in imts, hit.values))
             yield (hit)
