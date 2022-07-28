@@ -300,12 +300,11 @@ def get_levels(source_branches, locs, vs30):
     return hazard.values[0].lvls
 
 
-# process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, vs30)
 def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, vs30):
     log.info('get values for %s locations and %s hazard_solutions' % (len(locs), len(toshi_ids)))
     log.debug('aggs: %s' % (aggs))
     log.debug('source_branches: %s' % (source_branches))
-
+    tic_fn = time.perf_counter()
     values = load_realization_values(toshi_ids, locs, [vs30])
 
     if not values:
@@ -323,7 +322,8 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
     cnt = 0
     start_imt = 0
     for imt in imts:
-        print(f'working on {imt}')
+        log.info('process_location_list() working on imt: %s' % imt)
+        tic_imt = time.perf_counter()
         start_loc = start_imt
         stop_imt = start_imt + nlocs * naggs * nlevels
         binned_hazard_curves.loc[start_imt:stop_imt, 'imt'] = imt
@@ -345,7 +345,7 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
             # toc1 = time.perf_counter()
             # print(f'time to calculate_aggs {toc1-tic1} seconds')
 
-            tic_agg = time.perf_counter()
+            # tic_agg = time.perf_counter()
             for aggind, agg in enumerate(aggs):
 
                 stop_agg = start_agg + nlevels
@@ -365,10 +365,15 @@ def process_location_list(locs, toshi_ids, source_branches, aggs, imts, levels, 
                 # toc = time.perf_counter()
                 # print(f'time to store in df {toc-tic} seconds')
 
-            toc_agg = time.perf_counter()
-            if VERBOSE:
-                print(f'time to perform all aggregations for 1 location {loc}: {toc_agg-tic_agg:.4f} seconds')
+            # toc_agg = time.perf_counter()
+            # if VERBOSE:
+            #     print(f'time to perform all aggregations for 1 location {loc}: {toc_agg-tic_agg:.4f} seconds')
 
+        toc_imt = time.perf_counter()
+        log.info('imt: %s took %.3f secs' % (imt, (toc_imt - tic_imt)))
+
+    toc_fn = time.perf_counter()
+    log.info('process_location_list took %.3f secs' % (toc_fn - tic_fn))
     return binned_hazard_curves
 
 
