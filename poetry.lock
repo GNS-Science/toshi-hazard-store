@@ -839,7 +839,7 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "nzshm-common"
-version = "1.1.0"
+version = "0.1.1"
 description = "A small pure python library for shared NZ NSHM data like locations."
 category = "main"
 optional = false
@@ -850,7 +850,7 @@ develop = false
 type = "git"
 url = "https://github.com/GNS-Science/nzshm-common-py.git"
 reference = "main"
-resolved_reference = "03d2c932468b17fa396d1b9c1c52d88cd8248b48"
+resolved_reference = "d38292a03bd97462b4d58392fb4fa0a48fcf8afd"
 
 [[package]]
 name = "openquake.engine"
