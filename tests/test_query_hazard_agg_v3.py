@@ -11,7 +11,7 @@ HAZARD_MODEL_ID = 'MODEL_THE_FIRST'
 vs30s = [250, 350, 450]
 imts = ['PGA', 'SA(0.5)']
 aggs = ['mean', '0.10']
-locs = [CodedLocation(o['latitude'], o['longitude']) for o in LOCATIONS_BY_ID.values()]
+locs = [CodedLocation(o['latitude'], o['longitude'], 0.001) for o in LOCATIONS_BY_ID.values()]
 
 
 def build_hazard_aggregation_models():

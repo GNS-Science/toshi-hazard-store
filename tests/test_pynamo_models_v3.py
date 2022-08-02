@@ -17,7 +17,7 @@ def get_one_rlz():
         values = range(101, 151)
         imtvs.append(model.IMTValuesAttribute(imt="PGA", lvls=levels, vals=values))
 
-    location = CodedLocation(code='WLG', lat=-41.3, lon=174.78)
+    location = CodedLocation(lat=-41.3, lon=174.78, resolution=0.001)
     rlz = model.OpenquakeRealization(
         values=imtvs,
         rlz=10,
@@ -32,7 +32,7 @@ def get_one_rlz():
 
 def get_one_hazard_aggregate():
     lvps = list(map(lambda x: model.LevelValuePairAttribute(lvl=x / 1e3, val=(x / 1e6)), range(1, 51)))
-    location = CodedLocation(code='WLG', lat=-41.3, lon=174.78)
+    location = CodedLocation(lat=-41.3, lon=174.78, resolution=0.001)
     return model.HazardAggregation(
         values=lvps, agg="mean", imt="PGA", vs30=450, hazard_model_id="HAZ_MODEL_ONE"
     ).set_location(location)

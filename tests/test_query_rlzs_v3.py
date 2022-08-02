@@ -10,7 +10,7 @@ from toshi_hazard_store import model, query_v3
 TOSHI_ID = 'FAk3T0sHi1D=='
 vs30s = [250, 350, 450]
 imts = ['PGA', 'SA(0.5)']
-locs = [CodedLocation(o['latitude'], o['longitude']) for o in LOCATIONS_BY_ID.values()]
+locs = [CodedLocation(o['latitude'], o['longitude'], 0.001) for o in LOCATIONS_BY_ID.values()]
 rlzs = [x for x in range(5)]
 # lvps = list(map(lambda x: model.LevelValuePairAttribute(lvl=x / 1e3, val=(x / 1e6)), range(1, 51)))
 

@@ -296,6 +296,7 @@ class TestMetaWithOpenquake(unittest.TestCase):
 
         print('saved', saved[0].locs)
 
+    @unittest.skip("transform.export_meta is DEPRECATED")
     @unittest.skipUnless(HAVE_OQ, "This test requires openquake")
     def test_export_meta_non_normalized_sitecode(self):
         from openquake.calculators.export.hazard import get_sites

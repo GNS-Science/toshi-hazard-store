@@ -33,7 +33,7 @@ def get_hazard_metadata_v3(
 def downsample_code(loc_code, res):
     lt = loc_code.split('~')
     assert len(lt) == 2
-    return CodedLocation(lat=float(lt[0]), lon=float(lt[1])).downsample(res).code
+    return CodedLocation(lat=float(lt[0]), lon=float(lt[1]), resolution=res).code
 
 
 def get_hashes(locs: Iterable[str]):
