@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.0] - 2022-08-03
+
+### Added
+ - V3 THS table models with improved indexing and and performance (esp. THS_HazardAggregation table)
+ - usign latest CodedLocation API to manage gridded lcoations and resampling.
+
+### Removed
+ -  realisation aggregration computations. These have moving to toshi-hazard-post
+
 ## [0.4.1] - 2022-06-22
 ### Added
  - multi_batch module for parallelised batch saves
