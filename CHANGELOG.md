@@ -4,7 +4,7 @@
 
 ### Added
  - V3 THS table models with improved indexing and and performance (esp. THS_HazardAggregation table)
- - usign latest CodedLocation API to manage gridded lcoations and resampling.
+ - using latest CodedLocation API to manage gridded lcoations and resampling.
 
 ### Removed
  -  realisation aggregration computations. These have moving to toshi-hazard-post
