@@ -21,8 +21,11 @@ from toshi_hazard_store.branch_combinator.branch_combinator import grouped_ltbs,
 # from toshi_hazard_store.branch_combinator.SLT_0poly_TI import logic_tree_permutations
 # from toshi_hazard_store.branch_combinator.SLT_0poly_TI import data as gtdata
 
-from toshi_hazard_store.branch_combinator.SLT_NBsens_1b  import logic_tree_permutations
-from toshi_hazard_store.branch_combinator.SLT_NBsens_1b import data as gtdata
+# from toshi_hazard_store.branch_combinator.SLT_NBsens_1b  import logic_tree_permutations
+# from toshi_hazard_store.branch_combinator.SLT_NBsens_1b import data as gtdata
+
+from toshi_hazard_store.branch_combinator.SLT_tiny_test import logic_tree_permutations
+from toshi_hazard_store.branch_combinator.SLT_tiny_test import data as gtdata
 
 
 
@@ -112,7 +115,7 @@ def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num
     
     grouped = grouped_ltbs(merge_ltbs_fromLT(logic_tree_permutations, gtdata=gtdata, omit=omit))
     source_branches = get_weighted_branches(grouped)
-
+    
     if not imts:
         imts = get_imts(source_branches, vs30)
 
@@ -121,9 +124,10 @@ def process_agg(vs30, location_generator, aggs, imts=None, output_prefix='', num
     levels = get_levels(source_branches, list(binned_locs.values())[0], vs30)  # TODO: get seperate levels for every IMT
     
     for i in range(len(source_branches)):
-        rlz_combs, weight_combs = build_rlz_table(source_branches[i], vs30)
+        rlz_combs, weight_combs, rlz_sets = build_rlz_table(source_branches[i], vs30) #TODO: PORT
         source_branches[i]['rlz_combs'] = rlz_combs
         source_branches[i]['weight_combs'] = weight_combs
+        source_branches[i]['rlz_sets'] = rlz_sets
 
     ###########
     #
@@ -247,14 +251,14 @@ if __name__ == "__main__":
     # imts = ['PGA']
 
     # location_generator = locations_nzpt2_and_nz34_chunked
-    # location_generator = locations_nz34_chunked
-    location_generator = locations_nzpt2_chunked
+    location_generator = locations_nz34_chunked
+    # location_generator = locations_nzpt2_chunked
 
     loc_keyrange = None # CDC
     # loc_keyrange = (30,45) # CBC (there are 43, but just in case I miss counted)
 
     # output_prefix = f'FullLT_{loc_keyrange[0]}_{loc_keyrange[1]}'
-    output_prefix = 'basline_NBandNs_C4p2_gridp2deg'
+    output_prefix = 'tiny_test'
 
     
     if classical:
