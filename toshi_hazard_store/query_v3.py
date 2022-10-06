@@ -196,7 +196,11 @@ def get_hazard_curves(
         sort_key_first_val += f"{first_loc}"
 
         if vs30s:
-            first_vs30 = sorted(vs30s)[0]
+            max_vs30 = max(vs30s)
+            if max_vs30 >= 1000:  # handle vs30 include [1000 or 1500]
+                first_vs30 = str(max_vs30 / 10)
+            else:
+                first_vs30 = sorted(vs30s)[0]
             sort_key_first_val += f":{first_vs30}"
         if vs30s and imts:
             first_imt = sorted(imts)[0]
