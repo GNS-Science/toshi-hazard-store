@@ -1,11 +1,13 @@
 """Queries for saving and retrieving openquake hazard results with convenience."""
 import decimal
+import logging
 from typing import Iterable, Iterator
 
-# from toshi_hazard_store.utils import CodedLocation
 from nzshm_common.location.code_location import CodedLocation
 
 import toshi_hazard_store.model as model
+
+log = logging.getLogger(__name__)
 
 mOQM = model.ToshiOpenquakeMeta
 mRLZ = model.OpenquakeRealization
@@ -226,15 +228,14 @@ def get_hazard_curves(
     # TODO: use https://pypi.org/project/InPynamoDB/
     for hash_location_code in get_hashes(locs):
 
-        print(f'hash_key {hash_location_code}')
+        log.debug('hash_key %s' % hash_location_code)
 
         hash_locs = list(filter(lambda loc: downsample_code(loc, 0.1) == hash_location_code, locs))
-
         sort_key_first_val = build_sort_key(hash_locs, vs30s, hazard_model_ids)
         condition_expr = build_condition_expr(hash_locs, vs30s, hazard_model_ids)
 
-        print(f'sort_key_first_val {sort_key_first_val}')
-        print(f'condition_expr {condition_expr}')
+        log.debug('sort_key_first_val: %s' % sort_key_first_val)
+        log.debug('condition_expr: %s' % condition_expr)
 
         if sort_key_first_val:
             qry = mHAG.query(hash_location_code, mHAG.sort_key >= sort_key_first_val, filter_condition=condition_expr)
@@ -245,6 +246,6 @@ def get_hazard_curves(
                 filter_condition=condition_expr,
             )
 
-        print(f"get_hazard_rlz_curves_v3: qry {qry}")
+        log.debug("get_hazard_rlz_curves_v3: qry %s" % qry)
         for hit in qry:
             yield (hit)
