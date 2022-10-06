@@ -47,6 +47,17 @@ def get_hashes(locs: Iterable[str]):
     return sorted(list(hashes))
 
 
+def have_mixed_length_vs30s(vs30s):
+    """Does the list of vs30s require mixed length index keys."""
+    max_vs30 = max(vs30s)
+    min_vs30 = min(vs30s)
+    if max_vs30 >= 1000:
+        if min_vs30 < 1000:
+            return True
+    else:
+        return False
+
+
 def first_vs30_key(vs30s):
     """This function handles vs30 index keys with variable length (3 or 4), which occur since the addition
     of vs30 values 1000 & 1500.
@@ -54,14 +65,10 @@ def first_vs30_key(vs30s):
     DynamoDB sort key is not mutable, so we must handle this in our query instead, which is slighlty less
     efficient. Leave this in place unldess the table can be rewritten with a new vs30 key length of 4 characters.
     """
-    max_vs30 = max(vs30s)
-    min_vs30 = min(vs30s)
-    if max_vs30 >= 1000:
-        if min_vs30 < 1000:
-            return str(max_vs30 / 10)  # mixed length vs30, must make sure to include
-        return str(min_vs30).zfill(model.VS30_KEYLEN)  # long vs30 keys
-    else:
-        return str(sorted(vs30s)[0]).zfill(model.VS30_KEYLEN)  # short vs30 keys
+    if have_mixed_length_vs30s(vs30s):
+        vsLong = filter(lambda x: x >= 1000, vs30s)
+        return str(int(min(vsLong) / 10)).zfill(model.VS30_KEYLEN)
+    return str(min(vs30s)).zfill(model.VS30_KEYLEN)
 
 
 def get_rlz_curves_v3(
@@ -115,6 +122,8 @@ def get_rlz_curves_v3(
 
         if vs30s:
             sort_key_first_val += f":{first_vs30_key(vs30s)}"
+            if have_mixed_length_vs30s(vs30s):  # we must stop the sort_key build here
+                return sort_key_first_val
         if vs30s and rlzs:
             first_rlz = str(sorted(rlzs)[0]).zfill(6)
             sort_key_first_val += f":{first_rlz}"
@@ -213,6 +222,8 @@ def get_hazard_curves(
 
         if vs30s:
             sort_key_first_val += f":{first_vs30_key(vs30s)}"
+            if have_mixed_length_vs30s(vs30s):  # we must stop the sort_key build here
+                return sort_key_first_val
         if vs30s and imts:
             first_imt = sorted(imts)[0]
             sort_key_first_val += f":{first_imt}"

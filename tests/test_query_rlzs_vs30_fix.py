@@ -8,7 +8,7 @@ from nzshm_common.location.location import LOCATIONS_BY_ID
 from toshi_hazard_store import model, query_v3
 
 TOSHI_ID = 'FAk3T0sHi1D=='
-vs30s = [250, 1000]
+vs30s = [250, 500, 1000, 1500]
 imts = ['PGA']
 locs = [CodedLocation(o['latitude'], o['longitude'], 0.001) for o in list(LOCATIONS_BY_ID.values())[:2]]
 rlzs = [x for x in range(5)]
@@ -46,17 +46,17 @@ def build_rlzs_v3_models():
 
 
 @mock_dynamodb
-class QueryRlzsV3Test(unittest.TestCase):
+class QueryRlzsVs30Test(unittest.TestCase):
     def setUp(self):
         model.migrate()
         with model.OpenquakeRealization.batch_write() as batch:
             for item in build_rlzs_v3_models():
                 batch.save(item)
-        super(QueryRlzsV3Test, self).setUp()
+        super(QueryRlzsVs30Test, self).setUp()
 
     def tearDown(self):
         model.drop_tables()
-        return super(QueryRlzsV3Test, self).tearDown()
+        return super(QueryRlzsVs30Test, self).tearDown()
 
     def test_query_rlzs_objects(self):
         qlocs = [loc.downsample(0.001).code for loc in locs]
@@ -65,3 +65,33 @@ class QueryRlzsV3Test(unittest.TestCase):
         print(res)
         self.assertEqual(len(res), len(rlzs) * len(vs30s) * len(locs))
         self.assertEqual(res[0].nloc_001, qlocs[0])
+
+    def test_query_hazard_aggr_with_vs30_mixed_B(self):
+        vs30s = [500, 1000]
+        qlocs = [loc.downsample(0.001).code for loc in locs]
+        res = list(query_v3.get_rlz_curves_v3(qlocs, vs30s, rlzs, [TOSHI_ID], imts))
+        self.assertEqual(len(res), len(rlzs) * len(vs30s) * len(locs))
+
+    def test_query_hazard_aggr_with_vs30_one_long(self):
+        vs30s = [1500]
+        qlocs = [loc.downsample(0.001).code for loc in locs]
+        res = list(query_v3.get_rlz_curves_v3(qlocs, vs30s, rlzs, [TOSHI_ID], imts))
+        self.assertEqual(len(res), len(rlzs) * len(vs30s) * len(locs))
+
+    def test_query_hazard_aggr_with_vs30_two_long(self):
+        vs30s = [1000, 1500]
+        qlocs = [loc.downsample(0.001).code for loc in locs]
+        res = list(query_v3.get_rlz_curves_v3(qlocs, vs30s, rlzs, [TOSHI_ID], imts))
+        self.assertEqual(len(res), len(rlzs) * len(vs30s) * len(locs))
+
+    def test_query_hazard_aggr_with_vs30_one_short(self):
+        vs30s = [500]
+        qlocs = [loc.downsample(0.001).code for loc in locs]
+        res = list(query_v3.get_rlz_curves_v3(qlocs, vs30s, rlzs, [TOSHI_ID], imts))
+        self.assertEqual(len(res), len(rlzs) * len(vs30s) * len(locs))
+
+    def test_query_hazard_aggr_with_vs30_two_short(self):
+        vs30s = [250, 500]
+        qlocs = [loc.downsample(0.001).code for loc in locs]
+        res = list(query_v3.get_rlz_curves_v3(qlocs, vs30s, rlzs, [TOSHI_ID], imts))
+        self.assertEqual(len(res), len(rlzs) * len(vs30s) * len(locs))
