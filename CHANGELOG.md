@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.6.0] - 2023-02-09
+### Changed
+ - refactor model package
+
+
 ## [0.5.5] - 2022-10-06
 ### Changed
  - fix for queries with mixed length vs30 index keys
