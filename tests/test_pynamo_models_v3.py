@@ -63,11 +63,11 @@ def get_one_meta():
 class PynamoTestMeta(unittest.TestCase):
     def setUp(self):
 
-        model.migrate_v3()
+        model.migrate()
         super(PynamoTestMeta, self).setUp()
 
     def tearDown(self):
-        model.drop_tables_v3()
+        model.drop_tables()
         return super(PynamoTestMeta, self).tearDown()
 
     def test_table_exists(self):
@@ -95,11 +95,11 @@ class PynamoTestMeta(unittest.TestCase):
 class PynamoTestTwo(unittest.TestCase):
     def setUp(self):
 
-        model.migrate_v3()
+        model.migrate()
         super(PynamoTestTwo, self).setUp()
 
     def tearDown(self):
-        model.drop_tables_v3()
+        model.drop_tables()
         return super(PynamoTestTwo, self).tearDown()
 
     def test_table_exists(self):
@@ -127,11 +127,11 @@ class PynamoTestTwo(unittest.TestCase):
 class PynamoTestOpenquakeRealizationQuery(unittest.TestCase):
     def setUp(self):
 
-        model.migrate_v3()
+        model.migrate()
         super(PynamoTestOpenquakeRealizationQuery, self).setUp()
 
     def tearDown(self):
-        model.drop_tables_v3()
+        model.drop_tables()
         return super(PynamoTestOpenquakeRealizationQuery, self).tearDown()
 
     def test_model_query_no_condition(self):
@@ -223,11 +223,11 @@ class PynamoTestOpenquakeRealizationQuery(unittest.TestCase):
 class PynamoTestHazardAggregationQuery(unittest.TestCase):
     def setUp(self):
 
-        model.migrate_v3()
+        model.migrate_openquake()
         super(PynamoTestHazardAggregationQuery, self).setUp()
 
     def tearDown(self):
-        model.drop_tables_v3()
+        model.drop_openquake()
         return super(PynamoTestHazardAggregationQuery, self).tearDown()
 
     def test_model_query_no_condition(self):

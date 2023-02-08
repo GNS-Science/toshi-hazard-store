@@ -19,8 +19,7 @@ from pynamodb.models import Model
 from pynamodb_attributes import FloatAttribute, IntegerAttribute, TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
-from toshi_hazard_store.model.openquake_v1_model import LevelValuePairAttribute
-from toshi_hazard_store.model.openquake_v2_model import IMTValuesAttribute
+from toshi_hazard_store.model.attributes import IMTValuesAttribute, LevelValuePairAttribute
 
 VS30_KEYLEN = 3  # string length for VS30 field indices
 
