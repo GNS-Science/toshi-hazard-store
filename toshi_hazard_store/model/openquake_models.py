@@ -203,7 +203,7 @@ class HazardAggregation(LocationIndexedModel):
 
 
 class DisaggAggregation(LocationIndexedModel):
-    """Stores aggregated disaggregations."""
+    """Store aggregated disaggregations."""
 
     class Meta:
         """DynamoDB Metadata."""
@@ -216,10 +216,15 @@ class DisaggAggregation(LocationIndexedModel):
 
     hazard_model_id = UnicodeAttribute()
     imt = UnicodeAttribute()
-    agg = UnicodeEnumAttribute(AggregationEnum)
+
+    hazard_agg = UnicodeEnumAttribute(AggregationEnum) # eg MEAN
+    disagg_agg = UnicodeEnumAttribute(AggregationEnum)
 
     disaggs = CompressedPickleAttribute()  # a very compressible numpy array,
     bins = PickleAttribute()  # a much smaller numpy array
+
+    shaking_level = FloatAttribute()
+
 
     def set_location(self, location: CodedLocation):
         """Set internal fields, indices etc from the location."""
@@ -228,7 +233,7 @@ class DisaggAggregation(LocationIndexedModel):
         # update the indices
         vs30s = str(self.vs30).zfill(VS30_KEYLEN)
         self.partition_key = self.nloc_1
-        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.agg.value}:{self.hazard_model_id}'
+        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.hazard_agg.value}:{self.disagg_agg.value}:{self.hazard_model_id}'
         return self
 
 

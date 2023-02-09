@@ -14,13 +14,16 @@ disaggs = np.load(Path(folder, 'deagg_SLT_v8_gmm_v2_FINAL_-39.000~175.930_750_SA
 bins = np.load(
     Path(folder, 'bins_SLT_v8_gmm_v2_FINAL_-39.000~175.930_750_SA(0.5)_86_eps-dist-mag-trt.npy'), allow_pickle=True
 )
-
+shaking_level=0.1
 
 def get_one_disagg_aggregate():
-    # lvps = list(map(lambda x: model.LevelValuePairAttribute(lvl=x / 1e3, val=(x / 1e6)), range(1, 51)))
-    location = CodedLocation(lat=-41.3, lon=174.78, resolution=0.001)
+    location = CodedLocation(lat=-41.3, lon=174.78, resolution=0.01)
     return model.DisaggAggregation(
-        disaggs=disaggs, bins=bins, agg=model.AggregationEnum.MEAN, imt="PGA", vs30=450, hazard_model_id="HAZ_MODEL_ONE"
+        disaggs=disaggs, bins=bins,
+        hazard_agg=model.AggregationEnum._90,   # 90th percentile hazard
+        disagg_agg=model.AggregationEnum.MEAN,  # mean dissagg
+        shaking_level=shaking_level,
+        imt="PGA", vs30=450, hazard_model_id="HAZ_MODEL_ONE"
     ).set_location(location)
 
 
@@ -64,15 +67,8 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         self.assertEqual(res.partition_key, dag.partition_key)
         self.assertEqual(res.sort_key, dag.sort_key)
 
-        # check disaggs attribute
+        self.assertEqual(res.shaking_level, shaking_level)
         self.assertEqual(res.disaggs.all(), disaggs.all())
-
-        # check bins attribute
-
-        print(bins)
-        print()
-        print(res.bins)
-
         for idx in range(len(bins)):
             print(idx, type(bins[idx]))
             if type(bins[idx]) == list:
@@ -90,7 +86,7 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         # query on model
         res = list(
             model.DisaggAggregation.query(
-                dag.partition_key, model.DisaggAggregation.sort_key == '-41.300~174.780:450:PGA:mean:HAZ_MODEL_ONE'
+                dag.partition_key, model.DisaggAggregation.sort_key == '-41.300~174.780:450:PGA:0.9:mean:HAZ_MODEL_ONE'
             )
         )[0]
         self.assertEqual(res.partition_key, dag.partition_key)
