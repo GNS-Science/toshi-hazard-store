@@ -1,7 +1,7 @@
 """This module defines some custom attributes."""
 
 from enum import Enum
-from typing import Any, Optional, Type, TypeVar
+from typing import Any, Type, TypeVar
 
 from pynamodb.attributes import Attribute
 from pynamodb.constants import STRING

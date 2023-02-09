@@ -38,6 +38,29 @@ def datetime_now():
 log = logging.getLogger(__name__)
 
 
+class AggregationEnum(Enum):
+    """Defines the values available for Aggregations."""
+
+    MEAN = 'mean'
+    COV = 'cov'
+    _10 = '0.1'
+    _20 = '0.2'
+    _50 = '0.5'
+    _80 = '0.8'
+    _90 = '0.9'
+
+
+class ProbabilityEnum(Enum):
+    """
+    Defines the values available for probabilities.
+
+    store values as float representing probability in 1 year
+    """
+
+    TEN_PCT_IN_50YRS = 0.00456
+    TWO_PCT_IN_50YRS = 0.00056
+
+
 class ToshiOpenquakeMeta(Model):
     """Stores metadata from the job configuration and the oq HDF5."""
 
@@ -131,29 +154,6 @@ class LocationIndexedModel(Model):
         self.lon = location.lon
         self.uniq_id = str(uuid.uuid4())
         return self
-
-
-class AggregationEnum(Enum):
-    """Defines the values available for Aggregations."""
-
-    MEAN = 'mean'
-    COV = 'cov'
-    _10 = '0.1'
-    _20 = '0.2'
-    _50 = '0.5'
-    _80 = '0.8'
-    _90 = '0.9'
-
-
-class ProbabilityEnum(Enum):
-    """
-    Defines the values available for probabilities.
-
-    store values as float representing probability in 1 year
-    """
-
-    TEN_PCT_IN_50YRS = 0.00456
-    TWO_PCT_IN_50YRS = 0.00056
 
 
 class HazardAggregation(LocationIndexedModel):
