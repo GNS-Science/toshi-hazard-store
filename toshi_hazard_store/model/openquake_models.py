@@ -3,6 +3,7 @@
 import logging
 import uuid
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Iterable, Iterator, Sequence, Union
 
 from nzshm_common.location.code_location import CodedLocation
@@ -16,10 +17,15 @@ from pynamodb.attributes import (
 )
 from pynamodb.indexes import AllProjection, LocalSecondaryIndex
 from pynamodb.models import Model
-from pynamodb_attributes import FloatAttribute, IntegerAttribute, TimestampAttribute
+from pynamodb_attributes import FloatAttribute, IntegerAttribute, TimestampAttribute, UnicodeEnumAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
-from toshi_hazard_store.model.attributes import IMTValuesAttribute, LevelValuePairAttribute
+from toshi_hazard_store.model.attributes import (
+    CompressedPickleAttribute,
+    IMTValuesAttribute,
+    LevelValuePairAttribute,
+    PickleAttribute,
+)
 
 VS30_KEYLEN = 3  # string length for VS30 field indices
 
@@ -126,6 +132,18 @@ class LocationIndexedModel(Model):
         return self
 
 
+class AggregationEnum(Enum):
+    """Defines the values available for Aggregations."""
+
+    MEAN = 'mean'
+    COV = 'cov'
+    _10 = '0.1'
+    _20 = '0.2'
+    _50 = '0.5'
+    _80 = '0.8'
+    _90 = '0.9'
+
+
 class HazardAggregation(LocationIndexedModel):
     """Stores aggregate hazard curves."""
 
@@ -140,7 +158,7 @@ class HazardAggregation(LocationIndexedModel):
 
     hazard_model_id = UnicodeAttribute()
     imt = UnicodeAttribute()
-    agg = UnicodeAttribute()
+    agg = UnicodeEnumAttribute(AggregationEnum)
 
     values = ListAttribute(of=LevelValuePairAttribute)
 
@@ -151,7 +169,7 @@ class HazardAggregation(LocationIndexedModel):
         # update the indices
         vs30s = str(self.vs30).zfill(VS30_KEYLEN)
         self.partition_key = self.nloc_1
-        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.agg}:{self.hazard_model_id}'
+        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.agg.value}:{self.hazard_model_id}'
         return self
 
     @staticmethod
@@ -182,6 +200,36 @@ class HazardAggregation(LocationIndexedModel):
             # the data
             yield [getattr(model, attr) for attr in model_attrs] + [value.val for value in model.values]
             n_models += 1
+
+
+class DisaggAggregation(LocationIndexedModel):
+    """Stores aggregated disaggregations."""
+
+    class Meta:
+        """DynamoDB Metadata."""
+
+        billing_mode = 'PAY_PER_REQUEST'
+        table_name = f"THS_DisaggAggregation-{DEPLOYMENT_STAGE}"
+        region = REGION
+        if IS_OFFLINE:
+            host = "http://localhost:8000"  # pragma: no cover
+
+    hazard_model_id = UnicodeAttribute()
+    imt = UnicodeAttribute()
+    agg = UnicodeEnumAttribute(AggregationEnum)
+
+    disaggs = CompressedPickleAttribute()  # a very compressible numpy array,
+    bins = PickleAttribute()  # a much smaller numpy array
+
+    def set_location(self, location: CodedLocation):
+        """Set internal fields, indices etc from the location."""
+        super().set_location(location)
+
+        # update the indices
+        vs30s = str(self.vs30).zfill(VS30_KEYLEN)
+        self.partition_key = self.nloc_1
+        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.agg.value}:{self.hazard_model_id}'
+        return self
 
 
 class OpenquakeRealization(LocationIndexedModel):
@@ -221,7 +269,7 @@ class OpenquakeRealization(LocationIndexedModel):
         return self
 
 
-tables = [OpenquakeRealization, ToshiOpenquakeMeta, HazardAggregation]
+tables = [OpenquakeRealization, ToshiOpenquakeMeta, HazardAggregation, DisaggAggregation]
 
 
 def migrate():

@@ -2,12 +2,8 @@
 """Tests for `store_hazard_v3` module."""
 
 import unittest
-
 from click.testing import CliRunner
-
 from scripts import store_hazard_v3
-
-# from scripts import store_hazard
 
 
 @unittest.skip('module must be converted to use click')

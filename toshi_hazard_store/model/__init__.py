@@ -5,7 +5,14 @@ from .gridded_hazard import migrate as migrate_gridded
 
 # from .openquake_models import tables as oqv3_tables
 # from .openquake_v2_model import
-from .openquake_models import VS30_KEYLEN, HazardAggregation, OpenquakeRealization, ToshiOpenquakeMeta
+from .openquake_models import (
+    VS30_KEYLEN,
+    AggregationEnum,
+    DisaggAggregation,
+    HazardAggregation,
+    OpenquakeRealization,
+    ToshiOpenquakeMeta,
+)
 from .openquake_models import drop_tables as drop_openquake
 from .openquake_models import migrate as migrate_openquake
 from .openquake_models import vs30_nloc001_gt_rlz_index
