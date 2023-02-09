@@ -17,7 +17,7 @@ from pynamodb.attributes import (
 )
 from pynamodb.indexes import AllProjection, LocalSecondaryIndex
 from pynamodb.models import Model
-from pynamodb_attributes import FloatAttribute, IntegerAttribute, TimestampAttribute, UnicodeEnumAttribute
+from pynamodb_attributes import FloatAttribute, IntegerAttribute, TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
 from toshi_hazard_store.model.attributes import (
@@ -25,6 +25,7 @@ from toshi_hazard_store.model.attributes import (
     IMTValuesAttribute,
     LevelValuePairAttribute,
     PickleAttribute,
+    UnicodeEnumConstrainedAttribute,
 )
 
 VS30_KEYLEN = 3  # string length for VS30 field indices
@@ -144,6 +145,17 @@ class AggregationEnum(Enum):
     _90 = '0.9'
 
 
+class ProbabilityEnum(Enum):
+    """
+    Defines the values available for probabilities.
+
+    store values as float representing probability in 1 year
+    """
+
+    TEN_PCT_IN_50YRS = 0.00456
+    TWO_PCT_IN_50YRS = 0.00056
+
+
 class HazardAggregation(LocationIndexedModel):
     """Stores aggregate hazard curves."""
 
@@ -158,7 +170,7 @@ class HazardAggregation(LocationIndexedModel):
 
     hazard_model_id = UnicodeAttribute()
     imt = UnicodeAttribute()
-    agg = UnicodeEnumAttribute(AggregationEnum)
+    agg = UnicodeEnumConstrainedAttribute(AggregationEnum)
 
     values = ListAttribute(of=LevelValuePairAttribute)
 
@@ -169,7 +181,7 @@ class HazardAggregation(LocationIndexedModel):
         # update the indices
         vs30s = str(self.vs30).zfill(VS30_KEYLEN)
         self.partition_key = self.nloc_1
-        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.agg.value}:{self.hazard_model_id}'
+        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.agg}:{self.hazard_model_id}'
         return self
 
     @staticmethod
@@ -202,29 +214,19 @@ class HazardAggregation(LocationIndexedModel):
             n_models += 1
 
 
-class DisaggAggregation(LocationIndexedModel):
+class DisaggAggregationBase(LocationIndexedModel):
     """Store aggregated disaggregations."""
-
-    class Meta:
-        """DynamoDB Metadata."""
-
-        billing_mode = 'PAY_PER_REQUEST'
-        table_name = f"THS_DisaggAggregation-{DEPLOYMENT_STAGE}"
-        region = REGION
-        if IS_OFFLINE:
-            host = "http://localhost:8000"  # pragma: no cover
 
     hazard_model_id = UnicodeAttribute()
     imt = UnicodeAttribute()
 
-    hazard_agg = UnicodeEnumAttribute(AggregationEnum) # eg MEAN
-    disagg_agg = UnicodeEnumAttribute(AggregationEnum)
+    hazard_agg = UnicodeEnumConstrainedAttribute(AggregationEnum)  # eg MEAN
+    disagg_agg = UnicodeEnumConstrainedAttribute(AggregationEnum)
 
     disaggs = CompressedPickleAttribute()  # a very compressible numpy array,
     bins = PickleAttribute()  # a much smaller numpy array
 
     shaking_level = FloatAttribute()
-
 
     def set_location(self, location: CodedLocation):
         """Set internal fields, indices etc from the location."""
@@ -233,8 +235,27 @@ class DisaggAggregation(LocationIndexedModel):
         # update the indices
         vs30s = str(self.vs30).zfill(VS30_KEYLEN)
         self.partition_key = self.nloc_1
-        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.hazard_agg.value}:{self.disagg_agg.value}:{self.hazard_model_id}'
+        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.hazard_agg}:{self.disagg_agg}:{self.hazard_model_id}'
         return self
+
+
+class DisaggAggregationExceedance(DisaggAggregationBase):
+    class Meta:
+        billing_mode = 'PAY_PER_REQUEST'
+        table_name = f"THS_DisaggAggregationExceedance-{DEPLOYMENT_STAGE}"
+        region = REGION
+        if IS_OFFLINE:
+            host = "http://localhost:8000"  # pragma: no cover
+
+
+class DisaggAggregationOccurence(DisaggAggregationBase):
+    class Meta:
+        billing_mode = 'PAY_PER_REQUEST'
+        table_name = f"THS_DisaggAggregationOccurence-{DEPLOYMENT_STAGE}"
+        region = REGION
+
+        if IS_OFFLINE:
+            host = "http://localhost:8000"  # pragma: no cover
 
 
 class OpenquakeRealization(LocationIndexedModel):
@@ -274,7 +295,13 @@ class OpenquakeRealization(LocationIndexedModel):
         return self
 
 
-tables = [OpenquakeRealization, ToshiOpenquakeMeta, HazardAggregation, DisaggAggregation]
+tables = [
+    OpenquakeRealization,
+    ToshiOpenquakeMeta,
+    HazardAggregation,
+    DisaggAggregationExceedance,
+    DisaggAggregationOccurence,
+]
 
 
 def migrate():

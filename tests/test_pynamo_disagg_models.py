@@ -14,16 +14,20 @@ disaggs = np.load(Path(folder, 'deagg_SLT_v8_gmm_v2_FINAL_-39.000~175.930_750_SA
 bins = np.load(
     Path(folder, 'bins_SLT_v8_gmm_v2_FINAL_-39.000~175.930_750_SA(0.5)_86_eps-dist-mag-trt.npy'), allow_pickle=True
 )
-shaking_level=0.1
+shaking_level = 0.1
+
 
 def get_one_disagg_aggregate():
     location = CodedLocation(lat=-41.3, lon=174.78, resolution=0.01)
-    return model.DisaggAggregation(
-        disaggs=disaggs, bins=bins,
-        hazard_agg=model.AggregationEnum._90,   # 90th percentile hazard
-        disagg_agg=model.AggregationEnum.MEAN,  # mean dissagg
+    return model.DisaggAggregationExceedance(
+        disaggs=disaggs,
+        bins=bins,
+        hazard_agg=model.AggregationEnum._90.value,  # 90th percentile hazard
+        disagg_agg=model.AggregationEnum.MEAN.value,  # mean dissagg
         shaking_level=shaking_level,
-        imt="PGA", vs30=450, hazard_model_id="HAZ_MODEL_ONE"
+        imt="PGA",
+        vs30=450,
+        hazard_model_id="HAZ_MODEL_ONE",
     ).set_location(location)
 
 
@@ -38,23 +42,6 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         model.drop_openquake()
         return super(PynamoTestDisaggAggregationQuery, self).tearDown()
 
-    def test_attribute_compression(self):
-        """Test if compressing the numpy adday is worthwhile."""
-        print("Size of the array: ", disaggs.size)
-        print("Memory size of one array element in bytes: ", disaggs.itemsize)
-        array_size = disaggs.size * disaggs.itemsize
-        print("Memory size of numpy array in bytes:", array_size)
-
-        import zlib
-        import sys
-        import pickle
-
-        comp = zlib.compress(pickle.dumps(disaggs))
-        uncomp = pickle.loads(zlib.decompress(comp))
-
-        assert uncomp.all() == disaggs.all()
-        self.assertTrue(sys.getsizeof(comp) < array_size / 5)
-
     def test_model_query_no_condition(self):
         """fetch the single object from tbale and check it's structure OK."""
 
@@ -62,7 +49,7 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         dag.save()
 
         # query on model
-        res = list(model.DisaggAggregation.query(dag.partition_key))[0]
+        res = list(model.DisaggAggregationExceedance.query(dag.partition_key))[0]
 
         self.assertEqual(res.partition_key, dag.partition_key)
         self.assertEqual(res.sort_key, dag.sort_key)
@@ -85,8 +72,9 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
 
         # query on model
         res = list(
-            model.DisaggAggregation.query(
-                dag.partition_key, model.DisaggAggregation.sort_key == '-41.300~174.780:450:PGA:0.9:mean:HAZ_MODEL_ONE'
+            model.DisaggAggregationExceedance.query(
+                dag.partition_key,
+                model.DisaggAggregationExceedance.sort_key == '-41.300~174.780:450:PGA:0.9:mean:HAZ_MODEL_ONE',
             )
         )[0]
         self.assertEqual(res.partition_key, dag.partition_key)

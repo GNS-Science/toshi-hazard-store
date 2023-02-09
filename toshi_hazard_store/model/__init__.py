@@ -1,5 +1,5 @@
 from .attributes import IMTValuesAttribute, LevelValuePairAttribute
-from .gridded_hazard import CompressedListAttribute, GriddedHazard
+from .gridded_hazard import GriddedHazard
 from .gridded_hazard import drop_tables as drop_gridded
 from .gridded_hazard import migrate as migrate_gridded
 
@@ -8,7 +8,7 @@ from .gridded_hazard import migrate as migrate_gridded
 from .openquake_models import (
     VS30_KEYLEN,
     AggregationEnum,
-    DisaggAggregation,
+    DisaggAggregationExceedance,
     HazardAggregation,
     OpenquakeRealization,
     ToshiOpenquakeMeta,
