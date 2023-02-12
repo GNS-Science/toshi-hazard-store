@@ -3,6 +3,7 @@ import unittest
 from moto import mock_dynamodb
 import numpy as np
 
+# import pytest
 from pathlib import Path
 from nzshm_common.location.code_location import CodedLocation
 
@@ -24,8 +25,8 @@ def get_one_disagg_aggregate():
         bins=bins,
         hazard_agg=model.AggregationEnum._90.value,  # 90th percentile hazard
         disagg_agg=model.AggregationEnum.MEAN.value,  # mean dissagg
-        shaking_level=shaking_level,
         probability=model.ProbabilityEnum.TEN_PCT_IN_50YRS,
+        shaking_level=shaking_level,
         imt="PGA",
         vs30=450,
         hazard_model_id="HAZ_MODEL_ONE",
@@ -78,7 +79,8 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         res = list(
             model.DisaggAggregationExceedance.query(
                 dag.partition_key,
-                model.DisaggAggregationExceedance.sort_key == '-41.300~174.780:450:PGA:0.9:mean:HAZ_MODEL_ONE',
+                model.DisaggAggregationExceedance.sort_key
+                == '-41.300~174.780:450:PGA:0.9:mean:TEN_PCT_IN_50YRS:HAZ_MODEL_ONE',
             )
         )[0]
         self.assertEqual(res.partition_key, dag.partition_key)

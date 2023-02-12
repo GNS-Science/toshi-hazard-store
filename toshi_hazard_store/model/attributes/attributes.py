@@ -53,6 +53,7 @@ class CompressedListAttribute(CompressedJsonicAttribute):
     """
 
     def serialize(self, value: List[float]) -> str:
+        # value = list(value)
         if value is not None and not isinstance(value, list):
             raise TypeError(
                 f"value has invalid type '{type(value)}'; List[float])expected",

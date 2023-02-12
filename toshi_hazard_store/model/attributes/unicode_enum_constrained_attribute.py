@@ -96,8 +96,8 @@ class EnumAttribute(Attribute[T]):
         try:
             return getattr(self.enum_type, name)
             return name
-        except (ValueError) as err:
-            raise err
+        except (AttributeError):
+            raise ValueError(f'stored value {name} must be a value of  {self.enum_type}.')
 
     def serialize(self, instance: Type[T]) -> str:
         if isinstance(instance, self.enum_type):
