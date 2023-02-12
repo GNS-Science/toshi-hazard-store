@@ -25,6 +25,7 @@ def get_one_disagg_aggregate():
         hazard_agg=model.AggregationEnum._90.value,  # 90th percentile hazard
         disagg_agg=model.AggregationEnum.MEAN.value,  # mean dissagg
         shaking_level=shaking_level,
+        probability=model.ProbabilityEnum.TEN_PCT_IN_50YRS,
         imt="PGA",
         vs30=450,
         hazard_model_id="HAZ_MODEL_ONE",
@@ -35,11 +36,11 @@ def get_one_disagg_aggregate():
 class PynamoTestDisaggAggregationQuery(unittest.TestCase):
     def setUp(self):
 
-        model.migrate_openquake()
+        model.migrate_disagg()
         super(PynamoTestDisaggAggregationQuery, self).setUp()
 
     def tearDown(self):
-        model.drop_openquake()
+        model.drop_disagg()
         return super(PynamoTestDisaggAggregationQuery, self).tearDown()
 
     def test_model_query_no_condition(self):
@@ -56,6 +57,9 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
 
         self.assertEqual(res.shaking_level, shaking_level)
         self.assertEqual(res.disaggs.all(), disaggs.all())
+
+        assert res.probability == model.ProbabilityEnum.TEN_PCT_IN_50YRS
+
         for idx in range(len(bins)):
             print(idx, type(bins[idx]))
             if type(bins[idx]) == list:

@@ -13,6 +13,10 @@ class UnicodeEnumConstrainedAttribute(Attribute[T]):
     """
     Stores strings that are values of the supplied Enum as DynamoDB strings.
 
+    Useful where you have value strings in an existing table field and you want retrofit the Enum validation.
+
+    Otherwise, consider using the EnumAttribute class below and expect
+
     >>> from enum import Enum
     >>>
     >>> from pynamodb.models import Model
@@ -58,3 +62,44 @@ class UnicodeEnumConstrainedAttribute(Attribute[T]):
         except (ValueError) as err:
             raise err
         return value
+
+
+class EnumAttribute(Attribute[T]):
+    """
+    Stores names of the supplied Enum as DynamoDB strings.
+
+    >>> from enum import Enum
+    >>>
+    >>> from pynamodb.models import Model
+    >>>
+    >>> class ShakeFlavor(Enum):
+    >>>   VANILLA = 0.1
+    >>>   MINT = 1.22
+    >>>
+    >>> class Shake(Model):
+    >>>   flavor = EnumAttribute(ShakeFlavor)
+    >>>
+    >>> modelB = Shake(flavor=ShakeFlavor.MINT)
+    >>> assert modelB.flavor == ShakeFlavor.MINT
+    """
+
+    attr_type = STRING
+
+    def __init__(self, enum_type: Type[T], **kwargs: Any) -> None:
+        """
+        :param enum_type: The type of the enum
+        """
+        super().__init__(**kwargs)
+        self.enum_type = enum_type
+
+    def deserialize(self, name: str) -> Type[T]:
+        try:
+            return getattr(self.enum_type, name)
+            return name
+        except (ValueError) as err:
+            raise err
+
+    def serialize(self, instance: Type[T]) -> str:
+        if isinstance(instance, self.enum_type):
+            return instance.name
+        raise ValueError(f'value {instance} must be a {self.enum_type} or an instance.')

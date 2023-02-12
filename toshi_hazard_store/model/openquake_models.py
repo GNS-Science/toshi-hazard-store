@@ -1,9 +1,6 @@
 """This module defines the pynamodb tables used to store openquake data. Third iteration"""
 
 import logging
-import uuid
-from datetime import datetime, timezone
-from enum import Enum
 from typing import Iterable, Iterator, Sequence, Union
 
 from nzshm_common.location.code_location import CodedLocation
@@ -17,48 +14,15 @@ from pynamodb.attributes import (
 )
 from pynamodb.indexes import AllProjection, LocalSecondaryIndex
 from pynamodb.models import Model
-from pynamodb_attributes import FloatAttribute, IntegerAttribute, TimestampAttribute
+from pynamodb_attributes import IntegerAttribute, TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
-from toshi_hazard_store.model.attributes import (
-    CompressedPickleAttribute,
-    IMTValuesAttribute,
-    LevelValuePairAttribute,
-    PickleAttribute,
-    UnicodeEnumConstrainedAttribute,
-)
 
-VS30_KEYLEN = 3  # string length for VS30 field indices
-
-
-def datetime_now():
-    return datetime.now(tz=timezone.utc)
-
+from .attributes import IMTValuesAttribute, LevelValuePairAttribute, UnicodeEnumConstrainedAttribute
+from .disagg_models import AggregationEnum
+from .location_indexed_model import VS30_KEYLEN, LocationIndexedModel, datetime_now
 
 log = logging.getLogger(__name__)
-
-
-class AggregationEnum(Enum):
-    """Defines the values available for Aggregations."""
-
-    MEAN = 'mean'
-    COV = 'cov'
-    _10 = '0.1'
-    _20 = '0.2'
-    _50 = '0.5'
-    _80 = '0.8'
-    _90 = '0.9'
-
-
-class ProbabilityEnum(Enum):
-    """
-    Defines the values available for probabilities.
-
-    store values as float representing probability in 1 year
-    """
-
-    TEN_PCT_IN_50YRS = 0.00456
-    TWO_PCT_IN_50YRS = 0.00056
 
 
 class ToshiOpenquakeMeta(Model):
@@ -121,41 +85,6 @@ class vs30_nloc001_gt_rlz_index(LocalSecondaryIndex):
     index2_rk = UnicodeAttribute(range_key=True)
 
 
-class LocationIndexedModel(Model):
-    """Model base class."""
-
-    partition_key = UnicodeAttribute(hash_key=True)  # For this we will use a downsampled location to 1.0 degree
-    sort_key = UnicodeAttribute(range_key=True)
-
-    nloc_001 = UnicodeAttribute()  # 0.001deg ~100m grid
-    nloc_01 = UnicodeAttribute()  # 0.01deg ~1km grid
-    nloc_1 = UnicodeAttribute()  # 0.1deg ~10km grid
-    nloc_0 = UnicodeAttribute()  # 1.0deg ~100km grid
-
-    version = VersionAttribute()
-    uniq_id = UnicodeAttribute()
-
-    lat = FloatAttribute()  # latitude decimal degrees
-    lon = FloatAttribute()  # longitude decimal degrees
-    vs30 = FloatAttribute()
-
-    created = TimestampAttribute(default=datetime_now)
-
-    def set_location(self, location: CodedLocation):
-        """Set internal fields, indices etc from the location."""
-
-        self.nloc_001 = location.downsample(0.001).code
-        self.nloc_01 = location.downsample(0.01).code
-        self.nloc_1 = location.downsample(0.1).code
-        self.nloc_0 = location.downsample(1.0).code
-        # self.nloc_10 = location.downsample(10.0).code
-
-        self.lat = location.lat
-        self.lon = location.lon
-        self.uniq_id = str(uuid.uuid4())
-        return self
-
-
 class HazardAggregation(LocationIndexedModel):
     """Stores aggregate hazard curves."""
 
@@ -214,50 +143,6 @@ class HazardAggregation(LocationIndexedModel):
             n_models += 1
 
 
-class DisaggAggregationBase(LocationIndexedModel):
-    """Store aggregated disaggregations."""
-
-    hazard_model_id = UnicodeAttribute()
-    imt = UnicodeAttribute()
-
-    hazard_agg = UnicodeEnumConstrainedAttribute(AggregationEnum)  # eg MEAN
-    disagg_agg = UnicodeEnumConstrainedAttribute(AggregationEnum)
-
-    disaggs = CompressedPickleAttribute()  # a very compressible numpy array,
-    bins = PickleAttribute()  # a much smaller numpy array
-
-    shaking_level = FloatAttribute()
-
-    def set_location(self, location: CodedLocation):
-        """Set internal fields, indices etc from the location."""
-        super().set_location(location)
-
-        # update the indices
-        vs30s = str(self.vs30).zfill(VS30_KEYLEN)
-        self.partition_key = self.nloc_1
-        self.sort_key = f'{self.nloc_001}:{vs30s}:{self.imt}:{self.hazard_agg}:{self.disagg_agg}:{self.hazard_model_id}'
-        return self
-
-
-class DisaggAggregationExceedance(DisaggAggregationBase):
-    class Meta:
-        billing_mode = 'PAY_PER_REQUEST'
-        table_name = f"THS_DisaggAggregationExceedance-{DEPLOYMENT_STAGE}"
-        region = REGION
-        if IS_OFFLINE:
-            host = "http://localhost:8000"  # pragma: no cover
-
-
-class DisaggAggregationOccurence(DisaggAggregationBase):
-    class Meta:
-        billing_mode = 'PAY_PER_REQUEST'
-        table_name = f"THS_DisaggAggregationOccurence-{DEPLOYMENT_STAGE}"
-        region = REGION
-
-        if IS_OFFLINE:
-            host = "http://localhost:8000"  # pragma: no cover
-
-
 class OpenquakeRealization(LocationIndexedModel):
     """Stores the individual hazard realisation curves."""
 
@@ -299,8 +184,6 @@ tables = [
     OpenquakeRealization,
     ToshiOpenquakeMeta,
     HazardAggregation,
-    DisaggAggregationExceedance,
-    DisaggAggregationOccurence,
 ]
 
 
