@@ -85,3 +85,4 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         )[0]
         self.assertEqual(res.partition_key, dag.partition_key)
         self.assertEqual(res.sort_key, dag.sort_key)
+
