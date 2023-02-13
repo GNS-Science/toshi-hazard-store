@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 
 class AggregationEnum(Enum):
-    """Defines the values available for Aggregations."""
+    """Defines the values available for aggregations."""
 
     MEAN = 'mean'
     COV = 'cov'
@@ -53,8 +53,14 @@ class ProbabilityEnum(Enum):
     store values as float representing probability in 1 year
     """
 
-    TEN_PCT_IN_50YRS = 0.00456
-    TWO_PCT_IN_50YRS = 0.00056
+    _86_PCT_IN_50YRS = 3.8559e-02
+    _63_PCT_IN_50YRS = 1.9689e-02
+    _39_PCT_IN_50YRS = 9.8372e-03
+    _18_PCT_IN_50YRS = 3.9612e-03
+    _10_PCT_IN_50YRS = 2.1050e-03
+    _5_PCT_IN_50YRS = 1.0253e-03
+    _2_PCT_IN_50YRS = 4.0397e-04
+    _1_PCT_IN_50YRS = 2.0099e-04
 
 
 class DisaggAggregationBase(LocationIndexedModel):

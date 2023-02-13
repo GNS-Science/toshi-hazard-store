@@ -25,7 +25,7 @@ def get_one_disagg_aggregate():
         bins=bins,
         hazard_agg=model.AggregationEnum._90.value,  # 90th percentile hazard
         disagg_agg=model.AggregationEnum.MEAN.value,  # mean dissagg
-        probability=model.ProbabilityEnum.TEN_PCT_IN_50YRS,
+        probability=model.ProbabilityEnum._10_PCT_IN_50YRS,
         shaking_level=shaking_level,
         imt="PGA",
         vs30=450,
@@ -59,7 +59,7 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         self.assertEqual(res.shaking_level, shaking_level)
         self.assertEqual(res.disaggs.all(), disaggs.all())
 
-        assert res.probability == model.ProbabilityEnum.TEN_PCT_IN_50YRS
+        assert res.probability == model.ProbabilityEnum._10_PCT_IN_50YRS
 
         for idx in range(len(bins)):
             print(idx, type(bins[idx]))
@@ -80,9 +80,8 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
             model.DisaggAggregationExceedance.query(
                 dag.partition_key,
                 model.DisaggAggregationExceedance.sort_key
-                == '-41.300~174.780:450:PGA:0.9:mean:TEN_PCT_IN_50YRS:HAZ_MODEL_ONE',
+                == '-41.300~174.780:450:PGA:0.9:mean:_10_PCT_IN_50YRS:HAZ_MODEL_ONE',
             )
         )[0]
         self.assertEqual(res.partition_key, dag.partition_key)
         self.assertEqual(res.sort_key, dag.sort_key)
-

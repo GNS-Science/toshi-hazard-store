@@ -49,11 +49,11 @@ def test_compressed_list_serialise_valid(valid_arg):
 class TestEnumAttribute(object):
     def test_serialize_an_enum(self):
         attr = EnumAttribute(ProbabilityEnum)
-        assert attr.serialize(ProbabilityEnum.TEN_PCT_IN_50YRS) == 'TEN_PCT_IN_50YRS'
+        assert attr.serialize(ProbabilityEnum._10_PCT_IN_50YRS) == '_10_PCT_IN_50YRS'
 
     def test_deserialize_an_enum(self):
         attr = EnumAttribute(ProbabilityEnum)
-        assert attr.deserialize('TEN_PCT_IN_50YRS') == ProbabilityEnum.TEN_PCT_IN_50YRS
+        assert attr.deserialize('_10_PCT_IN_50YRS') == ProbabilityEnum._10_PCT_IN_50YRS
 
     def test_deserialize_invalid_value_raises_value_err(self):
         attr = EnumAttribute(ProbabilityEnum)
@@ -111,7 +111,57 @@ class TestUnicodeEnumConstrainedAttribute(object):
             attr.serialize(invalid_arg)
         assert 'AggregationEnum' in repr(ctx.value)
 
-@pytest.mark.parametrize('valid_arg', ["0.005", "0.01", "0.025", "0.05", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.95", "0.975", "0.99", "0.995"])
+
+@pytest.mark.parametrize(
+    'valid_arg',
+    [
+        "0.005",
+        "0.01",
+        "0.025",
+        "0.05",
+        "0.1",
+        "0.2",
+        "0.3",
+        "0.4",
+        "0.5",
+        "0.6",
+        "0.7",
+        "0.8",
+        "0.9",
+        "0.95",
+        "0.975",
+        "0.99",
+        "0.995",
+    ],
+)
 def test_serialise_all_valid_percentiles(valid_arg):
     attr = UnicodeEnumConstrainedAttribute(AggregationEnum)
     assert attr.serialize(valid_arg) == AggregationEnum(valid_arg).value
+
+
+year_prob_mapping = {
+    "_86_PCT_IN_50YRS": 3.8559e-02,
+    "_63_PCT_IN_50YRS": 1.9689e-02,
+    "_39_PCT_IN_50YRS": 9.8372e-03,
+    "_18_PCT_IN_50YRS": 3.9612e-03,
+    "_10_PCT_IN_50YRS": 2.1050e-03,
+    "_5_PCT_IN_50YRS": 1.0253e-03,
+    "_2_PCT_IN_50YRS": 4.0397e-04,
+    "_1_PCT_IN_50YRS": 2.0099e-04,
+}
+
+
+@pytest.mark.parametrize('valid_arg', year_prob_mapping.keys())
+def test_serialize_all_valid_probablities(valid_arg):
+    attr = EnumAttribute(ProbabilityEnum)
+    test_value = ProbabilityEnum[valid_arg]
+    print(test_value)
+    assert attr.serialize(test_value) == ProbabilityEnum[valid_arg].name
+
+
+@pytest.mark.parametrize('valid_arg', year_prob_mapping.values())
+def test_serialize_all_valid_probablities_by_value(valid_arg):
+    attr = EnumAttribute(ProbabilityEnum)
+    test_value = ProbabilityEnum(valid_arg)
+    print(test_value)
+    assert attr.serialize(test_value) == ProbabilityEnum(valid_arg).name
