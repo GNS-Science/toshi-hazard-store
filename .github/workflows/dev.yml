@@ -76,8 +76,8 @@ jobs:
         run: ls -l .
 
       - name: Submit coverage report if Ubuntu
+        if: runner.os == 'Linux'
         uses: codecov/codecov-action@v3
-        if: runner.os == 'Windows'
         with:
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
