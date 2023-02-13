@@ -75,7 +75,9 @@ jobs:
       - name: list files
         run: ls -l .
 
-      - uses: codecov/codecov-action@v1
+      - name: Submit coverage report
+        uses: codecov/codecov-action@v3
         with:
-          fail_ci_if_error: true
-          files: coverage.xml
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+
