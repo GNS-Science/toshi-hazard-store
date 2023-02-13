@@ -40,9 +40,11 @@ jobs:
           installer-parallel: true
 
       - name: Configure poetry path on Windows
-        run:
-        if: runner.os == 'Windows':
-          echo "C:\Users\runneradmin\.local\bin" >> $GITHUB_PATH
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            echo "C:\Users\runneradmin\.local\bin" >> $GITHUB_PATH
+          fi
+        shell: bash
 
       - name: Install dependencies w Poetry
         run: |
