@@ -40,6 +40,7 @@ jobs:
           installer-parallel: true
 
       - name: Configure poetry path on Windows
+        run:
         if: runner.os == 'Windows':
           echo "C:\Users\runneradmin\.local\bin" >> $GITHUB_PATH
 
