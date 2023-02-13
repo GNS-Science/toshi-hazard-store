@@ -39,6 +39,10 @@ jobs:
           virtualenvs-in-project: true
           installer-parallel: true
 
+      - name: Configure poetry path on Windows
+        if: runner.os == 'Windows':
+          echo "C:\Users\runneradmin\.local\bin" >> $GITHUB_PATH
+
       - name: Install dependencies w Poetry
         run: |
           poetry install --with dev
