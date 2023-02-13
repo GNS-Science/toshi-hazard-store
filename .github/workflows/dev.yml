@@ -21,7 +21,7 @@ jobs:
     strategy:
       matrix:
         python-versions: [3.8, 3.9]
-        os: [ubuntu-18.04, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     defaults:
       run:
         shell: bash
@@ -75,8 +75,9 @@ jobs:
       - name: list files
         run: ls -l .
 
-      - name: Submit coverage report
+      - name: Submit coverage report if Ubuntu
         uses: codecov/codecov-action@v3
+        if: runner.os == 'Windows'
         with:
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
