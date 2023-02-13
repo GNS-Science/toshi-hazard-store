@@ -3,8 +3,8 @@
 import logging
 from datetime import datetime, timezone
 from enum import Enum
-import numpy as np
 
+import numpy as np
 from nzshm_common.location.code_location import CodedLocation
 from pynamodb.attributes import UnicodeAttribute
 from pynamodb_attributes import FloatAttribute
@@ -102,14 +102,19 @@ class DisaggAggregationExceedance(DisaggAggregationBase):
         if IS_OFFLINE:
             host = "http://localhost:8000"  # pragma: no cover
 
-
     @staticmethod
-    def new_model(hazard_model_id:str, location:CodedLocation, vs30:str, imt: str,
-            hazard_agg: AggregationEnum, disagg_agg: AggregationEnum, probability: ProbabilityEnum,
-            shaking_level: float,
-            disaggs: np.ndarray,
-            bins: np.ndarray
-        ) -> 'DisaggAggregationExceedance':
+    def new_model(
+        hazard_model_id: str,
+        location: CodedLocation,
+        vs30: str,
+        imt: str,
+        hazard_agg: AggregationEnum,
+        disagg_agg: AggregationEnum,
+        probability: ProbabilityEnum,
+        shaking_level: float,
+        disaggs: np.ndarray,
+        bins: np.ndarray,
+    ) -> 'DisaggAggregationExceedance':
         obj = DisaggAggregationExceedance(
             hazard_model_id=hazard_model_id,
             vs30=vs30,
@@ -119,10 +124,11 @@ class DisaggAggregationExceedance(DisaggAggregationBase):
             probability=probability,
             shaking_level=shaking_level,
             disaggs=disaggs,
-            bins=bins
+            bins=bins,
         )
         obj.set_location(location)
         return obj
+
 
 class DisaggAggregationOccurence(DisaggAggregationBase):
     class Meta:
