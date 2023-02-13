@@ -20,7 +20,8 @@ shaking_level = 0.1
 
 def get_one_disagg_aggregate():
     location = CodedLocation(lat=-41.3, lon=174.78, resolution=0.01)
-    return model.DisaggAggregationExceedance(
+    return model.DisaggAggregationExceedance.new_model(
+        location=location,
         disaggs=disaggs,
         bins=bins,
         hazard_agg=model.AggregationEnum._90.value,  # 90th percentile hazard
@@ -30,7 +31,7 @@ def get_one_disagg_aggregate():
         imt="PGA",
         vs30=450,
         hazard_model_id="HAZ_MODEL_ONE",
-    ).set_location(location)
+    )
 
 
 @mock_dynamodb
@@ -73,6 +74,8 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
     def test_model_query_equal_condition(self):
 
         dag = get_one_disagg_aggregate()
+        print(dag)
+
         dag.save()
 
         # query on model
