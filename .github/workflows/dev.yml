@@ -22,8 +22,10 @@ jobs:
       matrix:
         python-versions: [3.8, 3.9]
         os: [ubuntu-18.04, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
     runs-on: ${{ matrix.os }}
-
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -39,20 +41,35 @@ jobs:
           virtualenvs-in-project: true
           installer-parallel: true
 
-      - name: Configure poetry path on Windows
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            echo "C:\Users\runneradmin\.local\bin" >> $GITHUB_PATH
-          fi
-        shell: bash
+      #----------------------------------------------
+      #       load cached venv if cache exists
+      #----------------------------------------------
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Install dependencies w Poetry
+      #----------------------------------------------
+      # install dependencies if cache does not exist
+      #----------------------------------------------
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: |
-          poetry install --with dev
+          poetry install --no-interaction --no-root --with dev
           poetry add tox-gh-actions
+
+
+      # - name: Install dependencies w Poetry
+      #   run: |
+      #     source $VENV
+      #     poetry install --with dev
+      #     poetry add tox-gh-actions
 
       - name: test with tox (uses tox-gh-actions to select correct environment)
         run:
+          source $VENV
           poetry run tox
 
       - name: list files
