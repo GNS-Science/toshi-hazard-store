@@ -3,7 +3,12 @@
 ## [0.6.0] - 2023-02-09
 ### Changed
  - refactor model package
-
+ - refactor model.attributes package
+ - added validation via Enum for agg values
+ - more test coverage
+### Added
+ - two new models for DisaggAggregations
+ - new enum constraints for probabilities
 
 ## [0.5.5] - 2022-10-06
 ### Changed
