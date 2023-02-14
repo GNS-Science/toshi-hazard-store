@@ -14,7 +14,7 @@ disaggs = np.load(Path(folder, 'deagg_SLT_v8_gmm_v2_FINAL_-39.000~175.930_750_SA
 
 
 def test_attribute_compression():
-    """Test if compressing the numpy adday is worthwhile."""
+    """Test if compressing the numpy array is worthwhile."""
     print("Size of the array: ", disaggs.size)
     print("Memory size of one array element in bytes: ", disaggs.itemsize)
     array_size = disaggs.size * disaggs.itemsize

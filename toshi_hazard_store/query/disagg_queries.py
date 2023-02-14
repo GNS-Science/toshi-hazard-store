@@ -14,34 +14,31 @@ from toshi_hazard_store.model import (
 )
 
 from .hazard_query import downsample_code, get_hashes, have_mixed_length_vs30s
-
 # from pynamodb.expressions.condition import Condition
 
 
 log = logging.getLogger(__name__)
 
-
 # aliases for models
 mDAE = DisaggAggregationExceedance
 mDAO = DisaggAggregationOccurence
 
-
 def get_one_disagg_aggregation(
+    hazard_model_id: str,
+    hazard_agg: AggregationEnum,
+    disagg_agg: AggregationEnum,
     location: CodedLocation,
     vs30: float,
     imt: str,
-    hazard_agg: AggregationEnum,
-    disagg_agg: AggregationEnum,
     poe: ProbabilityEnum,
-    hazard_model_id: str,
     model: Type[Union[mDAE, mDAO]] = mDAE,
 ) -> Union[mDAE, mDAO, None]:
     """Fetch model based on single model arguments."""
 
     qry = model.query(
         downsample_code(location, 0.1),
-        range_key_condition=model.sort_key == f'{location}:{vs30}:{imt}:{hazard_agg.value}:{disagg_agg.value}:'
-        f'{poe.name}:{hazard_model_id}',  # type: ignore
+        range_key_condition=model.sort_key == f'{hazard_model_id}:{hazard_agg.value}:{disagg_agg.value}:'
+        f'{location}:{vs30}:{imt}:{poe.name}',  # type: ignore
     )
 
     log.debug(f"get_one_disagg_aggregation: qry {qry}")
@@ -53,13 +50,13 @@ def get_one_disagg_aggregation(
 
 
 def get_disagg_aggregates(
-    locs: Iterable[CodedLocation],  # nloc_001
-    vs30s: Iterable[float],
-    imts: Iterable[str],
-    hazard_aggs: Iterable[AggregationEnum],
-    disagg_aggs: Iterable[AggregationEnum],
-    poes: Iterable[ProbabilityEnum],
     hazard_model_ids: Iterable[str],
+    disagg_aggs: Iterable[AggregationEnum],
+    hazard_aggs: Iterable[AggregationEnum],
+    locs: Iterable[CodedLocation],  # nloc_001
+    vs30s: Iterable[int],
+    imts: Iterable[str],
+    poes: Iterable[ProbabilityEnum],
     model: Type[Union[mDAE, mDAO]] = mDAE,
 ) -> Iterator[Union[mDAE, mDAO]]:
 
@@ -69,31 +66,24 @@ def get_disagg_aggregates(
 
     # print(poe_keys[0])
 
-    def build_sort_key(locs, vs30s, imts, hazard_agg_keys, disagg_agg_keys, poe_keys, hazard_model_ids):
+    def build_sort_key(locs, vs30s, imts, hazard_agg_keys, disagg_agg_keys, poe_keys, tids):
         """Build sort_key."""
 
         sort_key = ""
-        sort_key = sort_key + f"{sorted(locs)[0]}" if locs else sort_key
-        sort_key = sort_key + f":{sorted(vs30s)[0]}" if locs and vs30s else sort_key
+        sort_key = sort_key + f"{sorted([_id for _id in tids])[0]}" if tids else sort_key
+        sort_key = sort_key + f":{sorted(hazard_agg_keys)[0]}" if tids and hazard_agg_keys else sort_key
+        sort_key = (
+            sort_key + f":{sorted(disagg_agg_keys)[0]}" if tids and hazard_agg_keys and disagg_agg_keys else sort_key
+        )
+        sort_key = sort_key + f":{sorted(locs)[0]}" if tids and hazard_agg_keys and disagg_agg_keys and locs else sort_key
+        sort_key = sort_key + f":{sorted(vs30s)[0]}" if tids and hazard_agg_keys and disagg_agg_keys and locs and vs30s else sort_key
         if have_mixed_length_vs30s(vs30s):  # we must stop the sort_key build here
             return sort_key
-        sort_key = sort_key + f":{sorted(imts)[0]}" if locs and vs30s and imts else sort_key
-        sort_key = (
-            sort_key + f":{sorted(hazard_agg_keys)[0]}" if locs and vs30s and imts and hazard_agg_keys else sort_key
-        )
-        sort_key = (
-            sort_key + f":{sorted(disagg_agg_keys)[0]}"
-            if locs and vs30s and imts and hazard_agg_keys and disagg_agg_keys
-            else sort_key
-        )
+
+        sort_key = sort_key + f":{sorted(imts)[0]}" if tids and hazard_agg_keys and disagg_agg_keys and locs and vs30s and imts else sort_key
         sort_key = (
             sort_key + f":{sorted([p.name for p in poe_keys])[0]}"
-            if locs and vs30s and imts and hazard_agg_keys and disagg_agg_keys and poe_keys
-            else sort_key
-        )
-        sort_key = (
-            sort_key + f":{sorted([_id for _id in hazard_model_ids])[0]}"
-            if locs and vs30s and imts and hazard_agg_keys and disagg_agg_keys and poe_keys and hazard_model_ids
+            if tids and hazard_agg_keys and disagg_agg_keys and locs and vs30s and imts and poe_keys
             else sort_key
         )
         return sort_key

@@ -88,8 +88,8 @@ class DisaggAggregationBase(LocationIndexedModel):
         vs30s = str(self.vs30).zfill(VS30_KEYLEN)
         self.partition_key = self.nloc_1
         self.sort_key = (
-            f'{self.nloc_001}:{vs30s}:{self.imt}:{self.hazard_agg}:{self.disagg_agg}:'
-            f'{self.probability.name}:{self.hazard_model_id}'
+            f'{self.hazard_model_id}:{self.hazard_agg}:{self.disagg_agg}:'
+            f'{self.nloc_001}:{vs30s}:{self.imt}:{self.probability.name}'
         )
         return self
 
