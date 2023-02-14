@@ -2,10 +2,11 @@ import os
 import pytest
 import numpy as np
 from pathlib import Path
-from toshi_hazard_store.model.attributes import UnicodeEnumConstrainedAttribute, EnumAttribute, CompressedListAttribute
+from toshi_hazard_store.model.attributes import EnumConstrainedAttribute, EnumAttribute, CompressedListAttribute
 
 from toshi_hazard_store.model import AggregationEnum, ProbabilityEnum
-
+from toshi_hazard_store.model import VS30Enum
+from pynamodb.constants import NUMBER
 
 INVALID_ARGS_LIST = [AggregationEnum.MEAN, object(), 'MEAN', {}]
 
@@ -72,19 +73,48 @@ class TestEnumAttribute(object):
         assert 'AggregationEnum' in repr(ctx.value)
 
 
-class TestUnicodeEnumConstrainedAttribute(object):
+class TestEnumConstrainedAttributeIntEnums(object):
+    def test_serialize_a_valid_integer(self):
+        assert VS30Enum(750) == VS30Enum._750
+        attr = EnumConstrainedAttribute(VS30Enum, NUMBER)
+        assert attr.serialize(750) == VS30Enum._750.value
+
+    def test_deserialize_a_valid_integer(self):
+        attr = EnumConstrainedAttribute(VS30Enum, NUMBER)
+        assert attr.deserialize(750) == VS30Enum._750.value
+
+    @pytest.mark.parametrize('invalid_arg', [123, object(), 'MEAN'])
+    def test_deserialize_an_unknown_value_raises_value_err(self, invalid_arg):
+        attr = EnumConstrainedAttribute(VS30Enum, NUMBER)
+        val = invalid_arg
+        with pytest.raises(ValueError) as ctx:
+            attr.deserialize(val)
+        print(ctx.value)
+        print(dir(ctx))
+        assert str(val) in repr(ctx.value)
+
+    @pytest.mark.parametrize('invalid_arg', [123, object(), 'MEAN'])
+    def test_serialize_an_unknown_number_raises_value_err(self, invalid_arg):
+        attr = EnumConstrainedAttribute(VS30Enum, NUMBER)
+        val = invalid_arg
+        with pytest.raises(ValueError) as ctx:
+            attr.serialize(val)
+        assert str(val) in repr(ctx.value)
+
+
+class TestEnumConstrainedAttribute(object):
     def test_serialize_a_valid_str(self):
         assert AggregationEnum('mean') == AggregationEnum.MEAN
-        attr = UnicodeEnumConstrainedAttribute(AggregationEnum)
+        attr = EnumConstrainedAttribute(AggregationEnum)
         assert attr.serialize('mean') == AggregationEnum.MEAN.value
 
     def test_deserialize_a_valid_str(self):
         assert AggregationEnum('mean') == AggregationEnum.MEAN
-        attr = UnicodeEnumConstrainedAttribute(AggregationEnum)
+        attr = EnumConstrainedAttribute(AggregationEnum)
         assert attr.deserialize('mean') == AggregationEnum.MEAN.value
 
     def test_serialize_an_unknown_str_raises_value_err(self):
-        attr = UnicodeEnumConstrainedAttribute(AggregationEnum)
+        attr = EnumConstrainedAttribute(AggregationEnum)
         val = 'NAHH'
         with pytest.raises(ValueError) as ctx:
             attr.serialize(val)
@@ -94,7 +124,7 @@ class TestUnicodeEnumConstrainedAttribute(object):
         assert val in repr(ctx.value)
 
     def test_deserialize_an_unknown_str_raises_value_err(self):
-        attr = UnicodeEnumConstrainedAttribute(AggregationEnum)
+        attr = EnumConstrainedAttribute(AggregationEnum)
         val = 'NAHH'
         with pytest.raises(ValueError) as ctx:
             attr.deserialize(val)
@@ -105,7 +135,7 @@ class TestUnicodeEnumConstrainedAttribute(object):
 
     @pytest.mark.parametrize('invalid_arg', [AggregationEnum.MEAN, object(), 'MEAN', {}])
     def test_serialize_an_unknown_type_raises_value_err(self, invalid_arg):
-        attr = UnicodeEnumConstrainedAttribute(AggregationEnum)
+        attr = EnumConstrainedAttribute(AggregationEnum)
 
         with pytest.raises(ValueError) as ctx:
             attr.serialize(invalid_arg)
@@ -135,7 +165,7 @@ class TestUnicodeEnumConstrainedAttribute(object):
     ],
 )
 def test_serialise_all_valid_percentiles(valid_arg):
-    attr = UnicodeEnumConstrainedAttribute(AggregationEnum)
+    attr = EnumConstrainedAttribute(AggregationEnum)
     assert attr.serialize(valid_arg) == AggregationEnum(valid_arg).value
 
 

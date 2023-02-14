@@ -5,6 +5,7 @@ from .attributes import (
     LevelValuePairAttribute,
     PickleAttribute,
 )
-from .unicode_enum_constrained_attribute import EnumAttribute, UnicodeEnumConstrainedAttribute
+from .enum_attribute import EnumAttribute
+from .enum_constrained_attribute import EnumConstrainedAttribute
 
 # from .enum_unicode_attribute import EnumUnicodeAttribute

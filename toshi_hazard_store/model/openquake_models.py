@@ -18,7 +18,7 @@ from pynamodb_attributes import IntegerAttribute, TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
 
-from .attributes import IMTValuesAttribute, LevelValuePairAttribute, UnicodeEnumConstrainedAttribute
+from .attributes import EnumConstrainedAttribute, IMTValuesAttribute, LevelValuePairAttribute
 from .disagg_models import AggregationEnum
 from .location_indexed_model import VS30_KEYLEN, LocationIndexedModel, datetime_now
 
@@ -99,7 +99,7 @@ class HazardAggregation(LocationIndexedModel):
 
     hazard_model_id = UnicodeAttribute()
     imt = UnicodeAttribute()
-    agg = UnicodeEnumConstrainedAttribute(AggregationEnum)
+    agg = EnumConstrainedAttribute(AggregationEnum)
 
     values = ListAttribute(of=LevelValuePairAttribute)
 

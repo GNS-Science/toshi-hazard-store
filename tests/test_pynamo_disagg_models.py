@@ -28,7 +28,7 @@ def get_one_disagg_aggregate():
         disagg_agg=model.AggregationEnum.MEAN.value,  # mean dissagg
         probability=model.ProbabilityEnum._10_PCT_IN_50YRS,
         shaking_level=shaking_level,
-        imt="PGA",
+        imt=model.IntensityMeasureTypeEnum.PGA.value,
         vs30=450,
         hazard_model_id="HAZ_MODEL_ONE",
     )
@@ -61,6 +61,7 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         self.assertEqual(res.disaggs.all(), disaggs.all())
 
         assert res.probability == model.ProbabilityEnum._10_PCT_IN_50YRS
+        assert res.imt == model.IntensityMeasureTypeEnum.PGA.value
 
         for idx in range(len(bins)):
             print(idx, type(bins[idx]))

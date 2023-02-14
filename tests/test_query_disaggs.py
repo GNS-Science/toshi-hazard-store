@@ -11,7 +11,7 @@ from toshi_hazard_store import model, query
 
 HAZARD_MODEL_ID = ' MODEL_THE_FIRST'
 vs30s = [250, 350]
-imts = ['PGA', 'SA(0.5)']
+imts = [model.IntensityMeasureTypeEnum.PGA.value, model.IntensityMeasureTypeEnum.SA_0_5.value]
 hazard_aggs = [model.AggregationEnum.MEAN.value, model.AggregationEnum._10.value]
 disagg_aggs = [model.AggregationEnum.MEAN.value]
 locs = [CodedLocation(loc['latitude'], loc['longitude'], 0.001) for loc in LOCATIONS_BY_ID.values()]

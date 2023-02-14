@@ -11,7 +11,7 @@ from pynamodb_attributes import FloatAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
 
-from .attributes import CompressedPickleAttribute, EnumAttribute, PickleAttribute, UnicodeEnumConstrainedAttribute
+from .attributes import CompressedPickleAttribute, EnumAttribute, EnumConstrainedAttribute, PickleAttribute
 from .location_indexed_model import VS30_KEYLEN, LocationIndexedModel
 
 
@@ -64,14 +64,70 @@ class ProbabilityEnum(Enum):
     _1_PCT_IN_50YRS = 2.0099e-04
 
 
+class IntensityMeasureTypeEnum(Enum):
+    """
+    Defines the values available for IMTs.
+    """
+
+    PGA = 'PGA'
+    SA_0_1 = 'SA(0.1)'
+    SA_0_2 = 'SA(0.2)'
+    SA_0_3 = 'SA(0.3)'
+    SA_0_4 = 'SA(0.4)'
+    SA_0_5 = 'SA(0.5)'
+    SA_0_7 = 'SA(0.6)'
+    SA_1_0 = 'SA(1.0)'
+    SA_1_5 = 'SA(1.5)'
+    SA_2_0 = 'SA(2.0)'
+    SA_3_0 = 'SA(3.0)'
+    SA_4_0 = 'SA(4.0)'
+    SA_5_0 = 'SA(5.0)'
+    SA_6_0 = 'SA(6.0)'
+    SA_7_5 = 'SA(7.5)'
+    SA_10_0 = 'SA(10.0)'
+
+
+class VS30Enum(Enum):
+    """
+    Defines the values available for VS30.
+    """
+
+    _150 = 150
+    _175 = 175
+    _200 = 200
+    _225 = 225
+    _250 = 250
+    _275 = 275
+    _300 = 300
+    _350 = 350
+    _375 = 375
+    _400 = 400
+    _450 = 450
+    _500 = 500
+    _525 = 525
+    _550 = 550
+    _600 = 600
+    _650 = 650
+    _700 = 700
+    _750 = 750
+    _800 = 800
+    _850 = 850
+    _900 = 900
+    _950 = 950
+    _1000 = 1000
+    _1050 = 1050
+    _1100 = 1100
+    _1500 = 1500
+
+
 class DisaggAggregationBase(LocationIndexedModel):
     """Store aggregated disaggregations."""
 
     hazard_model_id = UnicodeAttribute()
-    imt = UnicodeAttribute()
+    imt = EnumConstrainedAttribute(IntensityMeasureTypeEnum)
 
-    hazard_agg = UnicodeEnumConstrainedAttribute(AggregationEnum)  # eg MEAN
-    disagg_agg = UnicodeEnumConstrainedAttribute(AggregationEnum)
+    hazard_agg = EnumConstrainedAttribute(AggregationEnum)  # eg MEAN
+    disagg_agg = EnumConstrainedAttribute(AggregationEnum)
 
     disaggs = CompressedPickleAttribute()  # a very compressible numpy array,
     bins = PickleAttribute()  # a much smaller numpy array
