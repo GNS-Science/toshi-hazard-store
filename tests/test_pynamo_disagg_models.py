@@ -82,8 +82,9 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         res = list(
             model.DisaggAggregationExceedance.query(
                 dag.partition_key,
-                range_key_condition = (model.DisaggAggregationExceedance.sort_key
-                == 'HAZ_MODEL_ONE:0.9:mean:-41.300~174.780:450:PGA:_10_PCT_IN_50YRS'
+                range_key_condition=(
+                    model.DisaggAggregationExceedance.sort_key
+                    == 'HAZ_MODEL_ONE:0.9:mean:-41.300~174.780:450:PGA:_10_PCT_IN_50YRS'
                 ),
             )
         )[0]

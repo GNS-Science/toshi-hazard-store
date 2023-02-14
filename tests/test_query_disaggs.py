@@ -102,8 +102,6 @@ class QueryDisaggAggregationsTest(unittest.TestCase):
         assert res[0].nloc_001 == qlocs[0]
         assert res[1].nloc_001 == qlocs[1]
 
-
-
     def test_query_many_valid_hazard_aggr_offset_checks_indexing(self):
         qlocs = [loc.downsample(0.001).code for loc in locs[3:5]]
 
@@ -121,6 +119,3 @@ class QueryDisaggAggregationsTest(unittest.TestCase):
         assert len(res) == 2
         assert res[0].nloc_001 == qlocs[1]
         assert res[1].nloc_001 == qlocs[0]
-
-
-

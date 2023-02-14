@@ -14,6 +14,7 @@ from toshi_hazard_store.model import (
 )
 
 from .hazard_query import downsample_code, get_hashes, have_mixed_length_vs30s
+
 # from pynamodb.expressions.condition import Condition
 
 
@@ -22,6 +23,7 @@ log = logging.getLogger(__name__)
 # aliases for models
 mDAE = DisaggAggregationExceedance
 mDAO = DisaggAggregationOccurence
+
 
 def get_one_disagg_aggregation(
     hazard_model_id: str,
@@ -75,12 +77,22 @@ def get_disagg_aggregates(
         sort_key = (
             sort_key + f":{sorted(disagg_agg_keys)[0]}" if tids and hazard_agg_keys and disagg_agg_keys else sort_key
         )
-        sort_key = sort_key + f":{sorted(locs)[0]}" if tids and hazard_agg_keys and disagg_agg_keys and locs else sort_key
-        sort_key = sort_key + f":{sorted(vs30s)[0]}" if tids and hazard_agg_keys and disagg_agg_keys and locs and vs30s else sort_key
+        sort_key = (
+            sort_key + f":{sorted(locs)[0]}" if tids and hazard_agg_keys and disagg_agg_keys and locs else sort_key
+        )
+        sort_key = (
+            sort_key + f":{sorted(vs30s)[0]}"
+            if tids and hazard_agg_keys and disagg_agg_keys and locs and vs30s
+            else sort_key
+        )
         if have_mixed_length_vs30s(vs30s):  # we must stop the sort_key build here
             return sort_key
 
-        sort_key = sort_key + f":{sorted(imts)[0]}" if tids and hazard_agg_keys and disagg_agg_keys and locs and vs30s and imts else sort_key
+        sort_key = (
+            sort_key + f":{sorted(imts)[0]}"
+            if tids and hazard_agg_keys and disagg_agg_keys and locs and vs30s and imts
+            else sort_key
+        )
         sort_key = (
             sort_key + f":{sorted([p.name for p in poe_keys])[0]}"
             if tids and hazard_agg_keys and disagg_agg_keys and locs and vs30s and imts and poe_keys
