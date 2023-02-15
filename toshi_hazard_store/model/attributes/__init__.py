@@ -7,4 +7,3 @@ from .attributes import (
 )
 from .enum_attribute import EnumAttribute
 from .enum_constrained_attribute import EnumConstrainedAttribute
-
