@@ -9,8 +9,8 @@ from pynamodb_attributes import FloatAttribute, TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION  # we can share THS settings for model
 
-from .attributes import CompressedListAttribute
-
+from .attributes import CompressedListAttribute, EnumConstrainedUnicodeAttribute, EnumConstrainedIntegerAttribute
+from .constraints import AggregationEnum, IntensityMeasureTypeEnum, VS30Enum
 
 def datetime_now():
     return datetime.now(tz=timezone.utc)
@@ -40,9 +40,9 @@ class GriddedHazard(Model):
     hazard_model_id = UnicodeAttribute()
     location_grid_id = UnicodeAttribute()
 
-    vs30 = FloatAttribute()
-    imt = UnicodeAttribute()
-    agg = UnicodeAttribute()
+    vs30 = EnumConstrainedIntegerAttribute(VS30Enum)
+    imt = EnumConstrainedUnicodeAttribute(IntensityMeasureTypeEnum)
+    agg = EnumConstrainedUnicodeAttribute(AggregationEnum)
     poe = FloatAttribute()
 
     grid_poes = CompressedListAttribute()
