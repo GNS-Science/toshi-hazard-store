@@ -1,12 +1,6 @@
 from .attributes import IMTValuesAttribute, LevelValuePairAttribute
-from .disagg_models import (
-    AggregationEnum,
-    DisaggAggregationExceedance,
-    DisaggAggregationOccurence,
-    IntensityMeasureTypeEnum,
-    ProbabilityEnum,
-    VS30Enum,
-)
+from .constraints import AggregationEnum, IntensityMeasureTypeEnum, ProbabilityEnum, VS30Enum
+from .disagg_models import DisaggAggregationExceedance, DisaggAggregationOccurence
 from .disagg_models import drop_tables as drop_disagg
 from .disagg_models import migrate as migrate_disagg
 from .gridded_hazard import GriddedHazard

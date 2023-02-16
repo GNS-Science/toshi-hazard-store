@@ -6,6 +6,9 @@ from pynamodb.attributes import UnicodeAttribute, VersionAttribute
 from pynamodb.models import Model
 from pynamodb_attributes import FloatAttribute, TimestampAttribute
 
+from .attributes import EnumConstrainedIntegerAttribute
+from .constraints import VS30Enum
+
 VS30_KEYLEN = 3  # string length for VS30 field indices
 
 
@@ -29,7 +32,7 @@ class LocationIndexedModel(Model):
 
     lat = FloatAttribute()  # latitude decimal degrees
     lon = FloatAttribute()  # longitude decimal degrees
-    vs30 = FloatAttribute()
+    vs30 = EnumConstrainedIntegerAttribute(VS30Enum)
 
     created = TimestampAttribute(default=datetime_now)
 

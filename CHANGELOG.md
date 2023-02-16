@@ -4,11 +4,11 @@
 ### Changed
  - refactor model package
  - refactor model.attributes package
- - added validation via Enum for aggregation values
  - more test coverage
 ### Added
  - two new models for DisaggAggregations
- - new enumerations and constraint for probabilities, IMTS and VS30s
+ - validation via Enum for aggregation values
+ - new enumerations and constraints for probabilities, IMTS and VS30s
 
 ## [0.5.5] - 2022-10-06
 ### Changed

@@ -9,7 +9,6 @@ from nzshm_common.location.code_location import CodedLocation
 
 from toshi_hazard_store import model
 
-
 folder = Path(Path(os.path.realpath(__file__)).parent, 'fixtures', 'disaggregation')
 disaggs = np.load(Path(folder, 'deagg_SLT_v8_gmm_v2_FINAL_-39.000~175.930_750_SA(0.5)_86_eps-dist-mag-trt.npy'))
 bins = np.load(
@@ -29,7 +28,7 @@ def get_one_disagg_aggregate():
         probability=model.ProbabilityEnum._10_PCT_IN_50YRS,
         shaking_level=shaking_level,
         imt=model.IntensityMeasureTypeEnum.PGA.value,
-        vs30=450,
+        vs30=model.VS30Enum._450.value,
         hazard_model_id="HAZ_MODEL_ONE",
     )
 
@@ -60,6 +59,9 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         self.assertEqual(res.shaking_level, shaking_level)
         self.assertEqual(res.disaggs.all(), disaggs.all())
 
+        print(res)
+        print(res.probability)
+
         assert res.probability == model.ProbabilityEnum._10_PCT_IN_50YRS
         assert res.imt == model.IntensityMeasureTypeEnum.PGA.value
 
@@ -77,7 +79,7 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
         dag = get_one_disagg_aggregate()
         print(dag)
 
-        dag.save()
+        dag.save()  # FAIL assert self.enum_type[value] # CBC MARKS
 
         # query on model
         res = list(
