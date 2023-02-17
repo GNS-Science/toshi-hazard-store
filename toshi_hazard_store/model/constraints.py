@@ -54,7 +54,7 @@ class IntensityMeasureTypeEnum(Enum):
     SA_0_3 = 'SA(0.3)'
     SA_0_4 = 'SA(0.4)'
     SA_0_5 = 'SA(0.5)'
-    SA_0_7 = 'SA(0.6)'
+    SA_0_7 = 'SA(0.7)'
     SA_1_0 = 'SA(1.0)'
     SA_1_5 = 'SA(1.5)'
     SA_2_0 = 'SA(2.0)'
