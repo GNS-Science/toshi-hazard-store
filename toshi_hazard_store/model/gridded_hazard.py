@@ -9,8 +9,9 @@ from pynamodb_attributes import FloatAttribute, TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION  # we can share THS settings for model
 
-from .attributes import CompressedListAttribute, EnumConstrainedUnicodeAttribute, EnumConstrainedIntegerAttribute
+from .attributes import CompressedListAttribute, EnumConstrainedIntegerAttribute, EnumConstrainedUnicodeAttribute
 from .constraints import AggregationEnum, IntensityMeasureTypeEnum, VS30Enum
+
 
 def datetime_now():
     return datetime.now(tz=timezone.utc)
