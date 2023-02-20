@@ -32,7 +32,7 @@ query_meta = 'scripts.query_meta:main'
 [tool.poetry.dependencies]
 numpy = "^1.23.1"
 nzshm-common = ">=0.4.0"
-openquake-engine = {version = "3.14", optional = true}
+openquake-engine = {version = "^3.15", optional = true}
 pandas = "^1.4.3"
 pynamodb = "^5.2.1"
 pynamodb-attributes = "^0.3.2"
