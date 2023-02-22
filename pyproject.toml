@@ -31,12 +31,12 @@ query_meta = 'scripts.query_meta:main'
 
 [tool.poetry.dependencies]
 numpy = "^1.23.1"
-nzshm-common = ">=0.4.0"
 openquake-engine = {version = "^3.15", optional = true}
 pandas = "^1.4.3"
 pynamodb = "^5.2.1"
 pynamodb-attributes = "^0.3.2"
 python = ">=3.8,<4.0"
+nzshm-common = {git = "https://github.com/GNS-Science/nzshm-common-py.git", rev = "feature/20-backarc-v2"}
 
 [tool.poetry.group.dev.dependencies]
 black  = { version = "^22.3"}
