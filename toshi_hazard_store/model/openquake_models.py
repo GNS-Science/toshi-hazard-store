@@ -17,6 +17,7 @@ from pynamodb.models import Model
 from pynamodb_attributes import IntegerAttribute, TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
+from toshi_hazard_store.model.caching import ModelCacheMixin
 
 from .attributes import EnumConstrainedUnicodeAttribute, IMTValuesAttribute, LevelValuePairAttribute
 from .constraints import AggregationEnum, IntensityMeasureTypeEnum
@@ -85,8 +86,8 @@ class vs30_nloc001_gt_rlz_index(LocalSecondaryIndex):
     index2_rk = UnicodeAttribute(range_key=True)
 
 
-class HazardAggregation(LocationIndexedModel):
-    """Stores aggregate hazard curves."""
+class HazardAggregation(ModelCacheMixin, LocationIndexedModel):
+    """A pynamodb model for aggregate hazard curves."""
 
     class Meta:
         """DynamoDB Metadata."""
@@ -192,7 +193,6 @@ def migrate():
     for table in tables:
         if not table.exists():  # pragma: no cover
             table.create_table(wait=True)
-            print(f"Migrate created table: {table}")
             log.info(f"Migrate created table: {table}")
 
 

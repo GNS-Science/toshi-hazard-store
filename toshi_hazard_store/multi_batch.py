@@ -1,7 +1,7 @@
 import multiprocessing
 import random
 
-from toshi_hazard_store import model, query
+from toshi_hazard_store import model
 
 
 class DynamoBatchWorker(multiprocessing.Process):

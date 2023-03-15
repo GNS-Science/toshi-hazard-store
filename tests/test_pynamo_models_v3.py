@@ -233,20 +233,28 @@ class PynamoTestHazardAggregationQuery(unittest.TestCase):
         hag = get_one_hazard_aggregate()
         hag.save()
 
-        # query on model
-        res = list(model.HazardAggregation.query(hag.partition_key))[0]
-        self.assertEqual(res.partition_key, hag.partition_key)
-        self.assertEqual(res.sort_key, hag.sort_key)
+        # query on model without range_key is not allowed
+        with self.assertRaises(TypeError):
+            list(model.HazardAggregation.query(hag.partition_key))[0]
+            # self.assertEqual(res.partition_key, hag.partition_key)
+            # self.assertEqual(res.sort_key, hag.sort_key)
 
     def test_model_query_equal_condition(self):
 
         hag = get_one_hazard_aggregate()
         hag.save()
 
+        mHAG = model.HazardAggregation
+        range_condition = mHAG.sort_key == '-41.300~174.780:450:PGA:mean:HAZ_MODEL_ONE'
+        filter_condition = mHAG.vs30.is_in(450) & mHAG.imt.is_in('PGA') & mHAG.hazard_model_id.is_in('HAZ_MODEL_ONE')
+
         # query on model
         res = list(
             model.HazardAggregation.query(
-                hag.partition_key, model.HazardAggregation.sort_key == '-41.300~174.780:450:PGA:mean:HAZ_MODEL_ONE'
+                hag.partition_key,
+                range_condition,
+                filter_condition
+                # model.HazardAggregation.sort_key == '-41.300~174.780:450:PGA:mean:HAZ_MODEL_ONE'
             )
         )[0]
         self.assertEqual(res.partition_key, hag.partition_key)
