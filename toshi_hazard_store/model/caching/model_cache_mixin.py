@@ -9,10 +9,7 @@ from pynamodb.expressions.condition import Condition
 
 from toshi_hazard_store.model.caching import cache_store
 
-# import sqlite3
-
 log = logging.getLogger(__name__)
-
 
 _T = TypeVar('_T', bound='pynamodb.models.Model')
 _KeyType = Any
@@ -43,6 +40,7 @@ class ModelCacheMixin(pynamodb.models.Model):
 
         # CBC TODO support optional filter condition if supplied range_condition operand is "="
         if (not cache_store.cache_enabled()) and (filter_condition is not None):
+            log.warning("Not using the cache")
             return super().query(  # type: ignore
                 hash_key,
                 range_key_condition,
@@ -63,39 +61,31 @@ class ModelCacheMixin(pynamodb.models.Model):
         if isinstance(filter_condition, Condition):
             conn = cache_store.get_connection(model_class=cls)
             cached_rows = list(cache_store.get_model(conn, cls, range_key_condition, filter_condition))  # type: ignore
-            print('permutations', cache_store.count_permutations(filter_condition), len(cached_rows))
 
-            if len(cached_rows) < cache_store.count_permutations(filter_condition):
-                print("misses")
-                # return pynamodb.models.ResultIterator(lambda:[])
-                #     # hit dynamomodb, insert into cache , return results
-                #     hits = super().query(  # type: ignore
-                #             hash_key,
-                #             range_key_condition,
-                #             filter_condition,
-                #             consistent_read,
-                #             index_name,
-                #             scan_index_forward,
-                #             limit,
-                #             last_evaluated_key,
-                #             attributes_to_get,
-                #             page_size,
-                #             rate_limit,
-                #             settings,
-                #     )
+            minimum_expected_hits = cache_store.count_permutations(filter_condition)
+            log.info('permutations: %s cached_rows: %s' % (minimum_expected_hits, len(cached_rows)))
 
-                #     for hit in hits:
-                #         # INSERT model object into cache
-                #         # cache_store.put_model(conn, cls, hit)
-                #         pass
-                #         yield hit
-
-                # else:
-                #     assert 0
-                #     # all HITs succeeded :) return the cached rows
-                #     pass
-                #     for row in cached_rows:
-                #         yield row
+            if len(cached_rows) >= minimum_expected_hits:
+                return cached_rows  # type: ignore
+            if len(cached_rows) < minimum_expected_hits:
+                result = []
+                for res in super().query(  # type: ignore
+                    hash_key,
+                    range_key_condition,
+                    filter_condition,
+                    consistent_read,
+                    index_name,
+                    scan_index_forward,
+                    limit,
+                    last_evaluated_key,
+                    attributes_to_get,
+                    page_size,
+                    rate_limit,
+                    settings,
+                ):
+                    cache_store.put_model(conn, res)
+                    result.append(res)
+                return result  # type: ignore
 
     @classmethod
     def create_table(

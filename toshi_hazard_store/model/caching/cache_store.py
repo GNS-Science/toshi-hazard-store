@@ -48,6 +48,10 @@ def get_model(
             d = dict(row)
             for name, attr in model_class.get_attributes().items():
 
+                # string conversion
+                if attr.attr_type == 'S':
+                    d[name] = str(d[name])
+
                 # list conversion
                 if attr.attr_type == 'L':
                     val = base64.b64decode(str(d[name])).decode('ascii')
@@ -93,14 +97,20 @@ def put_model(
         if field.get('L'):
             b64_bytes = json.dumps(field["L"]).encode('ascii')
             _sql += f'\t"{base64.b64encode(b64_bytes).decode("ascii")}",\n'
-    _sql = _sql[:-2] + ")\n"
+    _sql = _sql[:-2] + ");\n"
 
-    print(_sql)
+    log.debug('SQL: %s' % _sql)
 
     try:
-        conn.execute(_sql)
+        cursor = conn.cursor()
+        cursor.execute(_sql)
+        conn.commit()
+        log.info("Last row id: %s" % cursor.lastrowid)
+        # cursor.close()
+        # conn.execute(_sql)
     except Exception as e:
-        print(e)
+        log.error(e)
+        raise
 
 
 def cache_enabled() -> bool:

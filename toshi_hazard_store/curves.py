@@ -13,7 +13,7 @@ from pandas import DataFrame
 
 from toshi_hazard_store.query import get_hazard_curves
 
-ARCHIVE_DIR = Path(os.environ['HAZARD_CURVE_ARCHIVE'])
+ARCHIVE_DIR = Path(os.environ.get('HAZARD_CURVE_ARCHIVE', "."))
 assert ARCHIVE_DIR.exists()
 DTYPE = {'lat': 'str', 'lon': 'str', 'imt': 'str', 'agg': 'str', 'level': 'float64', 'apoe': 'float64'}
 SITE_LIST = 'NZ_0_1_NB_1_1'

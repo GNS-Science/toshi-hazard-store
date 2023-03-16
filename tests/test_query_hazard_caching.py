@@ -1,6 +1,5 @@
 import itertools
 import unittest
-import pytest
 import tempfile
 import pathlib
 from unittest.mock import patch
@@ -9,7 +8,7 @@ from moto import mock_dynamodb
 from nzshm_common.location.code_location import CodedLocation
 from nzshm_common.location.location import LOCATIONS_BY_ID
 
-from toshi_hazard_store import model, query_v3
+from toshi_hazard_store import model, query
 from toshi_hazard_store.model.caching import cache_store
 
 
@@ -22,6 +21,10 @@ locs = [CodedLocation(o['latitude'], o['longitude'], 0.001) for o in LOCATIONS_B
 
 # folder = pathlib.PurePath(os.path.realpath(__file__)).parent
 folder = tempfile.TemporaryDirectory()
+
+
+def tearDown():
+    folder.cleanup()
 
 
 def build_hazard_aggregation_models():
@@ -58,18 +61,25 @@ class TestGetHazardCurvesCached(unittest.TestCase):
         model.drop_tables()
         return super(TestGetHazardCurvesCached, self).tearDown()
 
-    @pytest.mark.skip('WIP')
     @patch("toshi_hazard_store.model.openquake_models.DEPLOYMENT_STAGE", "MOCK")
     @patch("toshi_hazard_store.model.caching.cache_store.DEPLOYMENT_STAGE", "MOCK")
     @patch("toshi_hazard_store.model.caching.cache_store.LOCAL_CACHE_FOLDER", str(folder.name))
-    def test_query_hazard_aggr_cached(self):
+    def test_query_hazard_curves_cache_population(self):
         qlocs = [loc.downsample(0.001).code for loc in locs[:2]]
         print(f'qlocs {qlocs}')
-        res = list(query_v3.get_hazard_curves(qlocs, vs30s, [HAZARD_MODEL_ID], imts))
-        # print(res)
-        self.assertEqual(len(res), len(imts) * len(aggs) * len(vs30s) * len(locs[:2]))
-        self.assertEqual(res[0].nloc_001, qlocs[0])
-        assert 0
+
+        res0 = list(query.get_hazard_curves(qlocs, vs30s, [HAZARD_MODEL_ID], imts))
+        self.assertEqual(len(res0), len(imts) * len(aggs) * len(vs30s) * len(locs[:2]))
+        self.assertEqual(res0[0].nloc_001, qlocs[0])
+
+        res1 = list(query.get_hazard_curves(qlocs, vs30s, [HAZARD_MODEL_ID], imts))
+        self.assertEqual(len(res1), len(imts) * len(aggs) * len(vs30s) * len(locs[:2]))
+
+        assert res0[0].sort_key == res1[0].sort_key
+        assert res0[0].vs30 == res1[0].vs30
+        assert res0[0].imt == res1[0].imt
+        assert res0[0].nloc_001 == res1[0].nloc_001
+        assert res0[0].agg == res1[0].agg
 
 
 @mock_dynamodb
@@ -78,7 +88,7 @@ class TestCacheStore(unittest.TestCase):
     @patch("toshi_hazard_store.model.caching.cache_store.DEPLOYMENT_STAGE", "MOCK")
     @patch("toshi_hazard_store.model.caching.cache_store.LOCAL_CACHE_FOLDER", str(folder.name))
     def setUp(self):
-        # model.migrate() # we do this so we get a cache table
+        model.migrate()  # we do this so we get a cache table
         n_lvls = 29
         lvps = list(map(lambda x: model.LevelValuePairAttribute(lvl=x / 1e3, val=(x / 1e6)), range(1, n_lvls)))
         loc = CodedLocation(-43.2, 177.27, 0.001)
@@ -90,6 +100,11 @@ class TestCacheStore(unittest.TestCase):
             hazard_model_id="HAZ_MODEL_ONE",
         ).set_location(loc)
         # model.drop_tables()
+
+    # def tearDown(self):
+    #     model.drop_tables()
+    #     folder.cleanup()
+    #     return super(TestCacheStore, self).tearDown()
 
     @patch("toshi_hazard_store.model.openquake_models.DEPLOYMENT_STAGE", "MOCK")
     @patch("toshi_hazard_store.model.caching.cache_store.DEPLOYMENT_STAGE", "MOCK")
@@ -117,3 +132,31 @@ class TestCacheStore(unittest.TestCase):
         assert self.m.imt == m2.imt
         assert self.m.nloc_001 == m2.nloc_001
         assert self.m.agg == m2.agg
+
+    # @patch("toshi_hazard_store.model.openquake_models.DEPLOYMENT_STAGE", "MOCK")
+    # @patch("toshi_hazard_store.model.caching.cache_store.DEPLOYMENT_STAGE", "MOCK")
+    # @patch("toshi_hazard_store.model.caching.cache_store.LOCAL_CACHE_FOLDER", str(folder.name))
+    # def test_cache_auto_population(self):
+    #     # 2nd pass of same query should use the cache
+
+    #     qlocs = [loc.downsample(0.001).code for loc in locs[:2]]
+    #     print(f'qlocs {qlocs}')
+    #     res = list(query_v3.get_hazard_curves(qlocs, vs30s, [HAZARD_MODEL_ID], imts))
+
+    #     m1 = next(
+    #         cache_store.get_model(
+    #             conn, model_class=mHAG, range_key_condition=range_condition, filter_condition=filter_condition
+    #         )
+    #     )
+
+    #     m2 = next(
+    #         cache_store.get_model(
+    #             conn, model_class=mHAG, range_key_condition=range_condition, filter_condition=filter_condition
+    #         )
+    #     )
+
+    # assert m1.sort_key == m2.sort_key
+    # assert m1.vs30 == m2.vs30
+    # assert m1.imt == m2.imt
+    # assert m1.nloc_001 == m2.nloc_001
+    # assert m1.agg == m2.agg
