@@ -16,6 +16,10 @@ from pynamodb.expressions.condition import Condition
 from pynamodb_attributes.timestamp import TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, LOCAL_CACHE_FOLDER
+from toshi_hazard_store.model.attributes import LevelValuePairAttribute
+
+# from pynamodb.attributes import ListAttribute, MapAttribute
+
 
 _T = TypeVar('_T', bound='pynamodb.models.Model')
 
@@ -41,7 +45,7 @@ def get_model(
         _sql += "\n"
         for expr in sql_from_pynamodb_condition(filter_condition):
             _sql += f"\tAND {expr}\n"
-    print(_sql)
+    # print(_sql)
     try:
         conn.row_factory = sqlite3.Row
         for row in conn.execute(_sql):
@@ -56,6 +60,15 @@ def get_model(
                 if attr.attr_type == 'L':
                     val = base64.b64decode(str(d[name])).decode('ascii')
                     d[name] = json.loads(val)
+                    # TODO: this is only good for THS_HAZARDAGGREGATION
+                    vals = list()
+                    for itm in d[name]:
+                        # print(itm)
+                        vals.append(LevelValuePairAttribute(lvl=itm['M']['lvl']['N'], val=itm['M']['val']['N']))
+                    d[name] = vals
+
+                    # print('LIST:', name)
+                    # print(d[name])
 
                 # datetime conversion
                 if isinstance(attr, TimestampAttribute):
@@ -64,6 +77,7 @@ def get_model(
             yield model_class(**d)
     except Exception as e:
         print(e)
+        raise
 
 
 def put_model(
@@ -108,6 +122,10 @@ def put_model(
         log.info("Last row id: %s" % cursor.lastrowid)
         # cursor.close()
         # conn.execute(_sql)
+    except (sqlite3.IntegrityError) as e:
+        msg = str(e)
+        if 'UNIQUE constraint failed' in msg:
+            log.debug('attempt to insert a duplicate key failed: ')
     except Exception as e:
         log.error(e)
         raise
