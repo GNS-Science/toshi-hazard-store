@@ -68,6 +68,7 @@ class ModelCacheMixin(pynamodb.models.Model):
             if len(cached_rows) >= minimum_expected_hits:
                 return cached_rows  # type: ignore
             if len(cached_rows) < minimum_expected_hits:
+                log.warn('permutations: %s cached_rows: %s' % (minimum_expected_hits, len(cached_rows)))
                 result = []
                 for res in super().query(  # type: ignore
                     hash_key,
