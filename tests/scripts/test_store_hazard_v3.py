@@ -2,7 +2,9 @@
 """Tests for `store_hazard_v3` module."""
 
 import unittest
+
 from click.testing import CliRunner
+
 from scripts import store_hazard_v3
 
 

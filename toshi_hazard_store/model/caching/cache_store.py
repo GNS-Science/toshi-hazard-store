@@ -35,7 +35,7 @@ def get_model(
     :param model_class: type of the model_class
     :return:
     """
-    _sql = "SELECT * FROM %s \n" % _safe_table_name(model_class)
+    _sql = "SELECT * FROM %s \n" % safe_table_name(model_class)
 
     # add the compulsary range key
     _sql += "\tWHERE " + next(sql_from_pynamodb_condition(range_key_condition))
@@ -93,7 +93,7 @@ def put_model(
     """
     model_args = model_instance.get_save_kwargs_from_instance()['Item']
 
-    _sql = "INSERT INTO %s \n" % _safe_table_name(model_instance.__class__)  # model_class)
+    _sql = "INSERT INTO %s \n" % safe_table_name(model_instance.__class__)  # model_class)
     _sql += "\t("
 
     # attribute names
@@ -103,7 +103,11 @@ def put_model(
 
     # attrbute values
     for name, attr in model_instance.get_attributes().items():
-        field = model_args[name]
+        field = model_args.get(name)
+
+        if field is None:  # optional fields may not have been set, save `Null` instead
+            _sql += '\tNull,\n'
+            continue
         if field.get('S'):
             _sql += f'\t"{field["S"]}",\n'
         if field.get('N'):
@@ -151,7 +155,7 @@ def get_connection(model_class: Type[_T]) -> sqlite3.Connection:
     return sqlite3.connect(pathlib.Path(str(LOCAL_CACHE_FOLDER), DEPLOYMENT_STAGE))
 
 
-def _safe_table_name(model_class: Type[_T]):
+def safe_table_name(model_class: Type[_T]):
     return model_class.Meta.table_name.replace('-', '_')
 
 
@@ -167,7 +171,7 @@ def ensure_table_exists(conn: sqlite3.Connection, model_class: Type[_T]):
         # print(name, _type, _type.attr_type)
         # print(dir(_type))
         type_map = {"S": "string", "N": "numeric", "L": "string"}
-        _sql: str = "CREATE TABLE IF NOT EXISTS %s (\n" % _safe_table_name(model_class)
+        _sql: str = "CREATE TABLE IF NOT EXISTS %s (\n" % safe_table_name(model_class)
 
         for name, attr in model_class.get_attributes().items():
             _sql += f'\t"{name}" {type_map[attr.attr_type]}'
@@ -186,6 +190,19 @@ def ensure_table_exists(conn: sqlite3.Connection, model_class: Type[_T]):
         conn.execute(create_sql)
     except Exception as e:
         print("EXCEPTION", e)
+
+
+def execute_sql(conn: sqlite3.Connection, model_class: Type[_T], sql_statement: str):
+    """
+    :param conn: Connection object
+    :param model_class: type of the model_class
+    :return:
+    """
+    try:
+        res = conn.execute(sql_statement)
+    except Exception as e:
+        print("EXCEPTION", e)
+    return res
 
 
 def _expand_expression(attr_type: str, expr: Iterable) -> Iterable[str]:

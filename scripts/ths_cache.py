@@ -20,7 +20,7 @@ NZ_01_GRID = 'NZ_0_1_NB_1_1'
 
 ALL_AGG_VALS = [e.value for e in model.AggregationEnum]
 ALL_IMT_VALS = [e.value for e in model.IntensityMeasureTypeEnum]
-ALL_VS30_VALS = [e.value for e in model.VS30Enum]
+ALL_VS30_VALS = [e.value for e in model.VS30Enum][1:] # drop the 0 value!
 ALL_CITY_LOCS = [CodedLocation(o['latitude'], o['longitude'], 0.001) for o in LOCATIONS]
 
 
@@ -88,7 +88,7 @@ def cache_info(ctx):
     '--model_id',
     '-M',
     default='NSHM_1.0.2',
-    type=click.Choice(['SLT_v8_gmm_v2_FINAL', 'SLT_v5_gmm_v0_SRWG', 'NSHM_1.0.2']),
+    type=click.Choice(['SLT_v8_gmm_v2_FINAL', 'SLT_v5_gmm_v0_SRWG', 'NSHM_1.0.0']),
 )
 @click.pass_context
 def get_hazard_curves(ctx, model_id, num_aggs, num_vs30s, num_imts, num_locations, timing):
@@ -182,13 +182,19 @@ def get_annes_curves(ctx, num_locations):
 
 @cli.command()
 @click.option('--num_locations', '-L', type=int, default=5)
+@click.option('--num_imts', '-I', type=int, default=5)
+@click.option('--num_vs30s', '-V', type=int, default=5)
+@click.option(
+    '--model_id',
+    '-M',
+    default='SLT_v8_gmm_v2_FINAL',
+    type=click.Choice(['SLT_v8_gmm_v2_FINAL', 'SLT_v5_gmm_v0_SRWG', 'NSHM_v1.0.2']),
+)
 @click.pass_context
-def srwg_grid_curves(ctx, num_locations):
+def srwg_grid_curves(ctx, model_id, num_vs30s, num_imts, num_locations):
 
     mHAG = model.HazardAggregation
     mHAG.create_table(wait=True)
-
-    model_id = 'SLT_v8_gmm_v2_FINAL'
 
     site_list = 'NZ_0_1_NB_1_1'
     resample = 0.1
@@ -207,28 +213,30 @@ def srwg_grid_curves(ctx, num_locations):
     locs = [loc.code for loc in locations[:num_locations]]
 
     # setup other args
-    vs30s = [150, 175, 225, 275, 375, 525, 750]
+    vs30s = [150, 175, 225, 275, 375, 525, 750][:num_vs30s]
     imts = [
         'PGA',
         'SA(0.1)',
-        'SA(0.15)',
         'SA(0.2)',
-        'SA(0.25)',
         'SA(0.3)',
-        'SA(0.35)',
         'SA(0.4)',
         'SA(0.5)',
         'SA(0.6)',
         'SA(0.7)',  #  'SA(0.8)', 'SA(0.9)', 'SA(1.0)', 'SA(1.25)', 'SA(1.5)', 'SA(1.75)', 'SA(2.0)', 'SA(2.5)',
         'SA(3.0)',
-        'SA(3.5)',
         'SA(4.0)',
-        'SA(4.5)',
         'SA(5.0)',
         'SA(6.0)',
-        'SA(7.5)',
-        'SA(10.0)',
-    ]
+        'SA(10.0)'][:num_imts]
+    """,
+     # 'SA(0.15)',
+    'SA(0.25)',
+    'SA(0.35)',
+    'SA(3.5)',
+    'SA(4.5)',
+    'SA(7.5)',
+    """
+
     aggs = ["mean", "0.1", "0.5", "0.9"]
 
     # run the query
@@ -244,6 +252,25 @@ def srwg_grid_curves(ctx, num_locations):
     click.echo(pts_summary_data)
     click.echo()
 
+
+@cli.command()
+@click.pass_context
+def add_site_vs30_col(ctx):
+
+    from toshi_hazard_store import model
+    from toshi_hazard_store.model.caching import get_connection, execute_sql, safe_table_name
+
+    mHAG = model.HazardAggregation
+   #mRLZ = model.OpenquakeRealization
+
+    for model in [mHAG,]: #  mRLZ]:
+        sql = """ALTER TABLE %s
+            ADD COLUMN site_vs30 numeric;""" % safe_table_name(model)
+        print(sql)
+
+        conn = get_connection(model)
+        res = execute_sql(conn, model, sql)
+        print( res )
 
 if __name__ == "__main__":
     cli()  # pragma: no cover

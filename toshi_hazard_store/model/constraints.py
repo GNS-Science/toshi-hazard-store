@@ -82,6 +82,7 @@ class VS30Enum(Enum):
     Defines the values available for VS30.
     """
 
+    _0 = 0  # indicates that this value is not used
     _150 = 150
     _175 = 175
     _200 = 200

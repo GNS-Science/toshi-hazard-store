@@ -33,6 +33,7 @@ class LocationIndexedModel(Model):
     lat = FloatAttribute()  # latitude decimal degrees
     lon = FloatAttribute()  # longitude decimal degrees
     vs30 = EnumConstrainedIntegerAttribute(VS30Enum)
+    site_vs30 = FloatAttribute(null=True)
 
     created = TimestampAttribute(default=datetime_now)
 

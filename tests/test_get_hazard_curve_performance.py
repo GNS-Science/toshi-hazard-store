@@ -1,11 +1,11 @@
-from toshi_hazard_store import query
-from nzshm_common.location.location import location_by_id, LOCATION_LISTS
-from nzshm_common.location.code_location import CodedLocation
-import pandas as pd
 import timeit
-import pytest
 
-from toshi_hazard_store import curves
+import pandas as pd
+import pytest
+from nzshm_common.location.code_location import CodedLocation
+from nzshm_common.location.location import LOCATION_LISTS, location_by_id
+
+from toshi_hazard_store import curves, query
 
 HAZARD_ID = 'NSHM_v1.0.2'
 id_list = LOCATION_LISTS['SRWG214']['locations']

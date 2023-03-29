@@ -1,16 +1,16 @@
 import os
-import pytest
-import numpy as np
 from pathlib import Path
-from toshi_hazard_store.model.attributes import EnumAttribute, CompressedListAttribute
-from toshi_hazard_store.model.attributes import (
-    EnumConstrainedUnicodeAttribute,
-    EnumConstrainedIntegerAttribute,
-    # EnumConstrainedFloatAttribute,
-)
 
-from toshi_hazard_store.model import AggregationEnum, ProbabilityEnum
-from toshi_hazard_store.model import VS30Enum
+import numpy as np
+import pytest
+
+from toshi_hazard_store.model import AggregationEnum, ProbabilityEnum, VS30Enum
+from toshi_hazard_store.model.attributes import (  # EnumConstrainedFloatAttribute,
+    CompressedListAttribute,
+    EnumAttribute,
+    EnumConstrainedIntegerAttribute,
+    EnumConstrainedUnicodeAttribute,
+)
 
 INVALID_ARGS_LIST = [AggregationEnum.MEAN, object(), 'MEAN', {}]
 
@@ -25,9 +25,9 @@ def test_attribute_compression():
     array_size = disaggs.size * disaggs.itemsize
     print("Memory size of numpy array in bytes:", array_size)
 
-    import zlib
-    import sys
     import pickle
+    import sys
+    import zlib
 
     comp = zlib.compress(pickle.dumps(disaggs))
     uncomp = pickle.loads(zlib.decompress(comp))
