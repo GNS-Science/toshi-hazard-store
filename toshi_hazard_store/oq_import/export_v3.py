@@ -44,7 +44,7 @@ def export_meta_v3(dstore, toshi_hazard_id, toshi_gt_id, locations_id, source_ta
         partition_key="ToshiOpenquakeMeta",
         hazard_solution_id=toshi_hazard_id,
         general_task_id=toshi_gt_id,
-        hazsol_vs30_rk=f"{toshi_hazard_id}:{str(int(oq.reference_vs30_value)).zfill(3)}",
+        hazsol_vs30_rk=f"{toshi_hazard_id}:{str(int(vs30)).zfill(3)}",
         # updated=dt.datetime.now(tzutc()),
         # known at configuration
         vs30=int(vs30),  # vs30 value
