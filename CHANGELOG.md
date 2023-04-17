@@ -1,9 +1,10 @@
 # Changelog
 
-## [0.7.0] - 2023-04-
+## [0.7.0] - 2023-04-17
 ### Changed
- -  update openquake dependency 3.16
- -  fix SA(0.7) value
+ - update openquake dependency 3.16
+ - update nzshm-common dependency 0.5.0
+ - fix SA(0.7) value
 
 ### Added
  - script ths_cache to prepopulate and test caching
