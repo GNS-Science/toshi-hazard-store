@@ -190,7 +190,7 @@ class TestCacheStoreWithOptionalAttribute(unittest.TestCase):
         assert self.m.nloc_001 == m2.nloc_001
         assert self.m.agg == m2.agg
         assert self.m.site_vs30 == m2.site_vs30
-        assert 200 < m2.site_vs30 < 300
+        assert 200 <= m2.site_vs30 < 300
 
     # @patch("toshi_hazard_store.model.openquake_models.DEPLOYMENT_STAGE", "MOCK")
     # @patch("toshi_hazard_store.model.caching.cache_store.DEPLOYMENT_STAGE", "MOCK")

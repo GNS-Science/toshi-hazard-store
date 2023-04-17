@@ -4,12 +4,13 @@
 ### Changed
  -  update openquake dependency 3.16
  -  fix SA(0.7) value
+
 ### Added
- - new script ths_cache to prepopulate and test caching
+ - script ths_cache to prepopulate and test caching
  - local caching feature
  - more spectral periods in constraint enum
- -  new constraints to existing THS models
- -  fix enum validations and apply to model fields
+ - new constraints to existing THS models
+ - fix enum validations and apply to model fields
 ### Removed
   - remove v2 type options from batch save
 

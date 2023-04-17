@@ -946,18 +946,9 @@ description = "A small pure python library for shared NZ NSHM data like location
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0.0"
-develop = false
 
 [package.extras]
-dev = []
 geometry = ["geopandas (>=0.12.2,<0.13.0)"]
-test = []
-
-[package.source]
-type = "git"
-url = "https://github.com/GNS-Science/nzshm-common-py"
-reference = "8be878fa3da9f2342a802d1b128393748e03d8fb"
-resolved_reference = "8be878fa3da9f2342a802d1b128393748e03d8fb"
 
 [[package]]
 name = "openquake-engine"
@@ -1829,7 +1820,7 @@ test = []
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<4.0"
-content-hash = "fd8b8f279e31022b2ff1cef0c2f0a784804d4292a531b818d9a5b91914ed1f62"
+content-hash = "d4ce81f2325506c506082aae9b6aed19237d105ed22c72e09770bd994d683ec3"
 
 [metadata.files]
 appnope = [
@@ -2619,7 +2610,10 @@ numpy = [
     {file = "numpy-1.24.2-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:150947adbdfeceec4e5926d956a06865c1c690f2fd902efede4ca6fe2e657c3f"},
     {file = "numpy-1.24.2.tar.gz", hash = "sha256:003a9f530e880cb2cd177cba1af7220b9aa42def9c4afc2a2fc3ee6be7eb2b22"},
 ]
-nzshm-common = []
+nzshm-common = [
+    {file = "nzshm_common-0.5.0-py3-none-any.whl", hash = "sha256:7d9b349404acdb01d2eea626f2c0448deac91626563118761e5ecf9b0f16674c"},
+    {file = "nzshm_common-0.5.0.tar.gz", hash = "sha256:ea9ac99471500db9c2f0b2cf0c656d17247d1a8a85e14941dc255f3b41b23c11"},
+]
 openquake-engine = [
     {file = "openquake.engine-3.16.1-py3-none-any.whl", hash = "sha256:fbb5800c365ebdeb24e32ca7b09cc3a35302dec66e26d5c02f367087b19c43c1"},
     {file = "openquake.engine-3.16.1.tar.gz", hash = "sha256:38ccecbe2597e8f8fb3596c16ca667d6376ec98e36e3df5266fa6a04e3c43fcd"},
