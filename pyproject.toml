@@ -32,12 +32,12 @@ ths_cache = 'scripts.ths_cache:cli'
 
 [tool.poetry.dependencies]
 numpy = "^1.23.1"
-nzshm-common = "^0.5.0"
 openquake-engine = {version = "^3.16", optional = true}
 pandas = "^1.4.3"
 pynamodb = "^5.2.1"
 pynamodb-attributes = "^0.3.2"
 python = ">=3.8,<4.0"
+nzshm-common = "^0.6.0"
 
 [tool.poetry.group.dev.dependencies]
 black  = { version = "^22.3"}
