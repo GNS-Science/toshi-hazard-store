@@ -68,10 +68,11 @@ class QueryRlzsV3Test(unittest.TestCase):
         qlocs = [loc.downsample(0.001).code for loc in locs[:1]]
         print(f'qlocs {qlocs}')
         res = list(query_v3.get_rlz_curves_v3(qlocs, vs30s, rlzs, [TOSHI_ID], imts))
-        print(res)
+        print(res[0])
         self.assertEqual(len(res), len(rlzs) * len(vs30s) * len(locs[:1]))
         self.assertEqual(res[0].nloc_001, qlocs[0])
 
+        assert 0
     # def test_query_rlzs_objects_2(self):
 
     #     res = list(query.get_hazard_rlz_curves_v3(TOSHI_ID, ['PGA'], ['WLG', 'QZN'], None))

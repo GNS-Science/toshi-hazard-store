@@ -23,17 +23,16 @@ ALL_IMT_VALS = [e.value for e in model.IntensityMeasureTypeEnum]
 ALL_VS30_VALS = [e.value for e in model.VS30Enum][1:] # drop the 0 value!
 ALL_CITY_LOCS = [CodedLocation(o['latitude'], o['longitude'], 0.001) for o in LOCATIONS]
 
-
 log = logging.getLogger()
-logging.basicConfig(level=logging.INFO)
-logging.getLogger('pynamodb').setLevel(logging.WARN)
-logging.getLogger('toshi_hazard_store').setLevel(logging.WARN)
+# logging.basicConfig(level=logging.)
+logging.getLogger('pynamodb').setLevel(logging.DEBUG)
+# logging.getLogger('botocore').setLevel(logging.DEBUG)
+logging.getLogger('toshi_hazard_store').setLevel(logging.DEBUG)
 
-formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+formatter = logging.Formatter(fmt='%(asctime)s %(name)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 screen_handler = logging.StreamHandler(stream=sys.stdout)
 screen_handler.setFormatter(formatter)
 log.addHandler(screen_handler)
-
 
 def columns_from_results(results):
     for res in results:
@@ -88,7 +87,7 @@ def cache_info(ctx):
     '--model_id',
     '-M',
     default='NSHM_1.0.2',
-    type=click.Choice(['SLT_v8_gmm_v2_FINAL', 'SLT_v5_gmm_v0_SRWG', 'NSHM_1.0.0']),
+    type=click.Choice(['SLT_v8_gmm_v2_FINAL', 'SLT_v5_gmm_v0_SRWG', 'NSHM_1.0.0', 'NSHM_v1.0.4']),
 )
 @click.pass_context
 def get_hazard_curves(ctx, model_id, num_aggs, num_vs30s, num_imts, num_locations, timing):
@@ -118,6 +117,47 @@ def get_hazard_curves(ctx, model_id, num_aggs, num_vs30s, num_imts, num_location
 
     # print(r.values)
 
+
+@cli.command()
+@click.option('--timing', '-T', is_flag=True, show_default=True, default=False, help="print timing information")
+@click.option('--location', '-L', type=str, default='MRO')
+@click.option('--imt', '-I', type=str, default='PGA')
+@click.option('--vs30', '-V', type=int, default=400)
+@click.option('--agg', '-A', type=str, default='mean')
+@click.option(
+    '--model_id',
+    '-M',
+    default='NSHM_v1.0.4',
+    type=click.Choice(['SLT_v8_gmm_v2_FINAL', 'SLT_v5_gmm_v0_SRWG', 'NSHM_1.0.0', 'NSHM_v1.0.4']),
+)
+@click.pass_context
+def get_hazard_curve(ctx, model_id, agg, vs30, imt, location, timing):
+
+    mHAG = model.HazardAggregation
+    mHAG.create_table(wait=True)
+
+    vs30s = [vs30,]
+    imts = [imt,]
+    aggs = [agg]
+    loc = location_by_id(location)
+    locs = [CodedLocation(loc['latitude'], loc['longitude'], 0.001).code,]
+    print(loc, locs)
+    results = query.get_hazard_curves(locs, vs30s, [model_id], imts, aggs)
+
+    pts_summary_data = pd.DataFrame.from_dict(columns_from_results(results))
+
+    # for r in res:
+    #     print(r)
+    click.echo(pts_summary_data.info())
+    click.echo()
+    click.echo(pts_summary_data.columns)
+    click.echo()
+    click.echo(pts_summary_data)
+    click.echo()
+    # print(pts_summary_data['apoe'][0])
+    # print(pts_summary_data['imtl'][0])
+
+    # print(r.values)
 
 @cli.command()
 @click.option('--num_locations', '-L', type=int, default=5)

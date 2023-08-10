@@ -59,3 +59,13 @@ class QueryHazardAggregationV3Test(unittest.TestCase):
         print(res)
         self.assertEqual(len(res), len(imts) * len(aggs) * len(vs30s) * len(locs[:2]))
         self.assertEqual(res[0].nloc_001, qlocs[0])
+
+    def test_query_hazard_aggr_single(self):
+        qlocs = [loc.downsample(0.001).code for loc in locs[:1]]
+        print(f'qlocs {qlocs}')
+        res = list(query_v3.get_hazard_curves(
+            qlocs, vs30s[:1], [HAZARD_MODEL_ID], imts[:1],
+            aggs=['mean']))
+        print(res)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0].nloc_001, qlocs[0])

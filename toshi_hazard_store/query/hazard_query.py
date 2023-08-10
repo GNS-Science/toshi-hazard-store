@@ -2,6 +2,7 @@
 import decimal
 import logging
 from typing import Iterable, Iterator
+import itertools
 
 from nzshm_common.location.code_location import CodedLocation
 
@@ -183,7 +184,7 @@ def get_hazard_curves(
     f'{nloc_001}:{vs30s}:{hazard_model_id}'
     """
 
-    def build_condition_expr(locs, vs30s, hids):
+    def build_condition_expr(locs, vs30s, hids, aggs):
         """Build filter condition."""
         ## TODO REFACTOR ME ... using the res of first loc is not ideal
         grid_res = decimal.Decimal(str(list(locs)[0].split('~')[0]))
@@ -215,7 +216,7 @@ def get_hazard_curves(
 
         return condition_expr
 
-    def build_sort_key(locs, vs30s, hids):
+    def build_sort_key(locs, vs30s, hids, aggs):
         """Build sort_key."""
         sort_key_first_val = ""
         first_loc = sorted(locs)[0]  # these need to be formatted to match the sort key 0.001 ?
@@ -238,30 +239,53 @@ def get_hazard_curves(
 
     # print('hashes', get_hashes(locs))
     # TODO: use https://pypi.org/project/InPynamoDB/
+    hits = 0
     for hash_location_code in get_hashes(locs):
 
         log.info('hash_key %s' % hash_location_code)
 
         hash_locs = list(filter(lambda loc: downsample_code(loc, 0.1) == hash_location_code, locs))
-        sort_key_first_val = build_sort_key(hash_locs, vs30s, hazard_model_ids)
-        condition_expr = build_condition_expr(hash_locs, vs30s, hazard_model_ids)
+        
+        for (hloc, hid, vs30, imt, agg ) in itertools.product(hash_locs, hazard_model_ids, vs30s, imts, aggs):
+    
+            sort_key_first_val = build_sort_key([hloc], [vs30], [hid], [agg])
+            condition_expr = build_condition_expr([hloc], [vs30], [hid], [agg])
 
-        log.debug('sort_key_first_val: %s' % sort_key_first_val)
-        log.debug('condition_expr: %s' % condition_expr)
+            log.debug('sort_key_first_val: %s' % sort_key_first_val)
+            log.debug('condition_expr: %s' % condition_expr)
 
-        if sort_key_first_val:
-            qry = mHAG.query(hash_location_code, mHAG.sort_key >= sort_key_first_val, filter_condition=condition_expr)
-        else:
-            qry = mHAG.query(
-                hash_location_code,
-                mHAG.sort_key >= " ",  # lowest printable char in ascii table is SPACE. (NULL is first control)
-                filter_condition=condition_expr,
-            )
+            if sort_key_first_val:
+                # ORIG HITS HARD ....
+                # qry = mHAG.query(
+                #     hash_key=hash_location_code, 
+                #     range_key_condition=mHAG.sort_key >= sort_key_first_val, 
+                #     filter_condition=condition_expr
+                #     )
+                
+                # SLOWER, iterates over everything
+                # qry = mHAG.query(
+                #     hash_key=hash_location_code, 
+                #     filter_condition=condition_expr
+                #     )
 
-        log.debug("get_hazard_rlz_curves_v3: qry %s" % qry)
-        hits = 0
-        for hit in qry:
-            hits += 1
-            yield (hit)
+                # FAST only works for one?
+                qry = mHAG.query(
+                    hash_key=hash_location_code, 
+                    range_key_condition=mHAG.sort_key == sort_key_first_val,
+                    filter_condition=condition_expr
+                )
+
+            else:
+                qry = mHAG.query(
+                    hash_location_code,
+                    mHAG.sort_key >= " ",  # lowest printable char in ascii table is SPACE. (NULL is first control)
+                    filter_condition=condition_expr,
+                )
+
+            log.debug("get_hazard_rlz_curves_v3: qry %s" % qry)
+
+            for hit in qry:
+                hits += 1
+                yield (hit)
 
         log.info('hash_key %s has %s hits' % (hash_location_code, hits))
