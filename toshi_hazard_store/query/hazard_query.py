@@ -9,6 +9,7 @@ from nzshm_common.location.code_location import CodedLocation
 import toshi_hazard_store.model as model
 
 log = logging.getLogger(__name__)
+# log.setLevel(logging.DEBUG)
 
 mOQM = model.ToshiOpenquakeMeta
 mRLZ = model.OpenquakeRealization
@@ -171,11 +172,11 @@ def get_rlz_curves_v3(
 
 
 def get_hazard_curves(
-    locs: Iterable[str] = [],  # nloc_001
-    vs30s: Iterable[int] = [],  # vs30s
-    hazard_model_ids: Iterable[str] = [],  # hazard_model_ids
-    imts: Iterable[str] = [],
-    aggs: Iterable[str] = [],
+    locs: Iterable[str] = [None],  # nloc_001
+    vs30s: Iterable[int] = [000],  # vs30s
+    hazard_model_ids: Iterable[str] = [None],  # hazard_model_ids
+    imts: Iterable[str] = ["   "],
+    aggs: Iterable[str] = ["mean", "0.1"],
     local_cache: bool = False,
 ) -> Iterator[mHAG]:
     """Use mHAG.sort_key as much as possible.
@@ -184,6 +185,7 @@ def get_hazard_curves(
     f'{nloc_001}:{vs30s}:{hazard_model_id}'
     """
 
+    log.info("get_hazard_curves( %s" % locs)
     def build_condition_expr(locs, vs30s, hids, aggs):
         """Build filter condition."""
         ## TODO REFACTOR ME ... using the res of first loc is not ideal
@@ -246,13 +248,14 @@ def get_hazard_curves(
 
         hash_locs = list(filter(lambda loc: downsample_code(loc, 0.1) == hash_location_code, locs))
         
+        # This method on;ly works if we have all the args
         for (hloc, hid, vs30, imt, agg ) in itertools.product(hash_locs, hazard_model_ids, vs30s, imts, aggs):
     
             sort_key_first_val = build_sort_key([hloc], [vs30], [hid], [agg])
             condition_expr = build_condition_expr([hloc], [vs30], [hid], [agg])
 
-            log.debug('sort_key_first_val: %s' % sort_key_first_val)
-            log.debug('condition_expr: %s' % condition_expr)
+            log.info('sort_key_first_val: %s' % sort_key_first_val)
+            log.info('condition_expr: %s' % condition_expr)
 
             if sort_key_first_val:
                 # ORIG HITS HARD ....
@@ -288,4 +291,5 @@ def get_hazard_curves(
                 hits += 1
                 yield (hit)
 
+            # log.info(qry.last_evaluated_key)
         log.info('hash_key %s has %s hits' % (hash_location_code, hits))
