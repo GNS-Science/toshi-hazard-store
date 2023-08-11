@@ -15,7 +15,6 @@ mOQM = model.ToshiOpenquakeMeta
 mRLZ = model.OpenquakeRealization
 mHAG = model.HazardAggregation
 
-
 def get_hazard_metadata_v3(
     haz_sol_ids: Iterable[str] = None,
     vs30_vals: Iterable[int] = None,
@@ -272,24 +271,44 @@ def get_hazard_curves(
                 #     )
 
                 # FAST only works for one?
-                qry = mHAG.query(
+                results = mHAG.query(
                     hash_key=hash_location_code, 
                     range_key_condition=mHAG.sort_key == sort_key_first_val,
-                    filter_condition=condition_expr
+                    filter_condition=condition_expr,
+                    limit=10,
+                    rate_limit=10,
+                    last_evaluated_key=None
                 )
-
+                # log.info(dir(results))
+                # log.info(results.last_evaluated_key)
+                # log.info(results.page_iter)
+                # log.info(results.total_count)
+               
+                # log.info(results.page_iter.total_scanned_count)
+                # log.info(results.page_iter.page_size)
+                # log.info(results.page_iter.last_evaluated_key)                
             else:
-                qry = mHAG.query(
+                results = mHAG.query(
                     hash_location_code,
                     mHAG.sort_key >= " ",  # lowest printable char in ascii table is SPACE. (NULL is first control)
                     filter_condition=condition_expr,
+                    limit=10,
+                    last_evaluated_key=None
                 )
 
-            log.debug("get_hazard_rlz_curves_v3: qry %s" % qry)
+            log.debug("get_hazard_rlz_curves_v3: results %s" % results)
 
-            for hit in qry:
+            for hit in results:
                 hits += 1
                 yield (hit)
 
-            # log.info(qry.last_evaluated_key)
+            ## Looking for stats
+            # log.info(dir(results))
+            # log.info(results.last_evaluated_key)
+            # log.info(dir(results.page_iter))
+            # log.info(results.page_iter.total_scanned_count)
+            # log.info(results.page_iter.page_size)
+            # log.info(results.page_iter.last_evaluated_key)
+
+
         log.info('hash_key %s has %s hits' % (hash_location_code, hits))

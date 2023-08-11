@@ -23,11 +23,30 @@ ALL_IMT_VALS = [e.value for e in model.IntensityMeasureTypeEnum]
 ALL_VS30_VALS = [e.value for e in model.VS30Enum][1:] # drop the 0 value!
 ALL_CITY_LOCS = [CodedLocation(o['latitude'], o['longitude'], 0.001) for o in LOCATIONS]
 
+
+class PyanamodbConsumedHandler(logging.Handler):
+
+    def __init__(self, level=0) -> None:
+        super().__init__(level)
+        self.consumed = 0
+
+    def reset(self):
+        self.consumed = 0
+
+    def emit(self, record):
+        if "pynamodb/connection/base.py" in record.pathname and record.msg == "%s %s consumed %s units":
+            self.consumed += record.args[2]
+            # print("CONSUMED:",  self.consumed)
+
 log = logging.getLogger()
+
+pyconhandler = PyanamodbConsumedHandler(logging.DEBUG)
+log.addHandler(pyconhandler)
+
 # logging.basicConfig(level=logging.)
 logging.getLogger('pynamodb').setLevel(logging.DEBUG)
 # logging.getLogger('botocore').setLevel(logging.DEBUG)
-logging.getLogger('toshi_hazard_store').setLevel(logging.DEBUG)
+# logging.getLogger('toshi_hazard_store').setLevel(logging.DEBUG)
 
 formatter = logging.Formatter(fmt='%(asctime)s %(name)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 screen_handler = logging.StreamHandler(stream=sys.stdout)
@@ -100,10 +119,11 @@ def get_hazard_curves(ctx, model_id, num_aggs, num_vs30s, num_imts, num_location
     aggs = ALL_AGG_VALS[:num_aggs]
     locs = [loc.code for loc in ALL_CITY_LOCS[:num_locations]]
 
+    pyconhandler.reset()
     results = query.get_hazard_curves(locs, vs30s, [model_id], imts, aggs)
-
     pts_summary_data = pd.DataFrame.from_dict(columns_from_results(results))
-
+    click.echo("get_hazard_curves Query consumed: %s units" % pyconhandler.consumed)
+    click.echo()
     # for r in res:
     #     print(r)
     click.echo(pts_summary_data.info())
@@ -142,10 +162,14 @@ def get_hazard_curve(ctx, model_id, agg, vs30, imt, location, timing):
     loc = location_by_id(location)
     locs = [CodedLocation(loc['latitude'], loc['longitude'], 0.001).code,]
     print(loc, locs)
+
+
+    pyconhandler.reset()
     results = query.get_hazard_curves(locs, vs30s, [model_id], imts, aggs)
-
     pts_summary_data = pd.DataFrame.from_dict(columns_from_results(results))
-
+    click.echo("get_hazard_curve Query consumed: %s units" % pyconhandler.consumed)
+    click.echo()
+    
     # for r in res:
     #     print(r)
     click.echo(pts_summary_data.info())

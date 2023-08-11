@@ -69,3 +69,4 @@ class QueryHazardAggregationV3Test(unittest.TestCase):
         print(res)
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0].nloc_001, qlocs[0])
+        assert 0
