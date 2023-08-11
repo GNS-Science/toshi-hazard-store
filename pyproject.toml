@@ -29,7 +29,7 @@ store_hazard_v3 = 'scripts.store_hazard_v3:main'
 get_hazard = 'scripts.get_hazard:main'
 query_meta = 'scripts.query_meta:main'
 ths_cache = 'scripts.ths_cache:cli'
-
+ths_testing = 'scripts.ths_testing:cli'
 [tool.poetry.dependencies]
 numpy = "^1.23.1"
 openquake-engine = {version = "^3.16", optional = true}
@@ -55,7 +55,6 @@ mkdocs-pymdownx-material-extras = "^2.0.3"
 mkdocstrings  = { version = "^0.18.0"}
 mkdocstrings-python = {version = "^0.6.5"}
 moto = "^3.1.10"
-mypy = {version = "^0.900"}
 pre-commit = "^3.0.4"
 pymdown-extensions = {version = "^9.4"}
 pytest = { version = "^6.2.4"}
@@ -65,6 +64,7 @@ tox = "^4.4.5"
 twine  = { version = "^3.3.0"}
 types-python-dateutil = "^2.8.16"
 virtualenv  = { version = "^20.2.2", optional = true}
+mypy = "^1.5.0"
 
 [tool.poetry.extras]
 test = [

@@ -1,16 +1,13 @@
 """Console script for testing or pre-poulating toshi_hazard_store local cache."""
 # noqa
 import logging
-import os
 import sys
-import pathlib
 import click
-import time
 import pandas as pd
 
 from nzshm_common.location.code_location import CodedLocation
-from nzshm_common.location.location import location_by_id, LOCATIONS, LOCATION_LISTS
-from nzshm_common.grids import load_grid, RegionGrid
+from nzshm_common.location.location import location_by_id, LOCATIONS
+# from nzshm_common.grids import load_grid, RegionGrid
 
 
 from toshi_hazard_store.config import LOCAL_CACHE_FOLDER, REGION, DEPLOYMENT_STAGE
@@ -46,7 +43,7 @@ log.addHandler(pyconhandler)
 # logging.basicConfig(level=logging.)
 logging.getLogger('pynamodb').setLevel(logging.DEBUG)
 # logging.getLogger('botocore').setLevel(logging.DEBUG)
-# logging.getLogger('toshi_hazard_store').setLevel(logging.DEBUG)
+logging.getLogger('toshi_hazard_store').setLevel(logging.INFO)
 
 formatter = logging.Formatter(fmt='%(asctime)s %(name)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 screen_handler = logging.StreamHandler(stream=sys.stdout)
@@ -125,18 +122,36 @@ def get_hazard_curves(ctx, model_id, num_aggs, num_vs30s, num_imts, num_location
     pts_summary_data = pd.DataFrame.from_dict(columns_from_results(results))
     click.echo("get_hazard_curves Query consumed: %s units" % pyconhandler.consumed)
     click.echo()
-    # for r in res:
-    #     print(r)
+
     click.echo(pts_summary_data.info())
     click.echo()
     click.echo(pts_summary_data.columns)
     click.echo()
     click.echo(pts_summary_data)
     click.echo()
-    # print(pts_summary_data['apoe'][0])
-    # print(pts_summary_data['imtl'][0])
 
-    # print(r.values)
+
+"""
+## OLD
+A) real    1m19.044s
+A) get_hazard_curves Query consumed: 88804.5 units
+
+B) real    0m6.881s
+B) get_hazard_curve Query consumed: 7848.5 units
+
+## NEW
+
+A) real    0m4.601s
+A) get_hazard_curves Query consumed: 30.0 units
+
+B) real    0m1.727s
+B) get_hazard_curve Query consumed: 0.5 units
+
+
+## speed / cost gains
+A) speed 79/4.6 = 17, cost 2970
+B) speed 6.8/1.7 = 4, cost 15697
+"""
 
 
 @cli.command()
@@ -176,177 +191,12 @@ def get_hazard_curve(ctx, model_id, agg, vs30, imt, location, timing):
     click.echo("get_hazard_curve Query consumed: %s units" % pyconhandler.consumed)
     click.echo()
 
-    # for r in res:
-    #     print(r)
     click.echo(pts_summary_data.info())
     click.echo()
     click.echo(pts_summary_data.columns)
     click.echo()
     click.echo(pts_summary_data)
     click.echo()
-    # print(pts_summary_data['apoe'][0])
-    # print(pts_summary_data['imtl'][0])
-
-    # print(r.values)
-
-
-@cli.command()
-@click.option('--num_locations', '-L', type=int, default=5)
-@click.pass_context
-def get_annes_curves(ctx, num_locations):
-
-    mHAG = model.HazardAggregation
-    mHAG.create_table(wait=True)
-
-    model_id = 'NSHM_v1.0.2'
-
-    # setup locations
-    id_list = LOCATION_LISTS['SRWG214']['locations']
-    site_list = [location_by_id(loc_id)['name'] for loc_id in id_list]
-    # site_list = ['Auckland', 'Wellington']
-    id_list = [loc_id for loc_id in id_list if location_by_id(loc_id)['name'] in site_list]
-    locations = [
-        CodedLocation(location_by_id(loc_id)['latitude'], location_by_id(loc_id)['longitude'], 0.001)
-        for loc_id in id_list
-    ]
-    # filter
-    locs = [loc.code for loc in locations[:num_locations]]
-
-    # setup other args
-    vs30s = [150, 175, 225, 275, 375, 525, 750]
-    imts = [
-        'PGA',
-        'SA(0.1)',
-        'SA(0.15)',
-        'SA(0.2)',
-        'SA(0.25)',
-        'SA(0.3)',
-        'SA(0.35)',
-        'SA(0.4)',
-        'SA(0.5)',
-        'SA(0.6)',
-        'SA(0.7)',  #  'SA(0.8)', 'SA(0.9)', 'SA(1.0)', 'SA(1.25)', 'SA(1.5)', 'SA(1.75)', 'SA(2.0)', 'SA(2.5)',
-        'SA(3.0)',
-        'SA(3.5)',
-        'SA(4.0)',
-        'SA(4.5)',
-        'SA(5.0)',
-        'SA(6.0)',
-        'SA(7.5)',
-        'SA(10.0)',
-    ]
-    aggs = ["mean", "0.1", "0.5", "0.9"]
-
-    # run the query
-    results = query.get_hazard_curves(locs, vs30s, [model_id], imts, aggs)
-    pts_summary_data = pd.DataFrame.from_dict(columns_from_results(results))
-
-    # for r in res:
-    #     print(r)
-    click.echo(pts_summary_data.info())
-    click.echo()
-    click.echo(pts_summary_data.columns)
-    click.echo()
-    click.echo(pts_summary_data)
-    click.echo()
-
-
-@cli.command()
-@click.option('--num_locations', '-L', type=int, default=5)
-@click.option('--num_imts', '-I', type=int, default=5)
-@click.option('--num_vs30s', '-V', type=int, default=5)
-@click.option(
-    '--model_id',
-    '-M',
-    default='SLT_v8_gmm_v2_FINAL',
-    type=click.Choice(['SLT_v8_gmm_v2_FINAL', 'SLT_v5_gmm_v0_SRWG', 'NSHM_v1.0.2']),
-)
-@click.pass_context
-def srwg_grid_curves(ctx, model_id, num_vs30s, num_imts, num_locations):
-
-    mHAG = model.HazardAggregation
-    mHAG.create_table(wait=True)
-
-    site_list = 'NZ_0_1_NB_1_1'
-    resample = 0.1
-    locations = []
-    grid = RegionGrid[site_list]
-    grid_locs = grid.load()
-    # remove empty location
-    l = grid_locs.index((-34.7, 172.7))
-    grid_locs = grid_locs[0:l] + grid_locs[l + 1 :]
-    for gloc in grid_locs:
-        loc = CodedLocation(*gloc, resolution=0.001)
-        loc = loc.resample(float(resample)) if resample else loc
-        locations.append(loc.resample(0.001))
-
-    # filter
-    locs = [loc.code for loc in locations[:num_locations]]
-
-    # setup other args
-    vs30s = [150, 175, 225, 275, 375, 525, 750][:num_vs30s]
-    imts = [
-        'PGA',
-        'SA(0.1)',
-        'SA(0.2)',
-        'SA(0.3)',
-        'SA(0.4)',
-        'SA(0.5)',
-        'SA(0.6)',
-        'SA(0.7)',  #  'SA(0.8)', 'SA(0.9)', 'SA(1.0)', 'SA(1.25)', 'SA(1.5)', 'SA(1.75)', 'SA(2.0)', 'SA(2.5)',
-        'SA(3.0)',
-        'SA(4.0)',
-        'SA(5.0)',
-        'SA(6.0)',
-        'SA(10.0)',
-    ][:num_imts]
-    """,
-     # 'SA(0.15)',
-    'SA(0.25)',
-    'SA(0.35)',
-    'SA(3.5)',
-    'SA(4.5)',
-    'SA(7.5)',
-    """
-
-    aggs = ["mean", "0.1", "0.5", "0.9"]
-
-    # run the query
-    results = query.get_hazard_curves(locs, vs30s, [model_id], imts, aggs)
-    pts_summary_data = pd.DataFrame.from_dict(columns_from_results(results))
-
-    # for r in res:
-    #     print(r)
-    click.echo(pts_summary_data.info())
-    click.echo()
-    click.echo(pts_summary_data.columns)
-    click.echo()
-    click.echo(pts_summary_data)
-    click.echo()
-
-
-@cli.command()
-@click.pass_context
-def add_site_vs30_col(ctx):
-
-    from toshi_hazard_store import model
-    from toshi_hazard_store.model.caching import get_connection, execute_sql, safe_table_name
-
-    mHAG = model.HazardAggregation
-    # mRLZ = model.OpenquakeRealization
-
-    for model in [
-        mHAG,
-    ]:  #  mRLZ]:
-        sql = """ALTER TABLE %s
-            ADD COLUMN site_vs30 numeric;""" % safe_table_name(
-            model
-        )
-        print(sql)
-
-        conn = get_connection(model)
-        res = execute_sql(conn, model, sql)
-        print(res)
 
 
 if __name__ == "__main__":
