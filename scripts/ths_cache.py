@@ -2,19 +2,18 @@
 # noqa
 import logging
 import os
-import sys
 import pathlib
-import click
+import sys
 import time
+
+import click
 import pandas as pd
-
+from nzshm_common.grids import RegionGrid, load_grid
 from nzshm_common.location.code_location import CodedLocation
-from nzshm_common.location.location import location_by_id, LOCATIONS, LOCATION_LISTS
-from nzshm_common.grids import load_grid, RegionGrid
+from nzshm_common.location.location import LOCATION_LISTS, LOCATIONS, location_by_id
 
-
-from toshi_hazard_store.config import LOCAL_CACHE_FOLDER, REGION, DEPLOYMENT_STAGE
 from toshi_hazard_store import model, query
+from toshi_hazard_store.config import DEPLOYMENT_STAGE, LOCAL_CACHE_FOLDER, REGION
 
 NZ_01_GRID = 'NZ_0_1_NB_1_1'
 
@@ -330,7 +329,7 @@ def srwg_grid_curves(ctx, model_id, num_vs30s, num_imts, num_locations):
 def add_site_vs30_col(ctx):
 
     from toshi_hazard_store import model
-    from toshi_hazard_store.model.caching import get_connection, execute_sql, safe_table_name
+    from toshi_hazard_store.model.caching import execute_sql, get_connection, safe_table_name
 
     mHAG = model.HazardAggregation
     # mRLZ = model.OpenquakeRealization
