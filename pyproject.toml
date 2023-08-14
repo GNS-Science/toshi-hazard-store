@@ -30,13 +30,19 @@ get_hazard = 'scripts.get_hazard:main'
 query_meta = 'scripts.query_meta:main'
 ths_cache = 'scripts.ths_cache:cli'
 ths_testing = 'scripts.ths_testing:cli'
+
 [tool.poetry.dependencies]
-numpy = "^1.23.1"
+# numpy = "^1.23.1"
 openquake-engine = {version = "^3.16", optional = true}
 pandas = "^1.4.3"
 pynamodb-attributes = "^0.3.2"
 python = ">=3.8,<4.0"
 nzshm-common = "^0.6.0"
+
+# see https://github.com/orgs/python-poetry/discussions/7937
+urllib3 = "<2" 
+# geopandas = "^0.13.2"
+numpy = "<1.25"
 
 [tool.poetry.group.dev.dependencies]
 black  = { version = "^22.3"}
