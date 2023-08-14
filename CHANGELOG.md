@@ -1,11 +1,11 @@
 # Changelog
 
-<<<<<<< HEAD
 ## [0.7.3] - 2023-08-11
-
 ### Changed
  - faster queries for THS_HazardAggregation table
  - faster queries for THS_OpenquakeRealization table
+ - query optimisation to gridded_hazard_query
+ - query optimisation to disagg_querys
  - mypy 1.5.0
  - pynamodb 5.5.0
  
