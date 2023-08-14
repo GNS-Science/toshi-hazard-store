@@ -300,7 +300,6 @@ def get_disagg_agg_curve(ctx, model_id, agg, vs30, imt, poe, location):
         model.ProbabilityEnum._2_PCT_IN_50YRS,
     )
     click.echo("get_one_disagg_aggregation Query consumed: %s units" % pyconhandler.consumed)
-    click.echo("Query returned: %s items" % len(results))
 
     """
     get_one_disagg_aggregation Query consumed: 1.5 units
