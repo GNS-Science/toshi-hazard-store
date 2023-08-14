@@ -254,8 +254,13 @@ def get_gridded(ctx, many_query, model_id, grid_id, agg, vs30, imt, poe):
         click.echo("get_gridded_hazard Query consumed: %s units" % pyconhandler.consumed)
 
         """
+        BEFORE
         get_gridded_hazard Query consumed: 6340.0 units
         real    0m5.317s
+
+        AFTER
+        get_gridded_hazard Query consumed: 0.5 units
+        real    0m1.762s        
         """
 
 if __name__ == "__main__":
