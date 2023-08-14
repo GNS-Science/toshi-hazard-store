@@ -9,7 +9,6 @@ from nzshm_common.location.code_location import CodedLocation
 from nzshm_common.location.location import location_by_id, LOCATIONS
 # from nzshm_common.grids import load_grid, RegionGrid
 
-
 from toshi_hazard_store.config import LOCAL_CACHE_FOLDER, REGION, DEPLOYMENT_STAGE
 from toshi_hazard_store import model, query
 
@@ -198,6 +197,66 @@ def get_hazard_curve(ctx, model_id, agg, vs30, imt, location, timing):
     click.echo(pts_summary_data)
     click.echo()
 
+
+"""
+                hazard_model_id=HAZARD_MODELS,
+                location_grid_id=GRID,
+                vs30=400,
+                imt='PGA',
+                agg='0.995',
+                poe=0.02,
+"""
+
+@cli.command()
+@click.option('--many-query', '-Q', is_flag=True, show_default=True, default=False, help="use many query version")
+@click.option('--imt', '-I', type=str, default='PGA')
+@click.option('--vs30', '-V', type=int, default=400)
+@click.option('--agg', '-A', type=str, default='0.995')
+@click.option('--poe', '-P', type=float, default=0.02)
+@click.option('--grid_id', '-G', type=str, default='NZ_0_1_NB_1_1')
+@click.option(
+    '--model_id',
+    '-M',
+    default='NSHM_v1.0.4',
+    type=click.Choice(['SLT_v8_gmm_v2_FINAL', 'SLT_v5_gmm_v0_SRWG', 'NSHM_1.0.0', 'NSHM_v1.0.4']),
+)
+@click.pass_context
+def get_gridded(ctx, many_query, model_id, grid_id, agg, vs30, imt, poe):
+    pyconhandler.reset()
+    if not many_query:
+        results = list(
+            query.get_one_gridded_hazard(
+                hazard_model_id=model_id,
+                location_grid_id=grid_id,
+                vs30=vs30,
+                imt=imt,
+                agg=agg,
+                poe=poe,
+            )
+        )
+        click.echo("get_one_gridded_hazard Query consumed: %s units" % pyconhandler.consumed)
+
+        """
+        get_one_gridded_hazard Query consumed: 0.5 units
+        real    0m1.661s        
+        """
+    else:
+        results = list(
+            query.get_gridded_hazard(
+                hazard_model_ids=tuple([model_id]),
+                location_grid_ids=tuple([grid_id]),
+                vs30s=tuple([vs30]),
+                imts=tuple([imt]),
+                aggs=tuple([agg]),
+                poes=tuple([poe]),
+            )            
+        )
+        click.echo("get_gridded_hazard Query consumed: %s units" % pyconhandler.consumed)
+
+        """
+        get_gridded_hazard Query consumed: 6340.0 units
+        real    0m5.317s
+        """
 
 if __name__ == "__main__":
     cli()  # pragma: no cover
