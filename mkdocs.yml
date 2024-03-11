@@ -3,11 +3,26 @@ site_url: https://GNS-Science.github.io/toshi-hazard-store
 repo_url: https://github.com/GNS-Science/toshi-hazard-store
 repo_name: GNS-Science/toshi-hazard-store
 #strict: true
+watch:
+  - toshi_hazard_store
+  - scripts
 nav:
   - Home: index.md
   - Installation: installation.md
+  - Configuration: configuration.md
   - Usage: usage.md
-  - Modules: api.md
+  # - Local configuration: sqlite_adapter_usage.md
+  - CLI tools: cli.md
+  - Query API:
+      - Hazard: hazard_query_api.md
+      - Gridded Hazard: gridded_hazard_query_api.md
+      - Hazard Disaggregation: hazard_disagg_query_api.md
+  - Database Models:
+      - Hazard: domain_model/openquake_models.md
+      - Gridded Hazard: domain_model/gridded_hazard_models.md
+      - Hazard Disaggregation: domain_model/disaggregation_models.md
+      - PROPOSED:
+        - Hazard: domain_model/proposed_hazard_models.md
   - Contributing: contributing.md
   - Changelog: changelog.md
 theme:
@@ -23,6 +38,7 @@ theme:
     - navigation.instant
     - navigation.tabs.sticky
 markdown_extensions:
+  - mkdocs-click
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
@@ -36,7 +52,6 @@ markdown_extensions:
       generic: true
   - pymdownx.highlight:
       linenums: false
-  - pymdownx.superfences
   - pymdownx.inlinehilite
   - pymdownx.details
   - admonition
@@ -45,6 +60,12 @@ markdown_extensions:
       permalink: true
       slugify: !!python/name:pymdownx.slugs.uslugify
   - meta
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
 plugins:
   - include-markdown
   - search:
@@ -52,6 +73,12 @@ plugins:
   - mkdocstrings:
       watch:
         - toshi_hazard_store
+        - scripts
+      handlers:
+        python:
+          options:
+            show_submodules: true
+
 extra:
   social:
     - icon: fontawesome/brands/twitter

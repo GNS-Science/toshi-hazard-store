@@ -1,6 +1,5 @@
 """This module defines some custom attributes."""
 
-
 import json
 import pickle
 import zlib
@@ -79,6 +78,8 @@ class PickleAttribute(BinaryAttribute):
     """
     This class will serialize/deserialize any picklable Python object.
     """
+
+    legacy_encoding = True
 
     def serialize(self, value):
         """

@@ -2,7 +2,12 @@
 
 import argparse
 import datetime as dt
+import logging
 from pathlib import Path
+
+from toshi_hazard_store import configure_adapter, model
+from toshi_hazard_store.config import USE_SQLITE_ADAPTER  # noqa TODO
+from toshi_hazard_store.db_adapter.sqlite import SqliteAdapter
 
 try:
     from openquake.calculators.extract import Extractor
@@ -12,7 +17,23 @@ except (ModuleNotFoundError, ImportError):
     print("WARNING: the transform module uses the optional openquake dependencies - h5py, pandas and openquake.")
 
 
-from toshi_hazard_store import model
+# if USE_SQLITE_ADAPTER:
+#     configure_adapter(adapter_model=SqliteAdapter)
+
+
+log = logging.getLogger()
+logging.basicConfig(level=logging.DEBUG)
+logging.getLogger('nshm_toshi_client.toshi_client_base').setLevel(logging.INFO)
+logging.getLogger('urllib3').setLevel(logging.INFO)
+logging.getLogger('botocore').setLevel(logging.INFO)
+logging.getLogger('gql.transport.requests').setLevel(logging.WARN)
+
+formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(name)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+root_handler = log.handlers[0]
+root_handler.setFormatter(formatter)
+
+# log.debug('DEBUG message')
+# log.info('INFO message')
 
 
 def extract_and_save(args):
@@ -72,6 +93,7 @@ def parse_args():
     parser.add_argument('-m', '--meta-data-only', action="store_true", help="Do just the meta data, then stop.")
 
     args = parser.parse_args()
+
     return args
 
 
@@ -82,7 +104,7 @@ def handle_args(args):
     if args.create_tables:
         print('Ensuring tables exist.')
         ## model.drop_tables() #DANGERMOUSE
-        model.migrate()  # ensure model Table(s) exist (check env REGION, DEPLOYMENT_STAGE, etc
+        model.openquake_models.migrate()  # ensure model Table(s) exist (check env REGION, DEPLOYMENT_STAGE, etc
 
     extract_and_save(args)
 
