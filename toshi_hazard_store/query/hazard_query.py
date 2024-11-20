@@ -4,7 +4,7 @@ import itertools
 import logging
 from typing import Iterable, Iterator, Union
 
-from nzshm_common.location.code_location import CodedLocation
+from nzshm_common.location import CodedLocation
 
 import toshi_hazard_store.model as model
 

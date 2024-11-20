@@ -5,8 +5,8 @@ import sys
 
 import click
 import pandas as pd
-from nzshm_common.location.code_location import CodedLocation
-from nzshm_common.location.location import LOCATIONS, location_by_id
+from nzshm_common.location import CodedLocation, location_by_id
+from nzshm_common.location.location import LOCATIONS
 
 from toshi_hazard_store import model, query, query_v3
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, LOCAL_CACHE_FOLDER, REGION
