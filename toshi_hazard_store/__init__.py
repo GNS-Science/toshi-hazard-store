@@ -2,7 +2,7 @@
 
 __author__ = """GNS Science"""
 __email__ = 'chrisbc@artisan.co.nz'
-__version__ = '0.7.9'
+__version__ = '0.7.10'
 
 import toshi_hazard_store.model as model
 import toshi_hazard_store.query.hazard_query as query_v3  # alias for clients using deprecated module name

@@ -2,7 +2,7 @@ import itertools
 import unittest
 
 from moto import mock_dynamodb
-from nzshm_common.location.code_location import CodedLocation
+from nzshm_common.location import CodedLocation
 from nzshm_common.location.location import LOCATIONS_BY_ID
 
 from toshi_hazard_store import model, query_v3

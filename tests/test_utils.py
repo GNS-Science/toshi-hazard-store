@@ -3,7 +3,7 @@
 import unittest
 
 from nzshm_common.grids.region_grid import load_grid
-from nzshm_common.location.code_location import CodedLocation
+from nzshm_common.location import CodedLocation
 
 
 class TestCodedLocation(unittest.TestCase):

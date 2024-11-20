@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.7.10] - 2024-11-20
+
+### Changed
+ - updated nzshm-common dependency
+
 ## [0.7.9] - 2024-02-26
 
 ### Changed

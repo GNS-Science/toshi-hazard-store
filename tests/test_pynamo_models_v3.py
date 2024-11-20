@@ -3,7 +3,7 @@ import unittest
 
 import pynamodb.exceptions
 from moto import mock_dynamodb
-from nzshm_common.location.code_location import CodedLocation
+from nzshm_common.location import CodedLocation
 
 from toshi_hazard_store import model
 
