@@ -40,10 +40,11 @@ pandas = "~2.0.3"
 numpy = "^1.26.4"
 pynamodb-attributes = "^0.4.0"
 pynamodb = "^5.5.1"
-openquake-engine = {version = "^3.18.0", optional = true}
 fiona = {version = "^1.9.5", optional = true}
 networkx = {version = "^3.2.1", optional = true}
-nzshm-common = {git = "https://github.com/GNS-Science/nzshm-common-py.git", rev = "pre-release"}
+openquake-engine = {version = "~3.19.0", optional = true}
+numba = {version = "0.58.1", optional = true}
+nzshm-common = "^0.8.4"
 
 [tool.poetry.group.dev.dependencies]
 black  = { version = "^22.3"}
@@ -95,7 +96,7 @@ doc = [
     "mkdocs-autorefs"
     ]
 
-openquake = ["openquake-engine", "fiona", "networkx"]
+openquake = ["openquake-engine", "fiona", "networkx", "numba"]
 
 [tool.black]
 line-length = 120
