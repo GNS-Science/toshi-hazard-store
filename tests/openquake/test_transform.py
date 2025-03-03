@@ -3,6 +3,7 @@
 import sys
 import unittest
 from pathlib import Path
+import semver
 
 try:
     import openquake  # noqa
@@ -57,7 +58,7 @@ class TestMetaWithOpenquake:
         # from openquake.commonlib import datastore
         from toshi_hazard_store import oq_import
 
-        assert oq_engine.__version__ == '3.19.0'  # need devel==3.19 to get the extra NSHM GMMs
+        assert semver.Version.parse(oq_engine.__version__) >= semver.Version.parse('3.19.0')  # need devel>=3.19 to get the extra NSHM GMMs
 
         TOSHI_ID = 'ABCBD'
         # p = Path(Path(__file__).parent.parent, 'fixtures', 'disaggregation', 'calc_1.hdf5')
