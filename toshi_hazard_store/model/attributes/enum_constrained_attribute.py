@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 class EnumConstrainedAttributeMixin:
 
     attr_type = STRING
-    value_type = Any
+    value_type: Any = Any
     enum_type: Any
 
     def _validate_enum(self, enum_type, *args):
