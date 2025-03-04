@@ -17,7 +17,7 @@ import random
 import sys
 import time
 
-import duckdb
+# import duckdb
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -29,7 +29,7 @@ nz1_grid = load_grid('NZ_0_1_NB_1_1')
 partition_codes = [CodedLocation(lat=loc[0], lon=loc[1], resolution=1) for loc in nz1_grid]
 
 CWD = pathlib.Path(os.path.realpath(__file__)).parent
-ARROW_DIR = CWD.parent.parent / 'WORKING' / 'ARROW' / 'pq-CDC4'
+ARROW_DIR = CWD.parent.parent / 'WORKING' / 'ARROW' / 'THS_R4_F32_DEFRAG'
 
 RLZ_COUNT = 912
 print(ARROW_DIR)
@@ -42,7 +42,7 @@ def baseline_thp_first_cut(loc: CodedLocation, imt="PGA", vs30=275, compat_key="
     filesystem = fs.LocalFileSystem()
     root = str(ARROW_DIR)
 
-    partition = f"nloc_0={loc.downsample(1).code}"
+    # partition = f"nloc_0={loc.downsample(1).code}"
     t0 = time.monotonic()
     dataset = ds.dataset(f'{root}/{partition}', format='parquet', filesystem=filesystem)
     t1 = time.monotonic()
@@ -64,6 +64,7 @@ def baseline_thp_first_cut(loc: CodedLocation, imt="PGA", vs30=275, compat_key="
         ind = (df0['sources_digest'] == sources_digest) & (df0['gmms_digest'] == gmms_digest)
         df1 = df0[ind]
         if df1.shape[0] != 1:
+            print(df1)
             assert 0
     t4 = time.monotonic()
 
@@ -83,7 +84,7 @@ def more_arrow(loc: CodedLocation, imt="PGA", vs30=275, compat_key="A_A"):
 
     partition = f"nloc_0={loc.downsample(1).code}"
     t0 = time.monotonic()
-    dataset = ds.dataset(f'{root}/{partition}', format='parquet', filesystem=filesystem)
+    dataset = ds.dataset(f'{root}/{partition}', format='parquet', filesystem=filesystem, partitioning='hive')
     t1 = time.monotonic()
 
     flt0 = (
@@ -92,14 +93,18 @@ def more_arrow(loc: CodedLocation, imt="PGA", vs30=275, compat_key="A_A"):
         & (pc.field('vs30') == pc.scalar(vs30))
         & (pc.field('compatible_calc_fk') == pc.scalar(compat_key))
     )
+    print(flt0)
     columns = ['sources_digest', 'gmms_digest', 'values']
-    table0 = dataset.to_table(columns=columns, filter=flt0)
+    table0 = dataset.to_table(columns=columns , filter=flt0)
+
+    # print(table0)
     t2 = time.monotonic()
 
     # print(table0.shape)
     df0 = table0.to_pandas()
     t3 = time.monotonic()
 
+    print(df0)
     for branch in range(RLZ_COUNT):  # this is NSHM count
         sources_digest = 'ef55f8757069'
         gmms_digest = 'a7d8c5d537e1'
@@ -207,16 +212,16 @@ location = CodedLocation(lat=test_loc[0], lon=test_loc[1], resolution=0.001)
 
 if __name__ == '__main__':
 
-    t0 = time.monotonic()
-    baseline_thp_first_cut(loc=location)
+    # t0 = time.monotonic()
+    # baseline_thp_first_cut(loc=location, compat_key="NZSHM22-0")
     t1 = time.monotonic()
-    print(f"baseline_thp_first_cut took {round(t1 - t0, 6)} seconds")
+    # print(f"baseline_thp_first_cut took {round(t1 - t0, 6)} seconds")
     print()
-    more_arrow(loc=location)
+    more_arrow(loc=location, compat_key="NZSHM22-0")
     t2 = time.monotonic()
     print(f"more_arrow took {round(t2 - t1, 6)} seconds")
-    print()
-    duckdb_attempt_two(location)
-    t3 = time.monotonic()
-    print(f"duckdb_attempt_two took {round(t3 - t2, 6)} seconds")
+    # print()
+    # # duckdb_attempt_two(location)
+    # t3 = time.monotonic()
+    # print(f"duckdb_attempt_two took {round(t3 - t2, 6)} seconds")
     # print("LOCAL dataset partition tests")
