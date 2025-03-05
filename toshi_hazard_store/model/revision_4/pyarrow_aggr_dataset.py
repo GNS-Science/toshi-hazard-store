@@ -65,7 +65,7 @@ def append_models_to_dataset(
     df = pd.DataFrame([model.as_pandas_model() for model in models])
     table = pa.Table.from_pandas(df)
 
-    write_metadata_fn = partial(write_metadata, base_dir)
+    write_metadata_fn = partial(write_metadata, pathlib.Path(base_dir))
 
     ds.write_dataset(
         table,

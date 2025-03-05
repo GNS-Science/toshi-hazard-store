@@ -45,9 +45,8 @@ python = ">=3.10,<3.13"
 
 # see https://github.com/orgs/python-poetry/discussions/7937
 # urllib3 = ">2"
-pandas = "~2.0.3"
+pandas = "^2.2"
 numpy = "^1.26.4"
-openquake-engine = {version = "^3.19.0", optional = true}
 fiona = {version = "^1.9.5", optional = true}
 networkx = {version = "^3.2.1", optional = true}
 numba = {version = "^0.59.0", optional = true}
@@ -55,8 +54,10 @@ python-dotenv = "^1.0.1"
 pynamodb = "^6.0.0"
 pynamodb-attributes = "^0.4.0"
 pyarrow = "^15.0.2"
-nzshm-common = {git = "https://github.com/GNS-Science/nzshm-common-py.git", rev = "pre-release"}
-nzshm-model = {git = "https://github.com/GNS-Science/nzshm-model.git", rev = "pre-release", extras = ["toshi"]}
+nzshm-common = "^0.8.4"
+nzshm-model = "^0.13.5"
+nshm-toshi-client = {version = "^1.0.1", optional = true}
+openquake-engine = {version = "3.19.0", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.2.0"
@@ -89,10 +90,12 @@ virtualenv  = { version = "^20.2.2", optional = true}
 twine = "^5.0.0"
 types-pytz = "^2024.1.0.20240203"
 types-requests = "^2.31.0.20240406"
+semver = "^3.0.4"
 
 
 [tool.poetry.extras]
 openquake = ["openquake-engine", "fiona", "networkx", "numba", "nzshm-model"]
+scripts = ["nshm-toshi-client"]
 
 [tool.black]
 line-length = 120

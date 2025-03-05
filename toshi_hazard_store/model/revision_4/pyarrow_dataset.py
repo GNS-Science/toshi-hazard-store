@@ -56,7 +56,7 @@ def append_models_to_dataset(
     TODO: option to BAIL if realisation exists, assume this is a duplicated operation
     TODO: schema checks
     """
-    write_metadata_fn = partial(write_metadata, base_dir)
+    write_metadata_fn = partial(write_metadata, pathlib.Path(base_dir))
     ds.write_dataset(
         table_or_batchreader,
         base_dir=base_dir,
