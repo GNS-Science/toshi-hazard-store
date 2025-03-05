@@ -1,4 +1,3 @@
-# flake8: noqa
 """
 Console script for compacting THS rev4 parquet datasets
 """
@@ -10,7 +9,6 @@ import uuid
 from functools import partial
 
 import click
-import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
