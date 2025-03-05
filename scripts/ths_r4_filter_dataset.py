@@ -76,6 +76,9 @@ def main(
     DATASET_FORMAT = 'parquet'  # TODO: make this an argument
     BAIL_AFTER = 0  # 0 => don't bail
 
+    if verbose:
+        click.echo(f'using pyarrow version {pa.__version__}')
+
     # resolve bins from locations
     # TODO: the following code requires knowledge of location internals, Here we're trying to solve two issues
     # A: match the location by name istead of code
@@ -119,7 +122,7 @@ def main(
         # file_visitor=writemeta_fn,
     )
 
-    click.echo(f'filter {len(user_locations)} locations to {target_folder.parent}')
+    click.echo(f'filter {len(user_locations)} locations to {target_folder}')
 
 
 if __name__ == "__main__":

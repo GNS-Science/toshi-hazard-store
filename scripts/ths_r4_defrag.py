@@ -5,6 +5,7 @@ Console script for compacting THS rev4 parquet datasets
 import csv
 import logging
 import pathlib
+import shutil
 import uuid
 from functools import partial
 
@@ -86,15 +87,16 @@ def main(
     partition_keys = [part.strip() for part in parts.split(",")] if parts else []
 
     if verbose:
+        click.echo(f'using pyarrow version {pa.__version__}')
         click.echo(f"partitions: {partition_keys}")
 
     filesystem = fs.LocalFileSystem()
-    dataset = ds.dataset(source_folder, filesystem=filesystem, format=DATASET_FORMAT, partitioning='hive')
-
     writemeta_fn = partial(write_metadata, target_folder)
+    dataset = ds.dataset(source_folder, filesystem=filesystem, format=DATASET_FORMAT, partitioning='hive')
 
     count = 0
     for partition_folder in source_folder.iterdir():
+
         usage = sum(file.stat().st_size for file in partition_folder.rglob('*'))
         if usage > MEMORY_WARNING_BYTES:
             click.echo(f'partition {partition_folder} has size: {human_size(usage)}')
