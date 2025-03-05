@@ -95,7 +95,7 @@ def more_arrow(loc: CodedLocation, imt="PGA", vs30=275, compat_key="A_A"):
     )
     print(flt0)
     columns = ['sources_digest', 'gmms_digest', 'values']
-    table0 = dataset.to_table(columns=columns , filter=flt0)
+    table0 = dataset.to_table(columns=columns, filter=flt0)
 
     # print(table0)
     t2 = time.monotonic()
