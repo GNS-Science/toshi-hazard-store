@@ -11,15 +11,23 @@ from functools import partial
 
 import click
 import pandas as pd
-
+import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.dataset as ds
 from pyarrow import fs
 
 DATASET_FORMAT = 'parquet'  # TODO: make this an argument
+MEMORY_WARNING_BYTES = 8e9  # At 8 GB let the user know they might run into trouble!!!
 
 log = logging.getLogger(__name__)
 
 logging.basicConfig(level=logging.INFO)
+
+
+def human_size(bytes, units=[' bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']):
+    """Returns a human readable string representation of bytes"""
+    return str(bytes) + units[0] if bytes < 1024 else human_size(bytes >> 10, units[1:])
+
 
 def write_metadata(base_path, visited_file):
     meta = [
@@ -64,8 +72,8 @@ def main(
     dry_run,
 ):
     """Compact the dataset within each partition.
-    
-    Can be used on both realisation and aggregate datasets. 
+
+    Can be used on both realisation and aggregate datasets.
     """
     source_folder = pathlib.Path(source)
     target_folder = pathlib.Path(target)
@@ -77,13 +85,11 @@ def main(
     assert target_parent.exists(), f'folder {target_parent} is not found'
     assert target_parent.is_dir(), f'folder {target_parent} is not a directory'
 
-
     partition_keys = [part.strip() for part in parts.split(",")] if parts else []
 
     if verbose:
         click.echo(f"partitions: {partition_keys}")
 
-    # no optimising parallel stuff yet
     filesystem = fs.LocalFileSystem()
     dataset = ds.dataset(source_folder, filesystem=filesystem, format=DATASET_FORMAT, partitioning='hive')
 
@@ -91,10 +97,17 @@ def main(
 
     count = 0
     for partition_folder in source_folder.iterdir():
-        if verbose:
-            click.echo(f'partition {partition_folder}')
+        usage = sum(file.stat().st_size for file in partition_folder.rglob('*'))
+        if usage > MEMORY_WARNING_BYTES:
+            click.echo(f'partition {partition_folder} has size: {human_size(usage)}')
+            click.confirm('Do you want to continue?', abort=True)
+        elif verbose:
+            click.echo(f'partition {partition_folder} has disk size: {human_size(usage)}')
 
-        arrow_scanner = ds.Scanner.from_dataset(dataset)
+        _name, _value = partition_folder.name.split('=')
+        flt0 = pc.field(_name) == pc.scalar(_value)
+
+        arrow_scanner = ds.Scanner.from_dataset(dataset, filter=flt0)
         ds.write_dataset(
             arrow_scanner,
             base_dir=str(target_folder),
@@ -107,7 +120,7 @@ def main(
         )
         count += 1
         if verbose:
-            click.echo(f'compacted {target_folder}')
+            click.echo(f'pyarrow RSS memory: {human_size(pa.total_allocated_bytes())}')
 
     click.echo(f'compacted {count} partitions for {target_folder.parent}')
 
