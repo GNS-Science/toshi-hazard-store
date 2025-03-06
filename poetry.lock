@@ -2693,13 +2693,13 @@ toshi = ["boto3 (>=1.26.28,<2.0.0)", "nshm-toshi-client[toshi] (>=1.0.1,<2.0.0)"
 
 [[package]]
 name = "openquake-engine"
-version = "3.19.0"
+version = "3.20.1"
 description = "Computes earthquake hazard and risk."
 optional = true
 python-versions = "*"
 files = [
-    {file = "openquake.engine-3.19.0-py3-none-any.whl", hash = "sha256:286e976cbdab138e1a0d92420c52b6d564803585e9513d1aad6ece3af3c4b9a9"},
-    {file = "openquake.engine-3.19.0.tar.gz", hash = "sha256:8fd4eacefffc04cd91f41a8bed1fb71b882f0f447b419c27bfcbc91b8ab0a25d"},
+    {file = "openquake.engine-3.20.1-py3-none-any.whl", hash = "sha256:4dad0f314a4c796223c89af0562be609f9d999eda5922e4965e33396ce02d2d1"},
+    {file = "openquake_engine-3.20.1.tar.gz", hash = "sha256:81d344b3289720f6c566de079c2dc4dfc7f5b6aae4c94d1ebd0bec8a7908aa0f"},
 ]
 
 [package.dependencies]
@@ -2721,7 +2721,7 @@ shapely = ">=1.7"
 toml = ">=0.10.2"
 
 [package.extras]
-dev = ["flake8 (>=3.5)", "ipython", "pdbpp", "pydata-sphinx-theme", "pytest (>=4.5)", "silx", "sphinx (==6.2)", "sphinx-theme"]
+dev = ["flake8 (>=3.5)", "ipython", "pdbpp", "pytest (>=4.5)", "silx"]
 
 [[package]]
 name = "packaging"
@@ -4538,4 +4538,4 @@ scripts = ["nshm-toshi-client"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "18cd9528e4fd76d4309080065f6047c749960498a3436a79dc5320d81adf1f98"
+content-hash = "8ee521e546c8a22c9b0fe1cfe2b6f1223a57cd5eb9e72e07ed882ada5bd00079"
