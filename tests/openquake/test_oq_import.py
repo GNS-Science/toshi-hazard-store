@@ -63,7 +63,7 @@ class OqImportTest(unittest.TestCase):
         # weight series has accuracy issue in oq 3.20 (vs 3.19)
         # however, we don't actually use these, we take weights from our nzshm-model slt.
         ERROR_DIM = 1e-8 / 2  # a Float32 error somewhere in bowels of openquake??
-        
+
         for series in meta.rlz_lt.columns:
             print("series:", series)
             if series == 'weight':
