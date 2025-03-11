@@ -1,7 +1,12 @@
 # Changelog
 
-## [0.9.0] - 2024-05-27
+## [0.9.1] - 2025-03-11
+### Changed
+ - upgrade openquake-engine@3.20.1
+ - upgrades pandas, numpy, numba, pyarrow
+ - fix meta test for new openquake compatablity
 
+## [0.9.0] - 2024-05-27
 ### Added
  - V4 epic tables
  - parquet support
