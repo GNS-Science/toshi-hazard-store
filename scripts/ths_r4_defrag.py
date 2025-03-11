@@ -5,7 +5,6 @@ Console script for compacting THS rev4 parquet datasets
 import csv
 import logging
 import pathlib
-import shutil
 import uuid
 from functools import partial
 
