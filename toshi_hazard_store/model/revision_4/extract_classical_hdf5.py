@@ -147,7 +147,7 @@ def rlzs_to_record_batch_reader(
             yield batch
 
     # create a schema...
-    values_type = pa.list_(pa.float32())  # TODO CHECK if this is enough res, or float32 float64
+    values_type = pa.list_(pa.float64())  # TODO CHECK if this is enough res, or float32 float64
     vs30_type = pa.int32()
     dict_type = pa.dictionary(pa.int32(), pa.string(), True)
     schema = pa.schema(
