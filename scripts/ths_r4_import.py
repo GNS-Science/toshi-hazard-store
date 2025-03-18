@@ -84,6 +84,7 @@ def handle_import_subtask_rev4(
     update,
     with_rlzs,
     dry_run=False,
+    use_64bit_values=False,
 ):
     if verbose:
         click.echo(subtask_info)
@@ -133,6 +134,7 @@ def handle_import_subtask_rev4(
                 calculation_id=subtask_info.hazard_calc_id,
                 compatible_calc_fk=compatible_calc.foreign_key()[1],  # TODO DROPPING the partition = awkward!
                 producer_config_fk=producer_config.foreign_key()[1],  # DROPPING the partition
+                use_64bit_values=use_64bit_values,
             )
             pyarrow_dataset.append_models_to_dataset(model_generator, output_folder)
         else:
@@ -336,6 +338,7 @@ def prod_from_gtfile(
 )
 @click.option('-v', '--verbose', is_flag=True, default=False)
 @click.option('-d', '--dry-run', is_flag=True, default=False)
+@click.option('-f64', '--use_64bit', is_flag=True, default=False)
 def producers(
     # model_id,
     gt_id,
@@ -350,6 +353,7 @@ def producers(
     # software, version, hashed, config, notes,
     verbose,
     dry_run,
+    use_64bit,
 ):
     """Prepare and validate Producer Configs for a given GT_ID in a PARTITION
 
@@ -391,7 +395,16 @@ def producers(
         if compatible_calc is None:
             raise ValueError(f'compatible_calc: {compatible_calc_fk} was not found')
         handle_import_subtask_rev4(
-            subtask_info, partition, compatible_calc, target, output_folder, verbose, update, with_rlzs, dry_run
+            subtask_info,
+            partition,
+            compatible_calc,
+            target,
+            output_folder,
+            verbose,
+            update,
+            with_rlzs,
+            dry_run,
+            use_64bit,
         )
 
 

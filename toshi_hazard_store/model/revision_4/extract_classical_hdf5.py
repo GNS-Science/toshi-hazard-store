@@ -47,6 +47,7 @@ def rlzs_to_record_batch_reader(
     calculation_id: str,
     compatible_calc_fk: str,
     producer_config_fk: str,  # TODO: decide if we actually want this column
+    use_64bit_values: bool = False,
 ) -> pa.RecordBatchReader:
     """extract realizations from a 'classical' openquake calc file as a pyarrow batch reader"""
     log.info(
@@ -147,7 +148,8 @@ def rlzs_to_record_batch_reader(
             yield batch
 
     # create a schema...
-    values_type = pa.list_(pa.float64())  # TODO CHECK if this is enough res, or float32 float64
+    vtype = pa.float64() if use_64bit_values else pa.float32()
+    values_type = pa.list_(vtype)
     vs30_type = pa.int32()
     dict_type = pa.dictionary(pa.int32(), pa.string(), True)
     schema = pa.schema(

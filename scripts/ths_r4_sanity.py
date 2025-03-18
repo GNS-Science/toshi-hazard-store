@@ -26,9 +26,8 @@ logging.getLogger('botocore').setLevel(logging.WARNING)
 logging.getLogger('toshi_hazard_store').setLevel(logging.WARNING)
 # logging.getLogger('toshi_hazard_store.db_adapter.sqlite.pynamodb_sql').setLevel(logging.DEBUG)
 
-from nzshm_common import location
+from nzshm_common import CodedLocation, LatLon, location
 from nzshm_common.grids import load_grid
-from nzshm_common.location.coded_location import CodedLocation
 from nzshm_model import branch_registry
 from nzshm_model.psha_adapter.openquake import gmcm_branch_from_element_text
 from pynamodb.models import Model
@@ -50,14 +49,9 @@ from toshi_hazard_store.db_adapter.sqlite import (  # noqa this is needed to fin
 from toshi_hazard_store.oq_import.oq_manipulate_hdf5 import migrate_nshm_uncertainty_string
 
 nz1_grid = load_grid('NZ_0_1_NB_1_1')
-city_locs = [
-    (location.LOCATIONS_BY_ID[key]['latitude'], location.LOCATIONS_BY_ID[key]['longitude'])
-    for key in location.LOCATION_LISTS["NZ"]["locations"]
-]
-srwg_locs = [
-    (location.LOCATIONS_BY_ID[key]['latitude'], location.LOCATIONS_BY_ID[key]['longitude'])
-    for key in location.LOCATION_LISTS["SRWG214"]["locations"]
-]
+# print(location.get_location_list(["NZ"]))
+city_locs = [LatLon(key.lat, key.lon) for key in location.get_location_list(["NZ"])]
+srwg_locs = [LatLon(key.lat, key.lon) for key in location.get_location_list(["SRWG214"])]
 IMTS = [
     'PGA',
     'SA(0.1)',
@@ -136,10 +130,19 @@ def get_table_rows(random_args_list):
         assert len(src_lt['branch']) == 1
 
         # print(gsim_lt['uncertainty'])
-
         # source digest
-        srcs = "|".join(sorted(src_lt['branch']['A'].split('|')))
-        src_id = registry.source_registry.get_by_identity(srcs)
+        try:
+            # handle the task T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTMyODU2MA== which has messed up meta...
+            ids = [x for x in src_lt['branch']['A'].split('|') if x != '']
+            srcs = "|".join(sorted(ids))
+            src_id = registry.source_registry.get_by_identity(srcs)
+        except Exception as exc:
+            print(f'args: {args}')
+            print()
+            print(f'meta: {meta}')
+            print()
+            print(srcs)
+            raise exc
 
         for res in query_table(args):
             obj = res.to_simple_dict(force=True)
@@ -162,8 +165,8 @@ def get_table_rows(random_args_list):
 
 
 def report_arrow_count_loc_rlzs(ds_name, location, verbose):
-    """report on dataset realisations for a singel location"""
-    dataset = ds.dataset(f'./WORKING/ARROW/{ds_name}/nloc_0={location.resample(1).code}', format='parquet')
+    """report on dataset realisations for a single location"""
+    dataset = ds.dataset(f'{ds_name}/nloc_0={location.resample(1).code}', format='parquet')
 
     click.echo(f"querying arrow/parquet dataset {dataset}")
     flt = (pc.field('imt') == pc.scalar("PGA")) & (pc.field("nloc_001") == pc.scalar(location.code))
@@ -221,25 +224,12 @@ def report_v3_count_loc_rlzs(location, verbose):
 
 def report_rlzs_grouped_by_calc(ds_name, verbose, bail_on_error=True):
     """report on dataset realisations"""
-    dataset_folder = f'./WORKING/ARROW/{ds_name}'
-    # dataset = ds.dataset(f'./WORKING/ARROW/{ds_name}', partitioning='hive')
-    # , format='arrow')
-    click.echo(f"querying arrow/parquet dataset {ds_name}")
-    # loc = CodedLocation(lat=-46, lon=169.5, resolution=0.001)
-    # fltA = (
-    #     (pc.field("nloc_0") == pc.scalar(loc.downsample(1.0).code)) &\
-    #     (pc.field("nloc_001") == pc.scalar(loc.code)) &\
-    #     (pc.field('imt') == pc.scalar("SA(3.0)"))
-    #     )
-    # df = dataset.to_table(filter=fltA).to_pandas()
+    dataset_folder = ds_name
 
-    # dataset = ds.dataset(f'{str(dataset_folder)}/nloc_0={loc.resample(1).code}', format='parquet', partitioning='hive')
+    click.echo(f"querying arrow/parquet dataset {ds_name}")
     dataset = ds.dataset(dataset_folder, format='parquet', partitioning='hive')
 
-    # flt = (pc.field("nloc_001") == pc.scalar(loc.code)) & \
     flt = pc.field("imt") == pc.scalar("PGA")
-    # (pc.field('calculation_id') == pc.scalar(args['tid']))
-    # (pc.field('rlz') == pc.scalar(f"rlz-{args['rlz']:03d}")) #& \
     df = dataset.to_table(filter=flt).to_pandas()
 
     hazard_calc_ids = list(df.calculation_id.unique())
@@ -410,105 +400,51 @@ def count_rlz(context, source, ds_name, report, strict, verbose, dry_run):
             report_v3_grouped_by_calc(verbose, bail_on_error=strict)
 
 
-#############
-#
-# HHHEHRHHHE
-#
-#
-#############
 @main.command()
+@click.argument('dataset', type=str)
 @click.argument('count', type=int)
-@click.option(
-    '--dataset',
-    '-D',
-    type=str,
-    help="set the dataset",
-)
+@click.option('--iterations', '-i', type=int, default=1)
 @click.pass_context
-def random_rlz_new(context, count, dataset):
-    """randomly select realisations loc, hazard_id, rlx and compare the results
-
-    This time the comparison is local THS V3 and local arrow v4
-    """
-
-    gtfile = pathlib.Path(__file__).parent / "GT_HAZ_IDs_R2VuZXJhbFRhc2s6MTMyODQxNA==.json"
-    gt_info = json.load(open(str(gtfile)))
-
-    random_args_list = list(get_random_args(gt_info, count))
-    dynamo_models = get_table_rows(random_args_list)
-    print(list(dynamo_models.values())[:2])
-    # click.echo(dynamo_models)
+def random_rlz_new(context, dataset, count, iterations):
+    """randomly select realisations loc, hazard_id, rlx and compare the results"""
 
     dataset_folder = pathlib.Path(dataset)
     assert dataset_folder.exists(), 'dataset not found'
 
-    def diff_arrow_rlzs(random_args_list, dynamo_models):
-        """This could be faster if locs were grouped into 1 degree bins"""
+    gtfile = pathlib.Path(__file__).parent / "migration" / "GT_HAZ_IDs_R2VuZXJhbFRhc2s6MTMyODQxNA==.json"
+    gt_info = json.load(open(str(gtfile)))
 
-        result = {}
-        for args in random_args_list:
-            for loc in args['locs']:
-                """
-                hazard_query.get_rlz_curves_v3(
-                        locs=[loc.code for loc in args['locs']], vs30s=[275], rlzs=[args['rlz']], tids=[args['tid']], imts=['PGA']
-                    ):
-                """
-                # print('rlz', f"rlz-{args['rlz']:03d}")
+    for iteration in range(iterations):
 
-                dataset = ds.dataset(
-                    f'{str(dataset_folder)}/nloc_0={loc.resample(1).code}', format='parquet', partitioning='hive'
+        random_args_list = list(get_random_args(gt_info, count))
+        print(f'Iteration: {iteration}')
+        print('===============')
+        print()
+
+        set_dynamo = get_table_rows(random_args_list)
+        for key, obj in set_dynamo.items():
+            print(key)
+            segment = f"vs30={obj['vs30']}/nloc_0={obj['nloc_0']}"
+            dataset = ds.dataset(dataset_folder / segment, format='parquet', partitioning='hive')
+            for value in obj['values']:
+
+                flt = (
+                    (pc.field("nloc_001") == obj['nloc_001'])
+                    & (pc.field("imt") == value['imt'])
+                    & (pc.field('calculation_id') == obj['hazard_solution_id'])
+                    & (pc.field('gmms_digest') == obj['gmms_digest'].replace('|', ''))
                 )
-                # dataset = ds.dataset(dataset_folder, format='parquet', partitioning='hive')
-                flt = (pc.field("nloc_001") == pc.scalar(loc.code)) & (pc.field("imt") == pc.scalar(args['imt']))
-                # (pc.field('calculation_id') == pc.scalar(args['tid']))
-                # (pc.field('rlz') == pc.scalar(f"rlz-{args['rlz']:03d}")) #& \
+                # (pc.field("vs30") == obj['vs30']) &\
+                print(flt)
+                print()
+
                 df = dataset.to_table(filter=flt).to_pandas()
-
-                for model in dynamo_models.values():
-                    if model['nloc_001'] == loc.code:
-                        flt = (df.sources_digest == model['sources_digest']) & (df.gmms_digest == model['gmms_digest'])
-                        row = df[flt]
-                        if not row.shape[0] == 1:
-                            raise ValueError(f"dataframe shape error {row.shape} for args {args}")
-
-                        row_values = row['values'].tolist()[0]
-                        model_values = np.array(model['values'][0]['vals'], dtype=np.float32)
-
-                        if model['values'][0] == args['imt']:
-                            raise ValueError(f"model values error {row.shape} for args {args['imt']}")
-
-                        if not (row_values == model_values).all():
-                            print(model)
-                            print()
-                            print('dynamodb:', model_values)
-                            print()
-                            print(row)
-                            print('dataset: ', row_values)
-                            print()
-                            raise ValueError(f"list values differ for args {args}")
-                        click.echo(f'model match {args}')
-                        # except AssertionError:
-                        #     print
-                        #     print(row)
-                        #     print(args)
-                        #     break
-                # print(df)
-                # print(df.columns)
-                # assert 0
-
-            for res in query_table(args):
-                obj = res.to_simple_dict(force=True)
-                result[obj["sort_key"]] = obj
-        return result
-
-    diff_arrow_rlzs(random_args_list, dynamo_models)
-
-
-def wip():
-    '''
-    df = dataset.to_table(filter=flt).to_pandas()
-    flt2 = (df.sources_digest == 'c8b5c5b43dbd') & (df.gmms_digest == 'a005ffbbdf4e') & (df.imt == 'SA(1.0)')
-    '''
+                if not (df.iloc[0]['values'] == np.array(value['vals'])).all():
+                    print(key, obj)
+                    print()
+                    print(value['imt'], value['vals'])
+                    print("FAIL")
+                    assert 0
 
 
 @main.command()
