@@ -111,6 +111,7 @@ def test_logic_tree_registry_lookup():
     assert not build_maps(bad_file_1), "bad_file_1 build map fails"
 
 
+@pytest.mark.skip('large inputs not checked in')
 @pytest.mark.skipif(not HAVE_OQ, reason="This test fails if openquake is not installed")
 def test_hdf5_realisations_direct_to_parquet_roundtrip(tmp_path):
 
