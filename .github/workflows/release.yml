@@ -78,13 +78,11 @@ jobs:
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: |
-          source $VENV
           poetry --version 
           poetry install --with doc --extras scripts
 
       - name: build documentation
         run: |
-          source $VENV
           poetry run mkdocs build
           
       - name: Upload artifact
@@ -94,7 +92,6 @@ jobs:
   
       - name: Build wheels and source tarball
         run: >-
-          source $VENV
           poetry build
 
       - name: show temporary      files
