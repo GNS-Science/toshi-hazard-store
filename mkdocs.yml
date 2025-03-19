@@ -13,7 +13,6 @@ nav:
       - Configuration: configuration.md
   - Usage:
       - Vanilla (DynamodDB): usage.md
-      - LOCAL (sqlite): sqlite_adapter_usage.md
       # - Parquet: TODO.md
   - CLI tools:
       - store_hazard_v4: cli/store_hazard_v4.md
@@ -23,7 +22,6 @@ nav:
       - ths_r4_sanity: cli/ths_r4_sanity.md
       - ths_r4_filter_dataset: cli/ths_r4_filter_dataset.md
       - ths_r4_query: cli/ths_r4_query.md
-      - Legacy scripts: cli/legacy.md
   - Migrations:
       # - Overview: migration_overview.md
       - Hazard dataset May-2024: migration/hazard_import_processing-may-2024.md

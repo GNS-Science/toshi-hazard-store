@@ -38,14 +38,6 @@ import toshi_hazard_store.model.openquake_models
 import toshi_hazard_store.model.revision_4.hazard_models  # noqa: E402
 import toshi_hazard_store.query.hazard_query
 from scripts.core import echo_settings  # noqa
-from toshi_hazard_store.config import DEPLOYMENT_STAGE as THS_STAGE
-from toshi_hazard_store.config import USE_SQLITE_ADAPTER  # noqa
-from toshi_hazard_store.config import LOCAL_CACHE_FOLDER
-from toshi_hazard_store.config import REGION as THS_REGION
-from toshi_hazard_store.db_adapter.dynamic_base_class import ensure_class_bases_begin_with, set_base_class
-from toshi_hazard_store.db_adapter.sqlite import (  # noqa this is needed to finish the randon-rlz functionality
-    SqliteAdapter,
-)
 from toshi_hazard_store.oq_import.oq_manipulate_hdf5 import migrate_nshm_uncertainty_string
 
 nz1_grid = load_grid('NZ_0_1_NB_1_1')
@@ -106,8 +98,6 @@ def get_random_args(gt_info, how_many):
 
 
 def query_table(args):
-    # mRLZ = toshi_hazard_store.model.openquake_models.__dict__['OpenquakeRealization']
-    importlib.reload(toshi_hazard_store.query.hazard_query)
     for res in toshi_hazard_store.query.hazard_query.get_rlz_curves_v3(
         locs=[loc.code for loc in args['locs']], vs30s=[275], rlzs=[args['rlz']], tids=[args['tid']], imts=[args['imt']]
     ):
@@ -115,8 +105,6 @@ def query_table(args):
 
 
 def query_hazard_meta(args):
-    # mRLZ = toshi_hazard_store.model.openquake_models.__dict__['OpenquakeRealization']
-    importlib.reload(toshi_hazard_store.query.hazard_query)
     for res in toshi_hazard_store.query.hazard_query.get_hazard_metadata_v3(haz_sol_ids=[args['tid']], vs30_vals=[275]):
         yield (res)
 
@@ -189,11 +177,7 @@ def report_arrow_count_loc_rlzs(ds_name, location, verbose):
 
 
 def report_v3_count_loc_rlzs(location, verbose):
-    #### MONKEYPATCH ...
-    # toshi_hazard_store.config.REGION = "ap-southeast-2"
-    # toshi_hazard_store.config.DEPLOYMENT_STAGE = "PROD"
-    # importlib.reload(toshi_hazard_store.model.openquake_models)
-    ####
+
     mRLZ = toshi_hazard_store.model.openquake_models.OpenquakeRealization
 
     gtfile = pathlib.Path(__file__).parent / "GT_HAZ_IDs_R2VuZXJhbFRhc2s6MTMyODQxNA==.json"
@@ -340,9 +324,9 @@ def main(context):
 @click.option(
     '--source',
     '-S',
-    type=click.Choice(['AWS', 'LOCAL', 'ARROW'], case_sensitive=False),
-    default='LOCAL',
-    help="set the source store. defaults to LOCAL, LOCAL means local sqlite (v3), AWS means AWS (v3), ARROW means local arrow (v4)",
+    type=click.Choice(['AWS', 'ARROW'], case_sensitive=False),
+    default='ARROW',
+    help="set the source store. defaults to ARROW, AWS means AWS (v3), ARROW means local arrow (v4)",
 )
 @click.option(
     '--ds-name',
@@ -378,22 +362,6 @@ def count_rlz(context, source, ds_name, report, strict, verbose, dry_run):
         return
 
     if source == 'AWS':
-        #### MONKEYPATCH ...
-        toshi_hazard_store.config.REGION = "ap-southeast-2"
-        toshi_hazard_store.config.DEPLOYMENT_STAGE = "PROD"
-        toshi_hazard_store.config.USE_SQLITE_ADAPTER = False
-        # importlib.reload(toshi_hazard_store.model.location_indexed_model)
-        importlib.reload(toshi_hazard_store.model.openquake_models)
-
-        # OK this works for reset...
-        set_base_class(toshi_hazard_store.model.location_indexed_model.__dict__, 'LocationIndexedModel', Model)
-        set_base_class(
-            toshi_hazard_store.model.openquake_models.__dict__,
-            'OpenquakeRealization',
-            toshi_hazard_store.model.location_indexed_model.__dict__['LocationIndexedModel'],
-        )
-
-    if source in ['AWS', 'LOCAL']:
         if report == 'LOC':
             report_v3_count_loc_rlzs(location, verbose)
         elif report == 'ALL':
@@ -463,21 +431,6 @@ def random_rlz_og(context, count):
     set_one = get_table_rows(random_args_list)
     print(set_one)
     assert 0
-
-    #### MONKEYPATCH ...
-    toshi_hazard_store.config.REGION = "ap-southeast-2"
-    toshi_hazard_store.config.DEPLOYMENT_STAGE = "PROD"
-    toshi_hazard_store.config.USE_SQLITE_ADAPTER = False
-    # importlib.reload(toshi_hazard_store.model.location_indexed_model)
-    importlib.reload(toshi_hazard_store.model.openquake_models)
-
-    # OK this works for reset...
-    set_base_class(toshi_hazard_store.model.location_indexed_model.__dict__, 'LocationIndexedModel', Model)
-    set_base_class(
-        toshi_hazard_store.model.openquake_models.__dict__,
-        'OpenquakeRealization',
-        toshi_hazard_store.model.location_indexed_model.__dict__['LocationIndexedModel'],
-    )
 
     def report_differences(dict1, dict2, ignore_keys):
         # print(dict1['sort_key'])
