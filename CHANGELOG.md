@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0-alpha]
+### Removed
+ - support fo local storage (sqlite)
+ - support for local cache
+ - db_adapter
+
+### Changed
+ - AWS dynamodb storage is deprecated
+
 ## [0.9.1] - 2025-03-19
 ### Changed
  - upgrade openquake-engine@3.20.1
