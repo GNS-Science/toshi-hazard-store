@@ -18,12 +18,9 @@ process models based on, or similar in scale to the NZSHM 22.
 
 ## Features
 
-* Extract realisations from PSHA (openquake) hazard calcs and store these in Parquet dataset.
-* Manage Openquake hazard results in AWS DynamodDB tables defined herein (used by NSHM project).
+* Extract realisations from PSHA (openquake) hazard calcs and store these in Parquet datasets.
 * CLI tools for end users
-* **Legacy features:**
-	* Option for caching using sqlite, See NZSHM22_HAZARD_STORE_LOCAL_CACHE environment variable.
-	* Option to use a local sqlite store instead of DynamoDB, see THS_USE_SQLITE_ADAPTER and THS_SQLITE_FOLDER variables.
+* **Deprecated** Manage Openquake hazard results in AWS DynamodDB tables (currently used by NSHM project).
 
 ## Credits
 
