@@ -40,7 +40,11 @@ jobs:
         shell: bash
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      # run build using the minimum supported python version
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
       - name: Get Changelog Entry
         id: changelog_reader
@@ -49,13 +53,7 @@ jobs:
           validation_depth: 10
           version: ${{ steps.tag_name.outputs.current_version }}
           path: ./CHANGELOG.md
-
-      # run build using the minimum supported python version
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-         
+        
       - name: Install and configure Poetry
         uses: GNS-Science/install-poetry@main
         with:
