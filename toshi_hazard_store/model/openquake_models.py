@@ -10,11 +10,13 @@ from pynamodb.models import Model
 from pynamodb_attributes import IntegerAttribute, TimestampAttribute
 
 from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION, SOURCE_DEPLOYMENT_STAGE, SOURCE_REGION
-from toshi_hazard_store.model.caching import ModelCacheMixin
 
 from .attributes import EnumConstrainedUnicodeAttribute, IMTValuesAttribute, LevelValuePairAttribute
 from .constraints import AggregationEnum, IntensityMeasureTypeEnum
 from .location_indexed_model import VS30_KEYLEN, LocationIndexedModel, datetime_now
+
+# from toshi_hazard_store.model.caching import ModelCacheMixin
+
 
 # MODELBASE = SqliteAdapter if USE_SQLITE_ADAPTER else Model
 # MODELCACHEBASE = SqliteAdapter if USE_SQLITE_ADAPTER else ModelCacheMixin
@@ -83,7 +85,7 @@ class vs30_nloc001_gt_rlz_index(LocalSecondaryIndex):
     index2_rk = UnicodeAttribute(range_key=True)
 
 
-class HazardAggregation(ModelCacheMixin, LocationIndexedModel):
+class HazardAggregation(LocationIndexedModel):
     """A pynamodb model for aggregate hazard curves."""
 
     class Meta:

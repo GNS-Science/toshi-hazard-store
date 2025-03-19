@@ -19,12 +19,14 @@ from nzshm_common.location.location import LOCATIONS_BY_ID
 from pynamodb.models import Model
 
 import toshi_hazard_store.config
-import toshi_hazard_store.db_adapter.sqlite.sqlite_adapter
-import toshi_hazard_store.model.caching.cache_store
+
+# import toshi_hazard_store.db_adapter.sqlite.sqlite_adapter
+# import toshi_hazard_store.model.caching.cache_store
 from toshi_hazard_store import model
-from toshi_hazard_store.db_adapter import ensure_class_bases_begin_with
-from toshi_hazard_store.db_adapter.sqlite import SqliteAdapter
-from toshi_hazard_store.db_adapter.sqlite.sqlite_store import safe_table_name
+
+# from toshi_hazard_store.db_adapter import ensure_class_bases_begin_with
+# from toshi_hazard_store.db_adapter.sqlite import SqliteAdapter
+# from toshi_hazard_store.db_adapter.sqlite.sqlite_store import safe_table_name
 from toshi_hazard_store.model import openquake_models
 from toshi_hazard_store.model.revision_4 import hazard_models  # noqa we need this for adaptation
 
@@ -40,43 +42,45 @@ def default_session_fixture(request, monkeypatch):
     :type request: _pytest.python.SubRequest
     :return:
     """
+    pass  # for now
     # pynamodb 6 requies a region set
     # monkeypatch.setattr(toshi_hazard_store.config, "REGION", "us-east-1")
     # but this didn't work everywhere (some tests are not pytest)
 
-    log.info("Patching storage configuration")
+    # log.info("Patching storage configuration")
 
-    def temporary_cache_connection(model_class, folder):
-        log.info(f"TEMP CONNECTION for {model_class} at {pathlib.Path(str(folder.name))}")
-        return sqlite3.connect(pathlib.Path(str(folder.name), "CACHE"))
+    # def temporary_cache_connection(model_class, folder):
+    #     log.info(f"TEMP CONNECTION for {model_class} at {pathlib.Path(str(folder.name))}")
+    #     return sqlite3.connect(pathlib.Path(str(folder.name), "CACHE"))
 
-    def temporary_adapter_connection(model_class, folder):
-        dbpath = pathlib.Path(folder.name) / f"{safe_table_name(model_class)}.db"
-        if not dbpath.parent.exists():
-            raise RuntimeError(f'The sqlite storage folder "{dbpath.parent.absolute()}" was not found.')
-        log.debug(f"get sqlite3 connection at {dbpath}")
-        return sqlite3.connect(dbpath)
+    # def temporary_adapter_connection(model_class, folder):
+    #     dbpath = pathlib.Path(folder.name) / f"{safe_table_name(model_class)}.db"
+    #     if not dbpath.parent.exists():
+    #         raise RuntimeError(f'The sqlite storage folder "{dbpath.parent.absolute()}" was not found.')
+    #     log.debug(f"get sqlite3 connection at {dbpath}")
+    #     return sqlite3.connect(dbpath)
 
-    # NB using environment variables doesn't work
-    # monkeypatch.setenv("NZSHM22_HAZARD_STORE_LOCAL_CACHE", str(cache_folder.name))
+    # # NB using environment variables doesn't work
+    # # monkeypatch.setenv("NZSHM22_HAZARD_STORE_LOCAL_CACHE", str(cache_folder.name))
 
-    monkeypatch.setattr(toshi_hazard_store.config, "LOCAL_CACHE_FOLDER", str(cache_folder))
-    monkeypatch.setattr(toshi_hazard_store.config, "SQLITE_ADAPTER_FOLDER", str(adapter_folder))
-    monkeypatch.setattr(
-        toshi_hazard_store.model.caching.cache_store,
-        "get_connection",
-        partial(temporary_cache_connection, folder=cache_folder),
-    )
-    monkeypatch.setattr(
-        toshi_hazard_store.db_adapter.sqlite.sqlite_adapter,
-        "get_connection",
-        partial(temporary_adapter_connection, folder=adapter_folder),
-    )
-    monkeypatch.setattr(toshi_hazard_store.model.caching.cache_store, "cache_enabled", lambda: True)
+    # monkeypatch.setattr(toshi_hazard_store.config, "LOCAL_CACHE_FOLDER", str(cache_folder))
+    # monkeypatch.setattr(toshi_hazard_store.config, "SQLITE_ADAPTER_FOLDER", str(adapter_folder))
+    # monkeypatch.setattr(
+    #     toshi_hazard_store.model.caching.cache_store,
+    #     "get_connection",
+    #     partial(temporary_cache_connection, folder=cache_folder),
+    # )
+    # monkeypatch.setattr(
+    #     toshi_hazard_store.db_adapter.sqlite.sqlite_adapter,
+    #     "get_connection",
+    #     partial(temporary_adapter_connection, folder=adapter_folder),
+    # )
+    # monkeypatch.setattr(toshi_hazard_store.model.caching.cache_store, "cache_enabled", lambda: True)
 
 
 @pytest.fixture(scope="function", autouse=True)
 def force_model_reload(monkeypatch):
+    return
     # monkeypatch.setattr(toshi_hazard_store.config, "USE_SQLITE_ADAPTER", False)
     importlib.reload(sys.modules['toshi_hazard_store.model'])
     # importlib.reload(sys.modules['toshi_hazard_store.model.openquake_models'])
@@ -91,46 +95,38 @@ def force_model_reload(monkeypatch):
 # ref https://docs.pytest.org/en/7.3.x/example/parametrize.html#deferring-the-setup-of-parametrized-resources
 def pytest_generate_tests(metafunc):
     if "adapted_rlz_model" in metafunc.fixturenames:
-        metafunc.parametrize("adapted_rlz_model", ["pynamodb", "sqlite"], indirect=True)
+        metafunc.parametrize("adapted_rlz_model", ["pynamodb"], indirect=True)
     if "adapted_hazagg_model" in metafunc.fixturenames:
-        metafunc.parametrize("adapted_hazagg_model", ["pynamodb", "sqlite"], indirect=True)
+        metafunc.parametrize("adapted_hazagg_model", ["pynamodb"], indirect=True)
     if "adapted_meta_model" in metafunc.fixturenames:
-        metafunc.parametrize("adapted_meta_model", ["pynamodb", "sqlite"], indirect=True)
-
-
-# @pytest.fixture(scope="function")
-# def adapter_model():
-#     with mock_dynamodb():
-#         model.migrate()
-#         yield model
-#         model.drop_tables()
+        metafunc.parametrize("adapted_meta_model", ["pynamodb"], indirect=True)
 
 
 @pytest.fixture
 def adapted_hazagg_model(request, tmp_path):
-    def set_adapter(adapter):
-        ensure_class_bases_begin_with(
-            namespace=openquake_models.__dict__, class_name=str('LocationIndexedModel'), base_class=adapter
-        )
-        ensure_class_bases_begin_with(
-            namespace=openquake_models.__dict__,
-            class_name=str('HazardAggregation'),  # `str` type differs on Python 2 vs. 3.
-            base_class=openquake_models.LocationIndexedModel,
-        )
+    # def set_adapter(adapter):
+    #     ensure_class_bases_begin_with(
+    #         namespace=openquake_models.__dict__, class_name=str('LocationIndexedModel'), base_class=adapter
+    #     )
+    #     ensure_class_bases_begin_with(
+    #         namespace=openquake_models.__dict__,
+    #         class_name=str('HazardAggregation'),  # `str` type differs on Python 2 vs. 3.
+    #         base_class=openquake_models.LocationIndexedModel,
+    #     )
 
     if request.param == 'pynamodb':
         with mock_dynamodb():
-            set_adapter(Model)
+            # set_adapter(Model)
             openquake_models.HazardAggregation.create_table(wait=True)
             yield openquake_models
             openquake_models.HazardAggregation.delete_table()
-    elif request.param == 'sqlite':
-        envvars = {"THS_SQLITE_FOLDER": str(tmp_path), "THS_USE_SQLITE_ADAPTER": "TRUE"}
-        with mock.patch.dict(os.environ, envvars, clear=True):
-            set_adapter(SqliteAdapter)
-            openquake_models.HazardAggregation.create_table(wait=True)
-            yield openquake_models
-            openquake_models.HazardAggregation.delete_table()
+    # elif request.param == 'sqlite':
+    #     envvars = {"THS_SQLITE_FOLDER": str(tmp_path), "THS_USE_SQLITE_ADAPTER": "TRUE"}
+    #     with mock.patch.dict(os.environ, envvars, clear=True):
+    #         set_adapter(SqliteAdapter)
+    #         openquake_models.HazardAggregation.create_table(wait=True)
+    #         yield openquake_models
+    #         openquake_models.HazardAggregation.delete_table()
     else:
         raise ValueError("invalid internal test config")
 
@@ -140,23 +136,23 @@ def adapted_rlz_model(request, tmp_path):
 
     importlib.reload(sys.modules['toshi_hazard_store.model.openquake_models'])
 
-    def set_rlz_adapter(adapter):
-        log.debug(f"set_rlz_adapter() called with {adapter} class")
-        ensure_class_bases_begin_with(
-            namespace=openquake_models.__dict__, class_name=str('LocationIndexedModel'), base_class=adapter
-        )
-        ensure_class_bases_begin_with(
-            namespace=openquake_models.__dict__,
-            class_name=str('OpenquakeRealization'),  # `str` type differs on Python 2 vs. 3.
-            base_class=openquake_models.LocationIndexedModel,
-        )
-        log.debug(f"<<< set_rlz_adapter() done for {adapter} class")
+    # def set_rlz_adapter(adapter):
+    #     log.debug(f"set_rlz_adapter() called with {adapter} class")
+    #     ensure_class_bases_begin_with(
+    #         namespace=openquake_models.__dict__, class_name=str('LocationIndexedModel'), base_class=adapter
+    #     )
+    #     ensure_class_bases_begin_with(
+    #         namespace=openquake_models.__dict__,
+    #         class_name=str('OpenquakeRealization'),  # `str` type differs on Python 2 vs. 3.
+    #         base_class=openquake_models.LocationIndexedModel,
+    #     )
+    #     log.debug(f"<<< set_rlz_adapter() done for {adapter} class")
 
     log.debug(f"adapted_rlz_model() called with {request.param}")
     if request.param == 'pynamodb':
         log.debug(f"mock_dynamodb {request.param}")
         with mock_dynamodb():
-            set_rlz_adapter(Model)
+            # set_rlz_adapter(Model)
             # obj0 = openquake_models.LocationIndexedModel()
             # assert not isinstance(obj0, SqliteAdapter)
             # assert isinstance(obj0, Model)
@@ -168,40 +164,40 @@ def adapted_rlz_model(request, tmp_path):
             yield openquake_models
             openquake_models.OpenquakeRealization.delete_table()
 
-    elif request.param == 'sqlite':
-        log.debug(f"mock_sqlite {request.param}")
-        envvars = {"THS_SQLITE_FOLDER": str(tmp_path), "THS_USE_SQLITE_ADAPTER": "TRUE"}
-        with mock.patch.dict(os.environ, envvars, clear=True):
-            set_rlz_adapter(SqliteAdapter)
-            openquake_models.OpenquakeRealization.create_table(wait=True)
-            yield openquake_models
-            openquake_models.OpenquakeRealization.delete_table()
+    # elif request.param == 'sqlite':
+    #     log.debug(f"mock_sqlite {request.param}")
+    #     envvars = {"THS_SQLITE_FOLDER": str(tmp_path), "THS_USE_SQLITE_ADAPTER": "TRUE"}
+    #     with mock.patch.dict(os.environ, envvars, clear=True):
+    #         set_rlz_adapter(SqliteAdapter)
+    #         openquake_models.OpenquakeRealization.create_table(wait=True)
+    #         yield openquake_models
+    #         openquake_models.OpenquakeRealization.delete_table()
     else:
         raise ValueError("invalid internal test config")
 
 
 @pytest.fixture
 def adapted_meta_model(request, tmp_path):
-    def set_adapter(adapter):
-        ensure_class_bases_begin_with(
-            namespace=openquake_models.__dict__,
-            class_name=str('ToshiOpenquakeMeta'),  # `str` type differs on Python 2 vs. 3.
-            base_class=adapter,
-        )
+    # def set_adapter(adapter):
+    #     ensure_class_bases_begin_with(
+    #         namespace=openquake_models.__dict__,
+    #         class_name=str('ToshiOpenquakeMeta'),  # `str` type differs on Python 2 vs. 3.
+    #         base_class=adapter,
+    #     )
 
     if request.param == 'pynamodb':
         with mock_dynamodb():
-            set_adapter(Model)
+            # set_adapter(Model)
             openquake_models.ToshiOpenquakeMeta.create_table(wait=True)
             yield openquake_models
             openquake_models.ToshiOpenquakeMeta.delete_table()
-    elif request.param == 'sqlite':
-        envvars = {"THS_SQLITE_FOLDER": str(tmp_path), "THS_USE_SQLITE_ADAPTER": "TRUE"}
-        with mock.patch.dict(os.environ, envvars, clear=True):
-            set_adapter(SqliteAdapter)
-            openquake_models.ToshiOpenquakeMeta.create_table(wait=True)
-            yield openquake_models
-            openquake_models.ToshiOpenquakeMeta.delete_table()
+    # elif request.param == 'sqlite':
+    #     envvars = {"THS_SQLITE_FOLDER": str(tmp_path), "THS_USE_SQLITE_ADAPTER": "TRUE"}
+    #     with mock.patch.dict(os.environ, envvars, clear=True):
+    #         set_adapter(SqliteAdapter)
+    #         openquake_models.ToshiOpenquakeMeta.create_table(wait=True)
+    #         yield openquake_models
+    #         openquake_models.ToshiOpenquakeMeta.delete_table()
     else:
         raise ValueError("invalid internal test config")
 

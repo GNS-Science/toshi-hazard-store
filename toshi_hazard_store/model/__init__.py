@@ -1,8 +1,6 @@
 import logging
 from typing import Type
 
-from toshi_hazard_store.db_adapter import PynamodbAdapterInterface, ensure_class_bases_begin_with
-
 from . import location_indexed_model, openquake_models, revision_4
 from .attributes import IMTValuesAttribute, LevelValuePairAttribute
 from .constraints import AggregationEnum, IntensityMeasureTypeEnum, ProbabilityEnum, VS30Enum
@@ -26,6 +24,9 @@ from .revision_4 import (  # , HazardRealizationMeta
 from .revision_4 import drop_tables as drop_r4
 from .revision_4 import migrate as migrate_r4
 
+# from toshi_hazard_store.db_adapter import PynamodbAdapterInterface, ensure_class_bases_begin_with
+
+
 # from .openquake_models import tables as oqv3_tables
 # from .openquake_v2_model import
 
@@ -46,45 +47,45 @@ def drop_tables():
     drop_disagg()
 
 
-def configure_adapter(adapter_model: Type[PynamodbAdapterInterface]):
-    log.info(f"Configure adapter: {adapter_model}")
-    ensure_class_bases_begin_with(
-        namespace=openquake_models.__dict__,
-        class_name=str('ToshiOpenquakeMeta'),  # `str` type differs on Python 2 vs. 3.
-        base_class=adapter_model,
-    )
-    ensure_class_bases_begin_with(
-        namespace=location_indexed_model.__dict__, class_name=str('LocationIndexedModel'), base_class=adapter_model
-    )
-    ensure_class_bases_begin_with(
-        namespace=openquake_models.__dict__,
-        class_name=str('OpenquakeRealization'),  # `str` type differs on Python 2 vs. 3.
-        base_class=adapter_model,
-    )
-    ensure_class_bases_begin_with(
-        namespace=openquake_models.__dict__,
-        class_name=str('HazardAggregation'),
-        base_class=adapter_model,
-    )
+# def configure_adapter(adapter_model: Type[PynamodbAdapterInterface]):
+#     log.info(f"Configure adapter: {adapter_model}")
+#     ensure_class_bases_begin_with(
+#         namespace=openquake_models.__dict__,
+#         class_name=str('ToshiOpenquakeMeta'),  # `str` type differs on Python 2 vs. 3.
+#         base_class=adapter_model,
+#     )
+#     ensure_class_bases_begin_with(
+#         namespace=location_indexed_model.__dict__, class_name=str('LocationIndexedModel'), base_class=adapter_model
+#     )
+#     ensure_class_bases_begin_with(
+#         namespace=openquake_models.__dict__,
+#         class_name=str('OpenquakeRealization'),  # `str` type differs on Python 2 vs. 3.
+#         base_class=adapter_model,
+#     )
+#     ensure_class_bases_begin_with(
+#         namespace=openquake_models.__dict__,
+#         class_name=str('HazardAggregation'),
+#         base_class=adapter_model,
+#     )
 
-    ### New Rev 4 tables
-    ensure_class_bases_begin_with(
-        namespace=revision_4.hazard_realization_curve.__dict__,
-        class_name=str('HazardRealizationCurve'),
-        base_class=adapter_model,
-    )
-    ensure_class_bases_begin_with(
-        namespace=revision_4.hazard_models.__dict__,
-        class_name=str('HazardCurveProducerConfig'),
-        base_class=adapter_model,
-    )
-    ensure_class_bases_begin_with(
-        namespace=revision_4.hazard_models.__dict__,
-        class_name=str('CompatibleHazardCalculation'),
-        base_class=adapter_model,
-    )
-    ensure_class_bases_begin_with(
-        namespace=revision_4.hazard_aggregate_curve.__dict__,
-        class_name=str('HazardAggregateCurve'),
-        base_class=adapter_model,
-    )
+#     ### New Rev 4 tables
+#     ensure_class_bases_begin_with(
+#         namespace=revision_4.hazard_realization_curve.__dict__,
+#         class_name=str('HazardRealizationCurve'),
+#         base_class=adapter_model,
+#     )
+#     ensure_class_bases_begin_with(
+#         namespace=revision_4.hazard_models.__dict__,
+#         class_name=str('HazardCurveProducerConfig'),
+#         base_class=adapter_model,
+#     )
+#     ensure_class_bases_begin_with(
+#         namespace=revision_4.hazard_models.__dict__,
+#         class_name=str('CompatibleHazardCalculation'),
+#         base_class=adapter_model,
+#     )
+#     ensure_class_bases_begin_with(
+#         namespace=revision_4.hazard_aggregate_curve.__dict__,
+#         class_name=str('HazardAggregateCurve'),
+#         base_class=adapter_model,
+#     )
