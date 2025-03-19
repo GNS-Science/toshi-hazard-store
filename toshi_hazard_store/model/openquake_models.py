@@ -15,12 +15,6 @@ from .attributes import EnumConstrainedUnicodeAttribute, IMTValuesAttribute, Lev
 from .constraints import AggregationEnum, IntensityMeasureTypeEnum
 from .location_indexed_model import VS30_KEYLEN, LocationIndexedModel, datetime_now
 
-# from toshi_hazard_store.model.caching import ModelCacheMixin
-
-
-# MODELBASE = SqliteAdapter if USE_SQLITE_ADAPTER else Model
-# MODELCACHEBASE = SqliteAdapter if USE_SQLITE_ADAPTER else ModelCacheMixin
-
 log = logging.getLogger(__name__)
 
 
