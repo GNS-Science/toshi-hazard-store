@@ -1,5 +1,3 @@
-# This is a basic workflow to help you get started with Actions
-
 name: dev workflow
 
 # Controls when the action will run.
@@ -28,14 +26,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-versions }}
 
       - name: Install and configure Poetry
         uses: GNS-Science/install-poetry@main
         with:
+          version: 1.8.4
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
@@ -45,7 +44,7 @@ jobs:
       #----------------------------------------------
       - name: Load cached venv
         id: cached-poetry-dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
@@ -57,20 +56,26 @@ jobs:
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: |
           poetry install --no-interaction --no-root --with dev --extras openquake
+
+      - name: Install tox-gh-actions
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run:
           poetry add tox-gh-actions
 
       - name: test with tox (uses tox-gh-actions to select correct environment)
         run:
-          source $VENV
           poetry run tox
 
       - name: list files
         run: ls -l .
 
-      - name: Submit coverage report if Ubuntu and we're on 'main' branch
-        if: runner.os == 'Linux' && ( github.head_ref == 'main' || github.ref_name == 'main' )
-        uses: codecov/codecov-action@v3
+      - name: Submit coverage report
+        uses: codecov/codecov-action@v5
         with:
+          files: ./coverage.xml # optional
+          flags: unittests # optional
+          name: codecov-umbrella # optional
+          token: ${{ secrets.CODECOV_TOKEN }} # required
+          # verbose: true # optional (default = false)
+          env_vars: OS,PYTHON
           fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
-
