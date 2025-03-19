@@ -1,9 +1,4 @@
-import os
-from unittest import mock
-
-import pytest
 from moto import mock_dynamodb
-from pynamodb.models import Model
 
 from toshi_hazard_store.model import openquake_models
 

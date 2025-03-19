@@ -1,18 +1,11 @@
 import itertools
 import logging
-import os
-from unittest import mock
 
 import pytest
 from moto import mock_dynamodb
 from nzshm_common.location.coded_location import CodedLocation
 from nzshm_common.location.location import LOCATIONS_BY_ID
-from pynamodb.models import Model
 
-from toshi_hazard_store import model  # noqa
-
-# from toshi_hazard_store.db_adapter import ensure_class_bases_begin_with
-# from toshi_hazard_store.db_adapter.sqlite import SqliteAdapter
 from toshi_hazard_store.model.revision_4 import hazard_models  # noqa
 from toshi_hazard_store.model.revision_4 import hazard_aggregate_curve, hazard_realization_curve
 
@@ -34,36 +27,12 @@ def pytest_generate_tests(metafunc):
 @pytest.fixture
 def adapted_model(request, tmp_path):
     """This fixture reconfigures adaption of all table in the hazard_models module"""
-    models = itertools.chain(
-        hazard_models.get_tables(), hazard_realization_curve.get_tables(), hazard_aggregate_curve.get_tables()
-    )
 
     class AdaptedModelFixture:
         HazardRealizationCurve = None
         HazardCurveProducerConfig = None
         CompatibleHazardCalculation = None
         HazardAggregateCurve = None
-
-    # def set_adapter(model_klass, adapter):
-    #     print(f'*** setting {model_klass.__name__} to adapter {adapter}')
-    #     if model_klass.__name__ == 'HazardAggregateCurve':
-    #         ensure_class_bases_begin_with(
-    #             namespace=hazard_aggregate_curve.__dict__,
-    #             class_name=model_klass.__name__,  # `str` type differs on Python 2 vs. 3.
-    #             base_class=adapter,
-    #         )
-    #     elif model_klass.__name__ == 'HazardRealizationCurve':
-    #         ensure_class_bases_begin_with(
-    #             namespace=hazard_realization_curve.__dict__,
-    #             class_name=model_klass.__name__,  # `str` type differs on Python 2 vs. 3.
-    #             base_class=adapter,
-    #         )
-    #     else:
-    #         ensure_class_bases_begin_with(
-    #             namespace=hazard_models.__dict__,
-    #             class_name=model_klass.__name__,  # `str` type differs on Python 2 vs. 3.
-    #             base_class=adapter,
-    #         )
 
     def new_model_fixture():
         model_fixture = AdaptedModelFixture()
@@ -85,21 +54,9 @@ def adapted_model(request, tmp_path):
 
     if request.param == 'pynamodb':
         with mock_dynamodb():
-            # for model_klass in models:
-            #     set_adapter(model_klass, Model)
-
             migrate_models()
             yield new_model_fixture()
             drop_models()
-
-    # elif request.param == 'sqlite':
-    #     envvars = {"THS_SQLITE_FOLDER": str(tmp_path), "THS_USE_SQLITE_ADAPTER": "TRUE"}
-    #     with mock.patch.dict(os.environ, envvars, clear=True):
-    #         for model_klass in models:
-    #             set_adapter(model_klass, SqliteAdapter)
-    #         migrate_models()
-    #         yield new_model_fixture()
-    #         drop_models()
 
     else:
         raise ValueError("invalid internal test config")
