@@ -79,7 +79,7 @@ jobs:
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: |
           poetry --version 
-          poetry install --with doc --extras scripts
+          poetry install --with dev --all-extras
 
       - name: build documentation
         run: |
