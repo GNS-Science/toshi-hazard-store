@@ -55,6 +55,8 @@ jobs:
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: |
+          source $VENV
+          poetry --version
           poetry install --no-interaction --no-root --with dev --all-extras
 
       - name: Install tox-gh-actions
@@ -64,6 +66,7 @@ jobs:
 
       - name: test with tox (uses tox-gh-actions to select correct environment)
         run:
+          source $VENV          
           poetry run tox
 
       - name: list files

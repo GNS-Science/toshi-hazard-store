@@ -29,11 +29,7 @@ jobs:
   # This workflow contains a single job called "release"
   release:
     name: Create Release
-    runs-on: ubuntu-20.04
-
-    strategy:
-      matrix:
-        python-versions: ["3.10"]
+    runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -54,32 +50,55 @@ jobs:
           version: ${{ steps.tag_name.outputs.current_version }}
           path: ./CHANGELOG.md
 
-      - uses: actions/setup-python@v2
+      # run build using the minimum supported python version
+      - uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-versions }}
+          python-version: "3.10"
 
       - name: Install and configure Poetry
         uses: GNS-Science/install-poetry@main
         with:
+          version: 1.8.4
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
 
+      #----------------------------------------------
+      #       load cached venv if cache exists
+      #----------------------------------------------
+        - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-publish-static-docs
+
+      #----------------------------------------------
+      # install dependencies if cache does not exist
+      #----------------------------------------------
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: |
+          source $VENV
+          poetry --version 
+          poetry install --with doc --extras scripts
+
       - name: build documentation
         run: |
-          poetry install -E doc -E openquake
+          source $VENV
           poetry run mkdocs build
           
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./site        
   
       - name: Build wheels and source tarball
         run: >-
+          source $VENV
           poetry build
 
-      - name: show temporary files
+      - name: show temporary      files
         run: >-
           ls -l
 
@@ -111,4 +130,4 @@ jobs:
     steps:
       - name: Deploy Docs to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
