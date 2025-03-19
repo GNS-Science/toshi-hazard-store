@@ -1,10 +1,13 @@
 # Changelog
 
-## [0.9.1] - 2025-03-11
+## [0.9.1] - 2025-03-19
 ### Changed
  - upgrade openquake-engine@3.20.1
  - upgrades pandas, numpy, numba, pyarrow
- - fix meta test for new openquake compatablity
+ - script fixes for latest nzshm-common
+
+### Added
+ - more dataset checking options
 
 ## [0.9.0] - 2024-05-27
 ### Added

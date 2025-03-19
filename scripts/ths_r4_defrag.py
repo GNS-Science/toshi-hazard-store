@@ -59,12 +59,14 @@ def write_metadata(base_path, visited_file):
 @click.command()
 @click.argument('source')
 @click.argument('target')
+@click.option('-l', '--levels', help="how many folder levels to subdivide the source folder by", default=0)
 @click.option("-p", "--parts", help="comma-separated list of partition keys", default="")
 @click.option('-v', '--verbose', is_flag=True, default=False)
 @click.option('-d', '--dry-run', is_flag=True, default=False)
 def main(
     source,
     target,
+    levels,
     parts,
     verbose,
     dry_run,
@@ -94,7 +96,17 @@ def main(
     dataset = ds.dataset(source_folder, filesystem=filesystem, format=DATASET_FORMAT, partitioning='hive')
 
     count = 0
-    for partition_folder in source_folder.iterdir():
+
+    def source_folder_iterator(source_folder, levels):
+        if levels == 0:
+            yield source_folder
+        elif levels == 1:
+            for partition_folder in source_folder.iterdir():
+                yield partition_folder
+        else:
+            raise NotImplementedError("max of one level is supported.")
+
+    for partition_folder in source_folder_iterator(source_folder, levels):
 
         usage = sum(file.stat().st_size for file in partition_folder.rglob('*'))
         if usage > MEMORY_WARNING_BYTES:
@@ -103,10 +115,14 @@ def main(
         elif verbose:
             click.echo(f'partition {partition_folder} has disk size: {human_size(usage)}')
 
-        _name, _value = partition_folder.name.split('=')
-        flt0 = pc.field(_name) == pc.scalar(_value)
+        # TODO: this aproach doesn't handle different field types
+        # _name, _value = partition_folder.name.split('=')
+        # flt0 = pc.field(_name) == pc.scalar(_value)
 
-        arrow_scanner = ds.Scanner.from_dataset(dataset, filter=flt0)
+        arrow_scanner = ds.Scanner.from_dataset(dataset)
+        # tbl = arrow_scanner.to_table()
+        # print(tbl)
+        # assert 0
         ds.write_dataset(
             arrow_scanner,
             base_dir=str(target_folder),
@@ -116,6 +132,9 @@ def main(
             existing_data_behavior="delete_matching",
             format=DATASET_FORMAT,
             file_visitor=writemeta_fn,
+            max_rows_per_file=200 * 1024,
+            max_rows_per_group=200 * 1024,
+            min_rows_per_group=100 * 1024,
         )
         count += 1
         if verbose:
