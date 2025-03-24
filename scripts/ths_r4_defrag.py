@@ -59,7 +59,7 @@ def write_metadata(base_path, visited_file):
 @click.command()
 @click.argument('source')
 @click.argument('target')
-@click.option('-l', '--levels', help="how many folder levels to subdivide the source folder by", default=0)
+@click.option('-l', '--levels', help="how many partition (folder) levels to subdivide the source folder by", default=0)
 @click.option("-p", "--parts", help="comma-separated list of partition keys", default="")
 @click.option('-v', '--verbose', is_flag=True, default=False)
 @click.option('-d', '--dry-run', is_flag=True, default=False)
@@ -110,7 +110,8 @@ def main(
 
         usage = sum(file.stat().st_size for file in partition_folder.rglob('*'))
         if usage > MEMORY_WARNING_BYTES:
-            click.echo(f'partition {partition_folder} has size: {human_size(usage)}')
+            click.echo(f'partition {partition_folder} has size: {human_size(usage)}.')
+            click.echo('NB. you can use the `--levels` argument to divide this job into smaller chunks.')
             click.confirm('Do you want to continue?', abort=True)
         elif verbose:
             click.echo(f'partition {partition_folder} has disk size: {human_size(usage)}')

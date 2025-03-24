@@ -171,6 +171,7 @@ def handle_subtasks(
         ECR_REPONAME, oldest_image_date=dt.datetime(2023, 3, 20, tzinfo=dt.timezone.utc)
     ).fetch()
 
+    fast_forward = True
     for task_id in subtask_ids:
 
         # completed already
@@ -182,6 +183,12 @@ def handle_subtasks(
         #  "T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDI2",
         #  "T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDMy"]: # "T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDI5",
         #     continue
+        # # problems
+        
+        if task_id == 'T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NTA4' and fast_forward:
+            fast_forward = False
+        else:
+            continue
 
         query_res = gtapi.get_oq_hazard_task(task_id)
         log.debug(query_res)

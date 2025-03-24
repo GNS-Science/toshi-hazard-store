@@ -352,7 +352,8 @@ def count_rlz(context, source, ds_name, report, strict, verbose, dry_run):
         click.echo(f"All (0.1 grid + SRWG + NZ) has {len(all_locs)} locations")
         click.echo(f"All (0.1 grid + SRWG) has {len(nz1_grid + srwg_locs)} locations")
 
-    location = CodedLocation(lat=-39, lon=175.93, resolution=0.001)
+    # location = CodedLocation(lat=-39, lon=175.93, resolution=0.001)
+    location = CodedLocation(lat=-41, lon=175, resolution=0.001)
 
     if (source == 'ARROW') and ds_name:
         if report == 'LOC':
