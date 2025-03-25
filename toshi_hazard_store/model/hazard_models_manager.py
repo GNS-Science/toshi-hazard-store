@@ -1,7 +1,13 @@
 """This module provide classes for managing hazard models as json files.
 
 It is used for local storage of these small and slow moving artefacts.
-CLI scripts will use these classes to maintain the metadata for published datasets.
+
+Each manager class will store a canonical list of instance 'unique_id`s and will
+ provide methods for creating, updating and deleting instances, with
+ serialisation to/from json.
+
+Note:
+ - CLI scripts will use these classes to maintain the metadata for published datasets.
 
 Classes:
   - CompatibleHazardCalculationManager
