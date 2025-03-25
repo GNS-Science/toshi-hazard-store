@@ -1,7 +1,8 @@
 """This module exports comfiguration for the current system."""
 
 import os
-
+import os
+from pathlib import PurePath
 from dotenv import load_dotenv
 
 load_dotenv()  # take environment variables from .env
@@ -23,3 +24,5 @@ NUM_BATCH_WORKERS = int(os.getenv('NZSHM22_HAZARD_STORE_NUM_WORKERS', 1))
 SOURCE_REGION = os.getenv('NZSHM22_HAZARD_STORE_MIGRATE_SOURCE_REGION')
 SOURCE_DEPLOYMENT_STAGE = os.getenv('NZSHM22_HAZARD_STORE_SOURCE_STAGE')
 # TARGET_REGION = os.getenv('NZSHM22_HAZARD_STORE_MIGRATE_TARGET_REGION')
+
+RESOURCES_FOLDER = str(PurePath(os.path.realpath(__file__)).parent.parent / "resources")
