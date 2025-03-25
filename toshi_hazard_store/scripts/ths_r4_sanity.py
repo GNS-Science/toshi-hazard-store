@@ -37,7 +37,7 @@ import toshi_hazard_store.config
 import toshi_hazard_store.model.openquake_models
 import toshi_hazard_store.model.revision_4.hazard_models  # noqa: E402
 import toshi_hazard_store.query.hazard_query
-from scripts.core import echo_settings  # noqa
+from toshi_hazard_store.scripts.core import echo_settings  # noqa
 from toshi_hazard_store.oq_import.oq_manipulate_hdf5 import migrate_nshm_uncertainty_string
 
 nz1_grid = load_grid('NZ_0_1_NB_1_1')

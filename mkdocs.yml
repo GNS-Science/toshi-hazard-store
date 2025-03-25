@@ -5,7 +5,7 @@ repo_name: GNS-Science/toshi-hazard-store
 #strict: true
 watch:
   - toshi_hazard_store
-  - scripts
+  - docs
 nav:
   - Home:
       - README: index.md

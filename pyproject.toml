@@ -20,27 +20,26 @@ classifiers=[
 ]
 packages = [
     { include = "toshi_hazard_store" },
-    { include = "scripts" },
     { include = "tests", format = "sdist" },
 ]
 
 [tool.poetry.scripts]
-ths_r4_import = 'scripts.ths_r4_import:main'
-ths_ds_check = 'scripts.ths_ds_check:main'
-ths_r4_sanity = 'scripts.ths_r4_sanity:main'
-ths_r4_defrag = 'scripts.ths_r4_defrag:main'
-ths_r4_filter_dataset = 'scripts.ths_r4_filter_dataset:main'
+ths_r4_import = 'toshi_hazard_store.scripts.ths_r4_import:main'
+ths_ds_check = 'toshi_hazard_store.scripts.ths_ds_check:main'
+ths_r4_sanity = 'toshi_hazard_store.scripts.ths_r4_sanity:main'
+ths_r4_defrag = 'toshi_hazard_store.scripts.ths_r4_defrag:main'
+ths_r4_filter_dataset = 'toshi_hazard_store.scripts.ths_r4_filter_dataset:main'
 
-store_hazard_v4 = 'scripts.store_hazard_v4:main'
-ths_r4_query = 'scripts.ths_r4_query:main'
-ths_r4_migrate = 'scripts.ths_r4_migrate:main'
+store_hazard_v4 = 'toshi_hazard_store.scripts.store_hazard_v4:main'
+ths_r4_query = 'toshi_hazard_store.scripts.ths_r4_query:main'
+ths_r4_migrate = 'toshi_hazard_store.scripts.ths_r4_migrate:main'
 
 # Legacy stuff
-# store_hazard_v3 = 'scripts.store_hazard_v3:main'
-# get_hazard = 'scripts.get_hazard:main'
-# query_meta = 'scripts.query_meta:main'
-# ths_cache = 'scripts.ths_cache:cli'
-# ths_testing = 'scripts.ths_testing:cli'
+# store_hazard_v3 = 'toshi_hazard_store.scripts.store_hazard_v3:main'
+# get_hazard = 'toshi_hazard_store.scripts.get_hazard:main'
+# query_meta = 'toshi_hazard_store.scripts.query_meta:main'
+# ths_cache = 'toshi_hazard_store.scripts.ths_cache:cli'
+# ths_testing = 'toshi_hazard_store.scripts.ths_testing:cli'
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
