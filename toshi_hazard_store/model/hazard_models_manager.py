@@ -1,67 +1,145 @@
-# import json
-import logging
+"""This module provide classes for managing hazard models as json files.
 
-# from datetime import datetime, timezone
+It is used for local storage of these small and slow moving artefacts.
+CLI scripts will use these classes to maintain the metadata for published datasets.
+
+Classes:
+  - CompatibleHazardCalculationManager
+  - HazardCurveProducerConfigManager
+ """
+
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
 from pydantic import ValidationError
 
-from .hazard_models_pydantic import CompatibleHazardCalculation, HazardCurveProducerConfig
+from toshi_hazard_store.model.hazard_models_pydantic import CompatibleHazardCalculation, HazardCurveProducerConfig
 
 
 class ManagerBase:
+    """Base class for managing storage of configuration models.
+
+    Attributes:
+        storage_folder: The directory where configurations are stored as JSON files.
+    """
+
     def __init__(self, storage_folder: Path):
+        """Initialize the manager with a specified storage folder."""
         self.storage_folder = storage_folder
         if not self.storage_folder.exists():
             self.storage_folder.mkdir(parents=True)
 
     def _get_path(self, unique_id: str) -> Path:
+        """Generate the file path for a given configuration ID.
+
+        Args:
+            unique_id: The unique identifier of the configuration.
+
+        Returns:
+            A Path object pointing to the JSON file.
+        """
         raise NotImplementedError
 
     def create(self, data: Union[Dict, Any]) -> None:
+        """Create and save a new configuration from provided data.
+
+        Args:
+            data: Configuration parameters as a dictionary or model instance.
+
+        Raises:
+            ValueError: If validation of input data fails.
+            FileExistsError: If the ID already exists in storage.
+        """
         raise NotImplementedError
 
     def update(self, unique_id: str, data: Dict) -> None:
+        """Update an existing configuration with new parameters.
+
+        Args:
+            unique_id: The identifier of the configuration to modify.
+            data: New parameters for the configuration.
+
+        Raises:
+            FileNotFoundError: If the ID does not exist in storage.
+        """
         raise NotImplementedError
 
     def delete(self, unique_id: str) -> None:
+        """Remove a configuration from storage by its ID.
+
+        Args:
+            unique_id: The identifier of the configuration to delete.
+        """
         path = self._get_path(unique_id)
         if path.exists():
             path.unlink()
 
     def get_all_ids(self) -> List[str]:
+        """Retrieve all IDs of configurations stored in the folder.
+
+        Returns:
+            A list of string identifiers for existing configurations.
+        """
         return [p.stem for p in self.storage_folder.glob('*.json')]
 
     def load(self, unique_id: str) -> Any:
+        """Load a configuration from storage by its ID.
+
+        Args:
+            unique_id: The identifier of the configuration to retrieve.
+
+        Returns:
+            The loaded configuration model instance.
+
+        Raises:
+            FileNotFoundError: If no configuration exists with that ID.
+        """
         raise NotImplementedError
 
     def _save_json(self, model: Any, file_path: Path):
+        """Serialize a Pydantic model to JSON and save it to disk.
+
+        Args:
+            model: The configuration model to persist.
+            file_path: Target path for the JSON file.
+        """
         logging.info(f'saving model to {file_path}')
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(model.model_dump_json())
             f.close()
 
-    # def _load_json(self, file_path: Path) -> Union[CompatibleHazardCalculation, HazardCurveProducerConfig]:
-    #     raise NotImplementedError
-
 
 class CompatibleHazardCalculationManager(ManagerBase):
-    Model = CompatibleHazardCalculation
+    """Manager for handling compatible hazard calculations.
+
+    Attributes:
+        storage_folder: Directory where calculation configurations are stored.
+    """
 
     def __init__(self, storage_folder: Path):
         super().__init__(storage_folder / "compatible_hazard_calculations")
 
     def _get_path(self, unique_id: str) -> Path:
+        """Override to generate paths for compatible hazard calculations."""
         return self.storage_folder / f"{unique_id}.json"
 
     def create(self, data: Union[Dict, CompatibleHazardCalculation]) -> None:
+        """Create a new compatible hazard calculation configuration.
+
+        Args:
+            data: Input parameters as dictionary or model instance.
+
+        Raises:
+            TypeError: If input is not valid type.
+            FileExistsError: When duplicate ID already exists.
+        """
         if isinstance(data, dict):
             try:
-                model = self.Model(**data)
+                model = CompatibleHazardCalculation(**data)
             except ValidationError as e:
                 raise ValueError(str(e))
-        elif isinstance(data, self.Model):
+        elif isinstance(data, CompatibleHazardCalculation):
             model = data
         else:
             raise TypeError("Data must be a dictionary or CompatibleHazardCalculation instance")
@@ -73,15 +151,28 @@ class CompatibleHazardCalculationManager(ManagerBase):
         self._save_json(model, path)
 
     def load(self, unique_id: str) -> CompatibleHazardCalculation:
+        """Load a compatible hazard calculation configuration by ID.
+
+        Args:
+            unique_id: The identifier of the configuration to retrieve.
+
+        Returns:
+            The loaded configuration model instance.
+        """
         path = self._get_path(unique_id)
         if not path.exists():
             raise FileNotFoundError(f"Compatible Hazard Calculation with unique ID {unique_id} does not exist.")
 
         json_string = path.read_text()
-        object = self.Model.model_validate_json(json_string)
-        return object
+        return CompatibleHazardCalculation.model_validate_json(json_string)
 
     def update(self, unique_id: str, data: Dict) -> None:
+        """Update an existing compatible hazard calculation configuration.
+
+        Args:
+            unique_id: Configuration ID to modify.
+            data: New parameters for the configuration.
+        """
         model = self.load(unique_id)
         for key, value in data.items():
             setattr(model, key, value)
@@ -91,22 +182,37 @@ class CompatibleHazardCalculationManager(ManagerBase):
 
 
 class HazardCurveProducerConfigManager(ManagerBase):
-    Model = HazardCurveProducerConfig
+    """Manager for hazard curve producer configurations.
+
+    Attributes:
+        storage_folder: Directory where configuration files are stored.
+        ch_manager: Reference to compatible calculation manager for integrity checks.
+    """
 
     def __init__(self, storage_folder: Path, ch_manager: CompatibleHazardCalculationManager):
         super().__init__(storage_folder / "hazard_curve_producer_configs")
         self.ch_manager = ch_manager
 
     def _get_path(self, unique_id: str) -> Path:
+        """Override path generation for hazard curve producer configurations."""
         return self.storage_folder / f"{unique_id}.json"
 
     def create(self, data: Union[Dict, HazardCurveProducerConfig]) -> None:
+        """Create a new hazard curve producer configuration.
+
+        Args:
+            data: Input parameters as dictionary or model instance.
+
+        Raises:
+            ValueError: If validation fails or referenced calculation doesn't exist.
+            FileExistsError: When duplicate ID already exists.
+        """
         if isinstance(data, dict):
             try:
-                model = self.Model(**data)
+                model = HazardCurveProducerConfig(**data)
             except ValidationError as e:
                 raise ValueError(str(e))
-        elif isinstance(data, self.Model):
+        elif isinstance(data, HazardCurveProducerConfig):
             model = data
         else:
             raise TypeError("Data must be a dictionary or HazardCurveProducerConfig instance")
@@ -116,31 +222,52 @@ class HazardCurveProducerConfigManager(ManagerBase):
             raise FileExistsError(f"Hazard Curve Producer Config with unique ID {model.unique_id} already exists.")
 
         # Check referential integrity
-        print(self.ch_manager.get_all_ids())
-        print(model.compatible_calc_fk)
         if model.compatible_calc_fk not in self.ch_manager.get_all_ids():
-            raise ValueError("Referenced compatible hazard calculation does not exist.")
+            raise ValueError("Referenced compatible hazard calculation {model.compatible_calc_fk} does not exist.")
 
         self._save_json(model, path)
 
     def load(self, unique_id: str) -> HazardCurveProducerConfig:
+        """Load a hazard curve producer configuration by ID.
+
+        Args:
+            unique_id: The identifier of the configuration to retrieve.
+
+        Returns:
+            The loaded configuration model instance.
+
+        Raises:
+            ValueError: If referenced compatible hazard calculation doesn't exist.
+        """
         path = self._get_path(unique_id)
         if not path.exists():
             raise FileNotFoundError(f"Hazard Curve Producer Config with unique ID {unique_id} does not exist.")
 
         json_string = path.read_text()
         object = HazardCurveProducerConfig.model_validate_json(json_string)
+
+        # Check referential integrity
+        if object.compatible_calc_fk not in self.ch_manager.get_all_ids():
+            raise ValueError(f"Referenced compatible hazard calculation {object.compatible_calc_fk} does not exist.")
         return object
 
     def update(self, unique_id: str, data: Dict) -> None:
+        """Update an existing hazard curve producer configuration.
+
+        Args:
+            unique_id: Configuration ID to modify.
+            data: New parameters for the configuration.
+
+        Raises:
+            ValueError: If referenced compatible hazard calculation doesn't exist (save precondition).
+        """
         model = self.load(unique_id)
         for key, value in data.items():
             setattr(model, key, value)
 
         # Check referential integrity
-        ch_calc_manager = CompatibleHazardCalculationManager(self.storage_folder.parent)
-        if 'compatible_calc_fk' in data and data['compatible_calc_fk'] not in ch_calc_manager.get_all_ids():
-            raise ValueError("Referenced compatible hazard calculation does not exist.")
+        if 'compatible_calc_fk' in data and data['compatible_calc_fk'] not in self.ch_manager.get_all_ids():
+            raise ValueError(f"Referenced compatible hazard calculation {data['compatible_calc_fk']} does not exist.")
 
         path = self._get_path(unique_id)
         self._save_json(model, path)
