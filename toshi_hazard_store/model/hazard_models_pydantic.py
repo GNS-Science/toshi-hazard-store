@@ -8,24 +8,26 @@ from pydantic import BaseModel, Field
 class CompatibleHazardCalculation(BaseModel):
     """Provides a unique identifier for compatible Hazard Calculations"""
 
+    model_config = dict(populate_by_name=True)
+
     unique_id: str = Field(..., alias="unique_id")
     notes: str | None = Field(None, alias="notes")
-    created: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    class Config:
-        allow_population_by_field_name = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class HazardCurveProducerConfig(BaseModel):
     """Records characteristics of Hazard Curve producers/engines for compatibility tracking"""
+
+    model_config = dict(populate_by_name=True)
 
     unique_id: str = Field(..., alias="unique_id")
     compatible_calc_fk: str = Field(
         ..., alias="compatible_calc_fk"
     )  # must map to a valid CompatibleHazardCalculation.unique_id
 
-    created: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    modified: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     effective_from: datetime | None = Field(None, alias="effective_from")
     last_used: datetime | None = Field(None, alias="last_used")
@@ -40,6 +42,3 @@ class HazardCurveProducerConfig(BaseModel):
     imts: list[str] = Field(..., alias="imts")  # EnumConstrainedUnicodeAttribute(IntensityMeasureTypeEnum))
     imt_levels: list[float] = Field(..., alias="imt_levels")
     notes: str | None = Field(None, alias="notes")
-
-    class Config:
-        allow_population_by_field_name = True

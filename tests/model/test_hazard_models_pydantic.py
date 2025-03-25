@@ -10,7 +10,7 @@ class TestCompatibleHazardCalculation:
         self.data = {
             "unique_id": "user_defined_unique_id",
             "notes": "Some notes about the calculation",
-            "created": datetime.now(timezone.utc),
+            "created_at": datetime.now(timezone.utc),
         }
 
     def test_valid_data(self):
@@ -18,7 +18,7 @@ class TestCompatibleHazardCalculation:
         print(model)
         assert model.unique_id == self.data["unique_id"]
         assert model.notes == self.data["notes"]
-        assert isinstance(model.created, datetime)
+        assert isinstance(model.created_at, datetime)
 
     def test_missing_required_field(self):
         with pytest.raises(ValueError, match="Field required"):
@@ -31,8 +31,8 @@ class TestHazardCurveProducerConfig:
         self.data = {
             "unique_id": "user_defined_unique_id",
             "compatible_calc_fk": "some_compatible_calc_id",
-            "created": datetime.now(timezone.utc),
-            "modified": datetime.now(timezone.utc),
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
             "effective_from": None,
             "last_used": None,
             "tags": ["tag1", "tag2"],
@@ -49,8 +49,8 @@ class TestHazardCurveProducerConfig:
         model = HazardCurveProducerConfig(**self.data)
         assert model.unique_id == self.data["unique_id"]
         assert model.compatible_calc_fk == self.data["compatible_calc_fk"]
-        assert isinstance(model.created, datetime)
-        assert isinstance(model.modified, datetime)
+        assert isinstance(model.created_at, datetime)
+        assert isinstance(model.updated_at, datetime)
 
     def test_missing_required_field(self):
         with pytest.raises(ValueError, match=r"Field required"):

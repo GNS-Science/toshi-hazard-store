@@ -184,7 +184,7 @@ def handle_subtasks(
         #  "T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDMy"]: # "T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDI5",
         #     continue
         # # problems
-        
+
         if task_id == 'T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NTA4' and fast_forward:
             fast_forward = False
         else:
