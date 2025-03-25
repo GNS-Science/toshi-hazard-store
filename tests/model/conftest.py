@@ -9,18 +9,18 @@ from toshi_hazard_store.model.hazard_models_manager import (
 )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def storage_path(tmpdir_factory):
     return Path(tmpdir_factory.mktemp("hazard_storage"))
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture
 def compatible_hazard_calc_data():
     now = datetime.now(timezone.utc)
     return {"unique_id": "chc1", "created_at": now, "updated_at": now}
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture
 def hazard_curve_producer_config_data(compatible_hazard_calc_data):
     now = datetime.now(timezone.utc)
     return {
@@ -41,14 +41,14 @@ def hazard_curve_producer_config_data(compatible_hazard_calc_data):
     }
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture
 def ch_manager(storage_path, compatible_hazard_calc_data):
     manager = CompatibleHazardCalculationManager(storage_path)
     manager.create(compatible_hazard_calc_data)
     return manager
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture
 def hcp_manager(storage_path, hazard_curve_producer_config_data, compatible_hazard_calc_data):
     ch_manager = CompatibleHazardCalculationManager(storage_path)
     ch_manager.create(compatible_hazard_calc_data)

@@ -1,15 +1,26 @@
+import pathlib
 from datetime import datetime, timezone
 
 import pytest
 
-from toshi_hazard_store.model.hazard_models_manager import (
-    CompatibleHazardCalculationManager,
-    HazardCurveProducerConfigManager,
-)
+from toshi_hazard_store.model.hazard_models_manager import CompatibleHazardCalculationManager
 from toshi_hazard_store.model.hazard_models_pydantic import CompatibleHazardCalculation, HazardCurveProducerConfig
 
 
-def test_compatible_hazard_calculation_create(ch_manager, compatible_hazard_calc_data):
+def test_reuse_existing_storage_folder(ch_manager, storage_path):
+    # ch_manger will have created the storage folder ...
+    cm2 = CompatibleHazardCalculationManager(storage_path)
+    assert cm2.storage_folder == ch_manager.storage_folder
+
+
+def test_non_existing_storage_folder_raises():
+    storage_path = pathlib.Path("Some_nonsense/path")
+    with pytest.raises(ValueError) as exc_info:
+        _ = CompatibleHazardCalculationManager(storage_path)
+    assert f"'{storage_path}' is not a valid path for storage_folder." in str(exc_info.value)
+
+
+def test_compatible_hazard_calculation_create_load(ch_manager, compatible_hazard_calc_data):
     chc = ch_manager.load(compatible_hazard_calc_data["unique_id"])
     assert isinstance(chc, CompatibleHazardCalculation)
 
@@ -50,7 +61,7 @@ def test_compatible_hazard_calculation_delete(ch_manager, compatible_hazard_calc
 ################
 
 
-def test_hazard_curve_producer_config_create(hcp_manager, hazard_curve_producer_config_data):
+def test_hazard_curve_producer_config_create_load(hcp_manager, hazard_curve_producer_config_data):
     hcp = hcp_manager.load(hazard_curve_producer_config_data["unique_id"])
     assert isinstance(hcp, HazardCurveProducerConfig)
 
@@ -71,39 +82,10 @@ def test_hazard_curve_producer_config_delete(hcp_manager, hazard_curve_producer_
         hcp_manager.load(unique_id)
 
 
-@pytest.mark.skip('WIP')
-def test_referential_integrity_failure(
-    ch_manager, storage_path, compatible_hazard_calc_data, hazard_curve_producer_config_data
-):
-    manager = HazardCurveProducerConfigManager(storage_path, ch_manager)
+def test_referential_integrity_load_failure(hcp_manager, hazard_curve_producer_config_data, monkeypatch):
+    monkeypatch.setattr(hcp_manager.ch_manager, 'get_all_ids', lambda: [])
 
-    # CBC this is the wrong approach - shoudl probably mock ch_manager get_all_ids method instead
-    # Attempt to create a config without the referenced CompatibleHazardCalculation existing
-    with pytest.raises(ValueError) as exc_info:
-        del hazard_curve_producer_config_data["compatible_calc_fk"]
-        manager.create(hazard_curve_producer_config_data)
-
-    assert "Referenced compatible hazard calculation does not exist" in str(exc_info.value)
-
-
-@pytest.mark.skip('WIP')
-def test_referential_integrity_update_failure(
-    storage_path, ch_manager, compatible_hazard_calc_data, hazard_curve_producer_config_data
-):
-    manager = HazardCurveProducerConfigManager(storage_path, ch_manager)
-
-    # Create a valid config
     hcp_id = hazard_curve_producer_config_data["unique_id"]
-    del hazard_curve_producer_config_data["compatible_calc_fk"]  # Remove to create without ref
-
-    invalid_ref_hcp_data = hazard_curve_producer_config_data.copy()
-    invalid_ref_hcp_data.update({"unique_id": "hcp2", "compatible_calc_fk": "non_existent_chc"})
-
-    manager.create(invalid_ref_hcp_data)
-
-    # Attempt to update the config with a non-existent reference
     with pytest.raises(ValueError) as exc_info:
-        data_to_update = {"compatible_calc_fk": "another_non_existent_chc"}
-        manager.update(hcp_id, data_to_update)
-
-    assert "Referenced compatible hazard calculation does not exist" in str(exc_info.value)
+        _ = hcp_manager.load(hcp_id)
+    assert "Referenced compatible hazard calculation" in str(exc_info.value)

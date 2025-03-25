@@ -33,8 +33,10 @@ class ManagerBase:
     def __init__(self, storage_folder: Path):
         """Initialize the manager with a specified storage folder."""
         self.storage_folder = storage_folder
+        if not storage_folder.parent.is_dir():
+            raise ValueError(f"'{storage_folder.parent}' is not a valid path for storage_folder.")
         if not self.storage_folder.exists():
-            self.storage_folder.mkdir(parents=True)
+            self.storage_folder.mkdir(parents=False)
 
     def _get_path(self, unique_id: str) -> Path:
         """Generate the file path for a given configuration ID.
