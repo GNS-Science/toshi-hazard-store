@@ -15,6 +15,7 @@ Classes:
  """
 
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
@@ -24,10 +25,10 @@ from toshi_hazard_store.model.hazard_models_pydantic import CompatibleHazardCalc
 
 
 class ManagerBase:
-    """Base class for managing storage of configuration models.
+    """Base class for managing storage of object models.
 
     Attributes:
-        storage_folder: The directory where configurations are stored as JSON files.
+        storage_folder: The directory where objects are stored as JSON files.
     """
 
     def __init__(self, storage_folder: Path):
@@ -39,10 +40,10 @@ class ManagerBase:
             self.storage_folder.mkdir(parents=False)
 
     def _get_path(self, unique_id: str) -> Path:
-        """Generate the file path for a given configuration ID.
+        """Generate the file path for a given object ID.
 
         Args:
-            unique_id: The unique identifier of the configuration.
+            unique_id: The unique identifier of the object.
 
         Returns:
             A Path object pointing to the JSON file.
@@ -50,10 +51,10 @@ class ManagerBase:
         raise NotImplementedError
 
     def create(self, data: Union[Dict, Any]) -> None:
-        """Create and save a new configuration from provided data.
+        """Create and save a new object from provided data.
 
         Args:
-            data: Configuration parameters as a dictionary or model instance.
+            data: object parameters as a dictionary or model instance.
 
         Raises:
             ValueError: If validation of input data fails.
@@ -62,11 +63,11 @@ class ManagerBase:
         raise NotImplementedError
 
     def update(self, unique_id: str, data: Dict) -> None:
-        """Update an existing configuration with new parameters.
+        """Update an existing object with new parameters.
 
         Args:
-            unique_id: The identifier of the configuration to modify.
-            data: New parameters for the configuration.
+            unique_id: The identifier of the object to modify.
+            data: New parameters for the object.
 
         Raises:
             FileNotFoundError: If the ID does not exist in storage.
@@ -74,34 +75,34 @@ class ManagerBase:
         raise NotImplementedError
 
     def delete(self, unique_id: str) -> None:
-        """Remove a configuration from storage by its ID.
+        """Remove a object from storage by its ID.
 
         Args:
-            unique_id: The identifier of the configuration to delete.
+            unique_id: The identifier of the object to delete.
         """
         path = self._get_path(unique_id)
         if path.exists():
             path.unlink()
 
     def get_all_ids(self) -> List[str]:
-        """Retrieve all IDs of configurations stored in the folder.
+        """Retrieve all IDs of objects stored in the folder.
 
         Returns:
-            A list of string identifiers for existing configurations.
+            A list of string identifiers for existing objects.
         """
         return [p.stem for p in self.storage_folder.glob('*.json')]
 
     def load(self, unique_id: str) -> Any:
-        """Load a configuration from storage by its ID.
+        """Load a object from storage by its ID.
 
         Args:
-            unique_id: The identifier of the configuration to retrieve.
+            unique_id: The identifier of the object to retrieve.
 
         Returns:
-            The loaded configuration model instance.
+            The loaded object model instance.
 
         Raises:
-            FileNotFoundError: If no configuration exists with that ID.
+            FileNotFoundError: If no object exists with that ID.
         """
         raise NotImplementedError
 
@@ -109,12 +110,12 @@ class ManagerBase:
         """Serialize a Pydantic model to JSON and save it to disk.
 
         Args:
-            model: The configuration model to persist.
+            model: The object model to persist.
             file_path: Target path for the JSON file.
         """
         logging.info(f'saving model to {file_path}')
         with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(model.model_dump_json())
+            f.write(model.model_dump_json(indent=2))
             f.close()
 
 
@@ -122,7 +123,7 @@ class CompatibleHazardCalculationManager(ManagerBase):
     """Manager for handling compatible hazard calculations.
 
     Attributes:
-        storage_folder: Directory where calculation configurations are stored.
+        storage_folder: Directory where calculation objects are stored.
     """
 
     def __init__(self, storage_folder: Path):
@@ -133,7 +134,7 @@ class CompatibleHazardCalculationManager(ManagerBase):
         return self.storage_folder / f"{unique_id}.json"
 
     def create(self, data: Union[Dict, CompatibleHazardCalculation]) -> None:
-        """Create a new compatible hazard calculation configuration.
+        """Create a new compatible hazard calculation object.
 
         Args:
             data: Input parameters as dictionary or model instance.
@@ -159,13 +160,13 @@ class CompatibleHazardCalculationManager(ManagerBase):
         self._save_json(model, path)
 
     def load(self, unique_id: str) -> CompatibleHazardCalculation:
-        """Load a compatible hazard calculation configuration by ID.
+        """Load a compatible hazard calculation object by ID.
 
         Args:
-            unique_id: The identifier of the configuration to retrieve.
+            unique_id: The identifier of the object to retrieve.
 
         Returns:
-            The loaded configuration model instance.
+            The loaded object model instance.
         """
         path = self._get_path(unique_id)
         if not path.exists():
@@ -175,25 +176,27 @@ class CompatibleHazardCalculationManager(ManagerBase):
         return CompatibleHazardCalculation.model_validate_json(json_string)
 
     def update(self, unique_id: str, data: Dict) -> None:
-        """Update an existing compatible hazard calculation configuration.
+        """Update an existing compatible hazard calculation object.
 
         Args:
-            unique_id: Configuration ID to modify.
-            data: New parameters for the configuration.
+            unique_id: object ID to modify.
+            data: New parameters for the object.
         """
         model = self.load(unique_id)
         for key, value in data.items():
             setattr(model, key, value)
+        if 'updated_at' not in data.keys():
+            setattr(model, 'updated_at', datetime.now(timezone.utc))
 
         path = self._get_path(unique_id)
         self._save_json(model, path)
 
 
 class HazardCurveProducerConfigManager(ManagerBase):
-    """Manager for hazard curve producer configurations.
+    """Manager for hazard curve producer objects.
 
     Attributes:
-        storage_folder: Directory where configuration files are stored.
+        storage_folder: Directory where object files are stored.
         ch_manager: Reference to compatible calculation manager for integrity checks.
     """
 
@@ -202,11 +205,11 @@ class HazardCurveProducerConfigManager(ManagerBase):
         self.ch_manager = ch_manager
 
     def _get_path(self, unique_id: str) -> Path:
-        """Override path generation for hazard curve producer configurations."""
+        """Override path generation for hazard curve producer objects."""
         return self.storage_folder / f"{unique_id}.json"
 
     def create(self, data: Union[Dict, HazardCurveProducerConfig]) -> None:
-        """Create a new hazard curve producer configuration.
+        """Create a new hazard curve producer object.
 
         Args:
             data: Input parameters as dictionary or model instance.
@@ -236,13 +239,13 @@ class HazardCurveProducerConfigManager(ManagerBase):
         self._save_json(model, path)
 
     def load(self, unique_id: str) -> HazardCurveProducerConfig:
-        """Load a hazard curve producer configuration by ID.
+        """Load a hazard curve producer object by ID.
 
         Args:
-            unique_id: The identifier of the configuration to retrieve.
+            unique_id: The identifier of the object to retrieve.
 
         Returns:
-            The loaded configuration model instance.
+            The loaded object model instance.
 
         Raises:
             ValueError: If referenced compatible hazard calculation doesn't exist.
@@ -260,11 +263,11 @@ class HazardCurveProducerConfigManager(ManagerBase):
         return object
 
     def update(self, unique_id: str, data: Dict) -> None:
-        """Update an existing hazard curve producer configuration.
+        """Update an existing hazard curve producer object.
 
         Args:
-            unique_id: Configuration ID to modify.
-            data: New parameters for the configuration.
+            unique_id: object ID to modify.
+            data: New parameters for the object.
 
         Raises:
             ValueError: If referenced compatible hazard calculation doesn't exist (save precondition).
@@ -272,6 +275,8 @@ class HazardCurveProducerConfigManager(ManagerBase):
         model = self.load(unique_id)
         for key, value in data.items():
             setattr(model, key, value)
+        if 'updated_at' not in data.keys():
+            setattr(model, 'updated_at', datetime.now(timezone.utc))
 
         # Check referential integrity
         if 'compatible_calc_fk' in data and data['compatible_calc_fk'] not in self.ch_manager.get_all_ids():

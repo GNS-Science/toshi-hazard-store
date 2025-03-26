@@ -49,6 +49,16 @@ def test_compatible_hazard_calculation_update(ch_manager, compatible_hazard_calc
     assert chc.updated_at == new_updated_at
 
 
+def test_compatible_hazard_calculation_update_sans_updated_at(ch_manager, compatible_hazard_calc_data):
+    notes = "Urbis dolur"
+    data_to_update = {"notes": notes}
+    ch_manager.update(compatible_hazard_calc_data["unique_id"], data_to_update)
+
+    chc = ch_manager.load(compatible_hazard_calc_data["unique_id"])
+    assert chc.notes == notes
+    assert chc.updated_at > compatible_hazard_calc_data["updated_at"]
+
+
 def test_compatible_hazard_calculation_delete(ch_manager, compatible_hazard_calc_data):
     unique_id = compatible_hazard_calc_data["unique_id"]
     ch_manager.delete(unique_id)

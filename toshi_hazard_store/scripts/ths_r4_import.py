@@ -33,9 +33,8 @@ from typing import Iterable
 
 import click
 
-import toshi_hazard_store  # noqa: E402
-from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, hazard_models, pyarrow_dataset
-from toshi_hazard_store.model.revision_4.migrate_v3_to_v4 import ECR_REGISTRY_ID, ECR_REPONAME
+from toshi_hazard_store.config import ECR_REGISTRY_ID, ECR_REPONAME
+from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
 from toshi_hazard_store.oq_import import (  # noqa: E402
     create_producer_config,
     export_rlzs_rev4,
@@ -227,42 +226,6 @@ def handle_subtasks(
 @click.group()
 def main():
     """Import NSHM Model hazard curves to new revision 4 models."""
-
-
-@main.command()
-def create_tables():
-    click.echo('Ensuring Rev4 tables exist.')
-    toshi_hazard_store.model.migrate_r4()
-
-
-@main.command()
-@click.argument('partition')
-@click.option('--uniq', '-U', required=False, default=None, help="uniq_id, if not specified a UUID will be used")
-@click.option('--notes', '-N', required=False, default=None, help="optional notes about the item")
-@click.option(
-    '-d',
-    '--dry-run',
-    is_flag=True,
-    default=False,
-    help="dont actually do anything.",
-)
-def compat(partition, uniq, notes, dry_run):
-    """create a new hazard calculation compatability identifier in PARTITION"""
-
-    mCHC = hazard_models.CompatibleHazardCalculation
-
-    t0 = dt.datetime.utcnow()
-    if uniq:
-        m = mCHC(partition_key=partition, uniq_id=uniq, notes=notes)
-    else:
-        m = mCHC(partition_key=partition, notes=notes)
-
-    if not dry_run:
-        m.save()
-        t1 = dt.datetime.utcnow()
-        click.echo("Done saving CompatibleHazardCalculation, took %s secs" % (t1 - t0).total_seconds())
-    else:
-        click.echo('SKIP: saving CompatibleHazardCalculation.')
 
 
 @main.command()

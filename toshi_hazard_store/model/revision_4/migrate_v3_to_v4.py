@@ -9,14 +9,12 @@ from nzshm_common.grids import get_location_grid
 from nzshm_common.location import coded_location, location
 
 import toshi_hazard_store.model
+from toshi_hazard_store.config import ECR_REGISTRY_ID, ECR_REPONAME
 from toshi_hazard_store.oq_import import create_producer_config, get_producer_config
 from toshi_hazard_store.oq_import.oq_manipulate_hdf5 import migrate_nshm_uncertainty_string
 from toshi_hazard_store.oq_import.parse_oq_realizations import rlz_mapper_from_dataframes
 
 SubtaskRecord = collections.namedtuple('SubtaskRecord', 'gt_id, hazard_calc_id, config_hash, image, vs30')
-
-ECR_REGISTRY_ID = '461564345538.dkr.ecr.us-east-1.amazonaws.com'
-ECR_REPONAME = "nzshm22/runzi-openquake"
 
 log = logging.getLogger(__name__)
 
