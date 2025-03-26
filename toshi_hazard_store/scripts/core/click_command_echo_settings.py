@@ -9,17 +9,16 @@ if TYPE_CHECKING:
     # from toshi_hazard_store.config import *
     from toshi_hazard_store.config import DEPLOYMENT_STAGE
     from toshi_hazard_store.config import DEPLOYMENT_STAGE as THS_STAGE
-    from toshi_hazard_store.config import LOCAL_CACHE_FOLDER, NUM_BATCH_WORKERS
+    from toshi_hazard_store.config import NUM_BATCH_WORKERS
     from toshi_hazard_store.config import REGION
     from toshi_hazard_store.config import REGION as THS_REGION
-    from toshi_hazard_store.config import USE_SQLITE_ADAPTER
 
     API_URL = None
 
 
 def echo_settings(work_folder: str, verbose=True):
     global click
-    global DEPLOYMENT_STAGE, API_URL, REGION, LOCAL_CACHE_FOLDER, THS_STAGE, THS_REGION, USE_SQLITE_ADAPTER
+    global DEPLOYMENT_STAGE, API_URL, REGION, THS_STAGE, THS_REGION
 
     click.echo('\nfrom command line:')
     click.echo(f"   using verbose: {verbose}")
@@ -37,4 +36,3 @@ def echo_settings(work_folder: str, verbose=True):
     # click.echo(f'   using LOCAL_CACHE_FOLDER: {LOCAL_CACHE_FOLDER}')
     click.echo(f'   using THS_STAGE: {THS_STAGE}')
     click.echo(f'   using THS_REGION: {THS_REGION}')
-    click.echo(f'   using USE_SQLITE_ADAPTER: {USE_SQLITE_ADAPTER}')

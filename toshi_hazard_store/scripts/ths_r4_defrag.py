@@ -10,7 +10,6 @@ from functools import partial
 
 import click
 import pyarrow as pa
-import pyarrow.compute as pc
 import pyarrow.dataset as ds
 from pyarrow import fs
 

@@ -1,8 +1,8 @@
 """This module exports comfiguration for the current system."""
 
 import os
-import os
 from pathlib import PurePath
+
 from dotenv import load_dotenv
 
 load_dotenv()  # take environment variables from .env

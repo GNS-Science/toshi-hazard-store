@@ -2,17 +2,11 @@
 Console script for comparing datasets for content equivalence.
 """
 
-import ast
-import importlib
-import itertools
-import json
 import logging
 import pathlib
 import random
 
 import click
-import numpy as np
-import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 
@@ -78,7 +72,7 @@ def rlzs(context, dataset0, dataset1, count):
             l0 = df0.iloc[idx]['values']
             l1 = df1.iloc[idx]['values']
             if not (l0 == l1).all():
-                print(f"l0 and l1 differ... ")
+                print("l0 and l1 differ... ")
                 print((l0 == l1))
 
                 print()
@@ -114,7 +108,7 @@ def aggs(context, dataset0, dataset1, count):
     df1 = ds1.to_table().to_pandas()
 
     imts = df1['imt'].unique().tolist()
-    nloc_3s0 = df0['nloc_001'].unique().tolist()
+    # nloc_3s0 = df0['nloc_001'].unique().tolist()
     nloc_3s1 = df1['nloc_001'].unique().tolist()
 
     # print(f'nloc_3s0: {nloc_3s0}')
@@ -143,7 +137,7 @@ def aggs(context, dataset0, dataset1, count):
             l0 = df0.iloc[idx]['values']
             l1 = df1.iloc[idx]['values']
             if not (l0 == l1).all():
-                print(f"l0 and l1 differ... ")
+                print("l0 and l1 differ... ")
                 print((l0 == l1))
 
                 print()
