@@ -1,4 +1,4 @@
-"""the hazard metatdata models are pydantic for (de)serialisaiton as json."""
+"""the hazard metatdata models are pydantic for (de)serialisation as json."""
 
 from datetime import datetime, timezone
 
@@ -8,10 +8,8 @@ from pydantic import BaseModel, Field
 class CompatibleHazardCalculation(BaseModel):
     """Provides a unique identifier for compatible Hazard Calculations"""
 
-    model_config = dict(populate_by_name=True)
-
-    unique_id: str = Field(..., alias="unique_id")
-    notes: str | None = Field(None, alias="notes")
+    unique_id: str  # NB Field(...) means that this field is required, no default value.
+    notes: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -19,26 +17,22 @@ class CompatibleHazardCalculation(BaseModel):
 class HazardCurveProducerConfig(BaseModel):
     """Records characteristics of Hazard Curve producers/engines for compatibility tracking"""
 
-    model_config = dict(populate_by_name=True)
-
-    unique_id: str = Field(..., alias="unique_id")
-    compatible_calc_fk: str = Field(
-        ..., alias="compatible_calc_fk"
-    )  # must map to a valid CompatibleHazardCalculation.unique_id
+    unique_id: str
+    compatible_calc_fk: str  # must map to a valid CompatibleHazardCalculation.unique_id
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    effective_from: datetime | None = Field(None, alias="effective_from")
-    last_used: datetime | None = Field(None, alias="last_used")
+    effective_from: datetime | None = None
+    last_used: datetime | None = None
 
-    tags: list[str] | None = Field(None, alias="tags")
+    tags: list[str] | None = None
 
-    producer_software: str = Field(..., alias="producer_software")
-    producer_version_id: str = Field(..., alias="producer_version_id")
-    configuration_hash: str = Field(alias="configuration_hash")
-    configuration_data: str | None = Field(None, alias="configuration_data")
+    producer_software: str
+    producer_version_id: str
+    configuration_hash: str | None
+    configuration_data: str | None = None
 
-    imts: list[str] | None = Field(None, alias="imts")  # EnumConstrainedUnicodeAttribute(IntensityMeasureTypeEnum))
-    imt_levels: list[float] | None = Field(None, alias="imt_levels")
-    notes: str | None = Field(None, alias="notes")
+    imts: list[str] | None = None  # EnumConstrainedUnicodeAttribute(IntensityMeasureTypeEnum))
+    imt_levels: list[float] | None = None
+    notes: str | None = Field(None)

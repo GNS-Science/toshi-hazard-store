@@ -34,8 +34,10 @@ class ManagerBase:
     def __init__(self, storage_folder: Path):
         """Initialize the manager with a specified storage folder."""
         self.storage_folder = storage_folder
+
         if not storage_folder.parent.is_dir():
             raise ValueError(f"'{storage_folder.parent}' is not a valid path for storage_folder.")
+
         if not self.storage_folder.exists():
             self.storage_folder.mkdir(parents=False)
 
@@ -255,12 +257,12 @@ class HazardCurveProducerConfigManager(ManagerBase):
             raise FileNotFoundError(f"Hazard Curve Producer Config with unique ID {unique_id} does not exist.")
 
         json_string = path.read_text()
-        object = HazardCurveProducerConfig.model_validate_json(json_string)
+        model = HazardCurveProducerConfig.model_validate_json(json_string)
 
         # Check referential integrity
-        if object.compatible_calc_fk not in self.ch_manager.get_all_ids():
-            raise ValueError(f"Referenced compatible hazard calculation {object.compatible_calc_fk} does not exist.")
-        return object
+        if model.compatible_calc_fk not in self.ch_manager.get_all_ids():
+            raise ValueError(f"Referenced compatible hazard calculation {model.compatible_calc_fk} does not exist.")
+        return model
 
     def update(self, unique_id: str, data: Dict) -> None:
         """Update an existing hazard curve producer object.
