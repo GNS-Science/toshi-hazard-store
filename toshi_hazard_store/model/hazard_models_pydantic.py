@@ -36,9 +36,9 @@ class HazardCurveProducerConfig(BaseModel):
 
     producer_software: str = Field(..., alias="producer_software")
     producer_version_id: str = Field(..., alias="producer_version_id")
-    configuration_hash: str = Field(..., alias="configuration_hash")
+    configuration_hash: str = Field(alias="configuration_hash")
     configuration_data: str | None = Field(None, alias="configuration_data")
 
-    imts: list[str] = Field(..., alias="imts")  # EnumConstrainedUnicodeAttribute(IntensityMeasureTypeEnum))
-    imt_levels: list[float] = Field(..., alias="imt_levels")
+    imts: list[str] | None = Field(None, alias="imts")  # EnumConstrainedUnicodeAttribute(IntensityMeasureTypeEnum))
+    imt_levels: list[float] | None = Field(None, alias="imt_levels")
     notes: str | None = Field(None, alias="notes")
