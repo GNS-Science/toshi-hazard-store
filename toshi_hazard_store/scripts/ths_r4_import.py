@@ -26,6 +26,7 @@ Process outline:
 
 import collections
 import datetime as dt
+import hashlib
 import logging
 import os
 import pathlib
@@ -45,6 +46,11 @@ from toshi_hazard_store.oq_import import (  # noqa: E402
 from .revision_4 import aws_ecr_docker_image as aws_ecr
 from .revision_4 import toshi_api_client  # noqa: E402
 from .revision_4 import oq_config
+
+from toshi_hazard_store.config import STORAGE_FOLDER
+from toshi_hazard_store.model.hazard_models_manager import CompatibleHazardCalculationManager, HazardCurveProducerConfigManager
+
+from toshi_hazard_store.model.hazard_models_pydantic import HazardCurveProducerConfig
 
 try:
     from openquake.calculators.extract import Extractor
@@ -71,11 +77,19 @@ S3_URL = None
 REGION = os.getenv('REGION', 'ap-southeast-2')  # SYDNEY
 
 SubtaskRecord = collections.namedtuple('SubtaskRecord', 'gt_id, hazard_calc_id, config_hash, image, hdf5_path, vs30')
+ProducerConfigKey = collections.namedtuple('ProducerConfigKey', 'producer_software, producer_version_id, configuration_hash')
 
+chc_manager = CompatibleHazardCalculationManager(pathlib.Path(STORAGE_FOLDER))
+hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc_manager)
+
+def get_producer_config_key(subtask_info: SubtaskRecord) -> ProducerConfigKey:
+    producer_software = f"{ECR_REGISTRY_ID}/{ECR_REPONAME}"
+    producer_version_id = subtask_info.image['imageDigest'][7:27]  # first 20 bits of hashdigest
+    configuration_hash = subtask_info.config_hash
+    return ProducerConfigKey(producer_software, producer_version_id, configuration_hash)
 
 def handle_import_subtask_rev4(
     subtask_info: 'SubtaskRecord',
-    partition,
     compatible_calc,
     target,
     output_folder,
@@ -90,39 +104,43 @@ def handle_import_subtask_rev4(
 
     extractor = None
 
-    producer_software = f"{ECR_REGISTRY_ID}/{ECR_REPONAME}"
-    producer_version_id = subtask_info.image['imageDigest'][7:27]  # first 20 bits of hashdigest
-    configuration_hash = subtask_info.config_hash
-    pc_key = (partition, f"{producer_software}:{producer_version_id}:{configuration_hash}")
+    hpc_key = get_producer_config_key(subtask_info)
+    hpc_md5 = hashlib.md5(str(hpc_key).encode())
 
-    producer_config = get_producer_config(pc_key, compatible_calc)
+    try:
+        producer_config = hpc_manager.load(hpc_md5.hexdigest())
+    except (FileNotFoundError):
+        pass
+        producer_config = None
+
     if producer_config:
         if verbose:
-            click.echo(f'found producer_config {pc_key} ')
+            click.echo(f'found producer_config {str(hpc_key)} ')
         if update:
             producer_config.notes = "notes 2"
-            producer_config.save()
-            click.echo(f'updated producer_config {pc_key} ')
-
-    if producer_config is None:
-        producer_config = create_producer_config(
-            partition_key=partition,
-            compatible_calc=compatible_calc,
+            hpc_manager.update(producer_config.unique_id, producer_config)
+            click.echo(f'updated producer_config {producer_config.unique_id,} ')
+    else:
+        producer_config = HazardCurveProducerConfig(
+            unique_id=hpc_md5.hexdigest(),
+            compatible_calc_fk=compatible_calc.unique_id,
             extractor=extractor,
             tags=subtask_info.image['imageTags'],
             effective_from=subtask_info.image['imagePushedAt'],
             last_used=subtask_info.image['lastRecordedPullTime'],
-            producer_software=producer_software,
-            producer_version_id=producer_version_id,
-            configuration_hash=configuration_hash,
+            producer_software=hpc_key.producer_software,
+            producer_version_id=hpc_key.producer_version_id,
+            configuration_hash=hpc_key.configuration_hash,
             # configuration_data=config.config_hash,
             notes="notes",
             dry_run=dry_run,
         )
+        hpc_manager.create(producer_config)
         if verbose:
             click.echo(
-                f"New Model {producer_config} has foreign key ({producer_config.partition_key},"
-                f" {producer_config.range_key})"
+                f"{producer_config.unique_id} has foreign key "
+                f" {producer_config.compatible_calc_fk}"
+                f" {producer_config.updated_at})"
             )
 
     if with_rlzs:
@@ -131,8 +149,8 @@ def handle_import_subtask_rev4(
             model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
                 hdf5_file=str(subtask_info.hdf5_path),
                 calculation_id=subtask_info.hazard_calc_id,
-                compatible_calc_fk=compatible_calc.foreign_key()[1],  # TODO DROPPING the partition = awkward!
-                producer_config_fk=producer_config.foreign_key()[1],  # DROPPING the partition
+                compatible_calc_fk=compatible_calc.unique_id,
+                producer_config_fk=hpc_md5.hexdigest(),
                 use_64bit_values=use_64bit_values,
             )
             pyarrow_dataset.append_models_to_dataset(model_generator, output_folder)
@@ -170,7 +188,7 @@ def handle_subtasks(
         ECR_REPONAME, oldest_image_date=dt.datetime(2023, 3, 20, tzinfo=dt.timezone.utc)
     ).fetch()
 
-    fast_forward = True
+    fast_forward = False
     for task_id in subtask_ids:
 
         # completed already
@@ -184,10 +202,11 @@ def handle_subtasks(
         #     continue
         # # problems
 
-        if task_id == 'T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NTA4' and fast_forward:
-            fast_forward = False
-        else:
-            continue
+        if fast_forward:
+            if task_id == 'T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NTA4':
+                fast_forward = False
+            else:
+                continue
 
         query_res = gtapi.get_oq_hazard_task(task_id)
         log.debug(query_res)
@@ -227,16 +246,13 @@ def handle_subtasks(
 def main():
     """Import NSHM Model hazard curves to new revision 4 models."""
 
-
 @main.command()
 @click.argument('gt_list', type=click.File('rb'))
-@click.argument('partition')
 @click.option(
     '--compatible_calc_fk',
     '-CCF',
-    default="A_A",
     required=True,
-    help="foreign key of the compatible_calc in form `A_B`",
+    help="foreign key of the compatible_calc",
 )
 @click.option('-v', '--verbose', is_flag=True, default=False)
 @click.option('-d', '--dry-run', is_flag=True, default=False)
@@ -244,7 +260,6 @@ def main():
 def prod_from_gtfile(
     context,
     gt_list,
-    partition,
     compatible_calc_fk,
     # update,
     # software, version, hashed, config, notes,
@@ -258,7 +273,6 @@ def prod_from_gtfile(
         context.invoke(
             producers,
             gt_id=gt_id.decode().strip(),
-            partition=partition,
             compatible_calc_fk=compatible_calc_fk,
             update=False,
             # software, version, hashed, config, notes,
@@ -270,7 +284,6 @@ def prod_from_gtfile(
 
 @main.command()
 @click.argument('gt_id')
-@click.argument('partition')
 @click.option(
     '-T',
     '--target',
@@ -288,9 +301,8 @@ def prod_from_gtfile(
 @click.option(
     '--compatible_calc_fk',
     '-CCF',
-    default="A_A",
     required=True,
-    help="foreign key of the compatible_calc in form `A_B`",
+    help="foreign key of the compatible_calc",
 )
 @click.option(
     '--update',
@@ -312,7 +324,6 @@ def prod_from_gtfile(
 def producers(
     # model_id,
     gt_id,
-    partition,
     target,
     work_folder,
     output_folder,
@@ -360,13 +371,13 @@ def producers(
             continue
 
         # normal processing
-        compatible_calc = get_compatible_calc(compatible_calc_fk.split("_"))
-        # print("CC ", compatible_calc)
-        if compatible_calc is None:
-            raise ValueError(f'compatible_calc: {compatible_calc_fk} was not found')
+        compatible_calc = chc_manager.load(compatible_calc_fk)
+
+        if verbose:
+            click.echo(f'Compatible calc: {compatible_calc}')
+
         handle_import_subtask_rev4(
             subtask_info,
-            partition,
             compatible_calc,
             target,
             output_folder,
