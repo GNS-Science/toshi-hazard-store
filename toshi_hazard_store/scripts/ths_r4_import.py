@@ -34,23 +34,18 @@ from typing import Iterable
 
 import click
 
-from toshi_hazard_store.config import ECR_REGISTRY_ID, ECR_REPONAME
-from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
-from toshi_hazard_store.oq_import import (  # noqa: E402
-    create_producer_config,
-    export_rlzs_rev4,
-    get_compatible_calc,
-    get_producer_config,
+from toshi_hazard_store.config import ECR_REGISTRY_ID, ECR_REPONAME, STORAGE_FOLDER
+from toshi_hazard_store.model.hazard_models_manager import (
+    CompatibleHazardCalculationManager,
+    HazardCurveProducerConfigManager,
 )
+from toshi_hazard_store.model.hazard_models_pydantic import HazardCurveProducerConfig
+from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
+from toshi_hazard_store.oq_import import export_rlzs_rev4  # noqa: E402
 
 from .revision_4 import aws_ecr_docker_image as aws_ecr
 from .revision_4 import toshi_api_client  # noqa: E402
 from .revision_4 import oq_config
-
-from toshi_hazard_store.config import STORAGE_FOLDER
-from toshi_hazard_store.model.hazard_models_manager import CompatibleHazardCalculationManager, HazardCurveProducerConfigManager
-
-from toshi_hazard_store.model.hazard_models_pydantic import HazardCurveProducerConfig
 
 try:
     from openquake.calculators.extract import Extractor
@@ -77,16 +72,20 @@ S3_URL = None
 REGION = os.getenv('REGION', 'ap-southeast-2')  # SYDNEY
 
 SubtaskRecord = collections.namedtuple('SubtaskRecord', 'gt_id, hazard_calc_id, config_hash, image, hdf5_path, vs30')
-ProducerConfigKey = collections.namedtuple('ProducerConfigKey', 'producer_software, producer_version_id, configuration_hash')
+ProducerConfigKey = collections.namedtuple(
+    'ProducerConfigKey', 'producer_software, producer_version_id, configuration_hash'
+)
 
 chc_manager = CompatibleHazardCalculationManager(pathlib.Path(STORAGE_FOLDER))
 hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc_manager)
+
 
 def get_producer_config_key(subtask_info: SubtaskRecord) -> ProducerConfigKey:
     producer_software = f"{ECR_REGISTRY_ID}/{ECR_REPONAME}"
     producer_version_id = subtask_info.image['imageDigest'][7:27]  # first 20 bits of hashdigest
     configuration_hash = subtask_info.config_hash
     return ProducerConfigKey(producer_software, producer_version_id, configuration_hash)
+
 
 def handle_import_subtask_rev4(
     subtask_info: 'SubtaskRecord',
@@ -109,7 +108,7 @@ def handle_import_subtask_rev4(
 
     try:
         producer_config = hpc_manager.load(hpc_md5.hexdigest())
-    except (FileNotFoundError):
+    except FileNotFoundError:
         pass
         producer_config = None
 
@@ -118,13 +117,12 @@ def handle_import_subtask_rev4(
             click.echo(f'found producer_config {str(hpc_key)} ')
         if update:
             producer_config.notes = "notes 2"
-            hpc_manager.update(producer_config.unique_id, producer_config)
+            hpc_manager.update(producer_config.unique_id, producer_config.model_dump())
             click.echo(f'updated producer_config {producer_config.unique_id,} ')
     else:
         producer_config = HazardCurveProducerConfig(
             unique_id=hpc_md5.hexdigest(),
             compatible_calc_fk=compatible_calc.unique_id,
-            extractor=extractor,
             tags=subtask_info.image['imageTags'],
             effective_from=subtask_info.image['imagePushedAt'],
             last_used=subtask_info.image['lastRecordedPullTime'],
@@ -133,7 +131,6 @@ def handle_import_subtask_rev4(
             configuration_hash=hpc_key.configuration_hash,
             # configuration_data=config.config_hash,
             notes="notes",
-            dry_run=dry_run,
         )
         hpc_manager.create(producer_config)
         if verbose:
@@ -245,6 +242,7 @@ def handle_subtasks(
 @click.group()
 def main():
     """Import NSHM Model hazard curves to new revision 4 models."""
+
 
 @main.command()
 @click.argument('gt_list', type=click.File('rb'))

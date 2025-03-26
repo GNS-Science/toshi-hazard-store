@@ -1,105 +1,34 @@
 import datetime as dt
 import json
 import logging
+import pathlib
 import random
-
-# from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
-from toshi_hazard_store.config import NUM_BATCH_WORKERS
-from toshi_hazard_store.model.revision_4 import hazard_models, hazard_realization_curve
+from toshi_hazard_store.config import NUM_BATCH_WORKERS, STORAGE_FOLDER
+from toshi_hazard_store.model.hazard_models_manager import (
+    CompatibleHazardCalculationManager,
+    HazardCurveProducerConfigManager,
+)
+from toshi_hazard_store.model.hazard_models_pydantic import CompatibleHazardCalculation, HazardCurveProducerConfig
+from toshi_hazard_store.model.revision_4 import hazard_realization_curve
 from toshi_hazard_store.multi_batch import save_parallel
 from toshi_hazard_store.utils import normalise_site_code
 
 from .parse_oq_realizations import build_rlz_mapper
+
+chc_manager = CompatibleHazardCalculationManager(pathlib.Path(STORAGE_FOLDER))
+hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc_manager)
 
 log = logging.getLogger(__name__)
 
 BATCH_SIZE = random.randint(15, 50)
 
 
-def create_producer_config(
-    partition_key: str,
-    compatible_calc: hazard_models.CompatibleHazardCalculation,
-    extractor,
-    producer_software: str,
-    producer_version_id: str,
-    configuration_hash: str,
-    tags: Optional[List[str]] = None,
-    effective_from: Optional[dt.datetime] = None,
-    last_used: Optional[dt.datetime] = None,
-    configuration_data: Optional[str] = "",
-    notes: Optional[str] = "",
-    dry_run: bool = False,
-) -> 'hazard_models.HazardCurveProducerConfig':
-    # first check the Foreign Key is OK
-    mCHC = hazard_models.CompatibleHazardCalculation
-
-    if next(mCHC.query(compatible_calc.foreign_key()[0], mCHC.uniq_id == compatible_calc.foreign_key()[1])) is None:
-        raise ValueError(f'compatible_calc: {compatible_calc.foreign_key()} was not found')
-
-    mHCPC = hazard_models.HazardCurveProducerConfig
-
-    # we use the extractor to load template imts and IMT levels
-    if extractor:
-        oq = json.loads(extractor.get('oqparam').json)
-        imtls = oq['hazard_imtls']  # dict of imt and the levels used at each imt e.g {'PGA': [0.011. 0.222]}
-
-    imts = list(imtls.keys()) if extractor else []
-    imt_levels = imtls[imts[0]] if extractor else []
-
-    m = mHCPC(
-        partition_key=partition_key,
-        compatible_calc_fk=compatible_calc.foreign_key(),
-        producer_software=producer_software,
-        producer_version_id=producer_version_id,
-        tags=tags,
-        effective_from=effective_from,
-        last_used=last_used,
-        configuration_hash=configuration_hash,
-        configuration_data=configuration_data,
-        imts=imts,
-        imt_levels=imt_levels,
-        notes=notes,
-    )
-    m.range_key = f"{producer_software}:{producer_version_id}:{configuration_hash}"
-    if not dry_run:
-        m.save()
-    return m
-
-
-def get_compatible_calc(foreign_key: Tuple[str, str]) -> Optional[hazard_models.CompatibleHazardCalculation]:
-    try:
-        mCHC = hazard_models.CompatibleHazardCalculation
-        return next(mCHC.query(foreign_key[0], mCHC.uniq_id == foreign_key[1]))
-    except StopIteration:
-        return None
-
-
-def get_producer_config(
-    foreign_key: Tuple[str, str], compatible_calc: hazard_models.CompatibleHazardCalculation
-) -> Optional[hazard_models.HazardCurveProducerConfig]:
-    mHCPC = hazard_models.HazardCurveProducerConfig
-    # print(compatible_calc)
-    # print(type(compatible_calc))
-    # print(compatible_calc.foreign_key)
-    assert isinstance(compatible_calc, hazard_models.CompatibleHazardCalculation)
-    try:
-        return next(
-            mHCPC.query(
-                foreign_key[0],
-                mHCPC.range_key == foreign_key[1],
-                mHCPC.compatible_calc_fk == compatible_calc.foreign_key(),  # filter_condition
-            )
-        )
-    except StopIteration:
-        return None
-
-
 def export_rlzs_rev4(
     extractor,
-    compatible_calc: hazard_models.CompatibleHazardCalculation,
-    producer_config: hazard_models.HazardCurveProducerConfig,
+    compatible_calc: CompatibleHazardCalculation,
+    producer_config: HazardCurveProducerConfig,
     hazard_calc_id: str,
     vs30: int,
     return_rlz=True,
@@ -107,33 +36,33 @@ def export_rlzs_rev4(
 ) -> Union[List[hazard_realization_curve.HazardRealizationCurve], None]:
 
     # first check the FKs are available
-    if get_compatible_calc(compatible_calc.foreign_key()) is None:
-        raise ValueError(f'compatible_calc: {compatible_calc.foreign_key()} was not found')
-
-    if get_producer_config(producer_config.foreign_key(), compatible_calc) is None:
-        raise ValueError(f'producer_config {producer_config} was not found')
+    hpc = hpc_manager.load(producer_config.unique_id)
+    assert hpc.compatible_calc_fk == compatible_calc.unique_id
 
     oq = json.loads(extractor.get('oqparam').json)
     sites = extractor.get('sitecol').to_dframe()
     rlzs = extractor.get('hcurves?kind=rlzs', asdict=True)
 
-    rlz_keys = [k for k in rlzs.keys() if 'rlz-' in k]
-    imtls = oq['hazard_imtls']  # dict of imt and the levels used at each imt e.g {'PGA': [0.011. 0.222]}
+    ###########################################################
+    # TODO: this code block has merit, but is on hold for now
+    #
+    # rlz_keys = [k for k in rlzs.keys() if 'rlz-' in k]
+    # imtls = oq['hazard_imtls']  # dict of imt and the levels used at each imt e.g {'PGA': [0.011. 0.222]}
 
-    if not set(producer_config.imts).issuperset(set(imtls.keys())):
-
-        if not update_producer:
-            log.error(f'imts do not align {imtls.keys()} <=> {producer_config.imts}')
-            raise ValueError('bad IMT configuration')
-        else:
-            # update producer
-            producer_config.imts = list(set(producer_config.imts).union(set(imtls.keys())))
-            imtl_values = set()
-            for values in imtls.values():
-                imtl_values.update(set(values))
-            producer_config.imt_levels = list(set(producer_config.imt_levels).union(imtl_values))
-            producer_config.save()
-            log.debug(f'updated: {producer_config}')
+    # if not set(producer_config.imts).issuperset(set(imtls.keys())):
+    #     if not update_producer:
+    #         log.error(f'imts do not align {imtls.keys()} <=> {producer_config.imts}')
+    #         raise ValueError('bad IMT configuration')
+    #     else:
+    #         # update producer
+    #         producer_config.imts = list(set(producer_config.imts).union(set(imtls.keys())))
+    #         imtl_values = set()
+    #         for values in imtls.values():
+    #             imtl_values.update(set(values))
+    #         producer_config.imt_levels = list(set(producer_config.imt_levels).union(imtl_values))
+    #         producer_config.save()
+    #         log.debug(f'updated: {producer_config}')
+    ###########################################################
 
     rlz_map = build_rlz_mapper(extractor)
 
