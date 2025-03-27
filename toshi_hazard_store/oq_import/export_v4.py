@@ -1,9 +1,8 @@
-import datetime as dt
 import json
 import logging
 import pathlib
 import random
-from typing import List, Optional, Tuple, Union
+from typing import List, Union
 
 from toshi_hazard_store.config import NUM_BATCH_WORKERS, STORAGE_FOLDER
 from toshi_hazard_store.model.hazard_models_manager import (
@@ -43,11 +42,12 @@ def export_rlzs_rev4(
     sites = extractor.get('sitecol').to_dframe()
     rlzs = extractor.get('hcurves?kind=rlzs', asdict=True)
 
+    rlz_keys = [k for k in rlzs.keys() if 'rlz-' in k]
+    imtls = oq['hazard_imtls']  # dict of imt and the levels used at each imt e.g {'PGA': [0.011. 0.222]}
+
     ###########################################################
     # TODO: this code block has merit, but is on hold for now
     #
-    # rlz_keys = [k for k in rlzs.keys() if 'rlz-' in k]
-    # imtls = oq['hazard_imtls']  # dict of imt and the levels used at each imt e.g {'PGA': [0.011. 0.222]}
 
     # if not set(producer_config.imts).issuperset(set(imtls.keys())):
     #     if not update_producer:
