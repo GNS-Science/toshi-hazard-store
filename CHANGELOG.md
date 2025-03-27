@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.0-alpha-*]
+## [1.0.0-alpha-0]
 ### Added
  - local json storage with pydantic models CompatibleHazardCalculation, HazardCurveProducerConfig
  - new `ths_compat script` to maintain CompatibleHazardCalculation models
