@@ -1,8 +1,20 @@
 # Changelog
 
+## [1.0.0-alpha-*]
+### Added
+ - local json storage with pydantic models CompatibleHazardCalculation, HazardCurveProducerConfig
+ - new `ths_compat script` to maintain CompatibleHazardCalculation models
+
+### Changed
+ - import script (ths_import) uses new json storage
+
+### Removed
+ - v3 -> v4 migration code
+ - use of DynamoDB for V4+ models 
+
 ## [1.0.0-alpha]
 ### Removed
- - support fo local storage (sqlite)
+ - support for local storage (sqlite)
  - support for local cache
  - db_adapter
 
