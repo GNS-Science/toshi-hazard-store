@@ -41,16 +41,11 @@ from toshi_hazard_store.model.hazard_models_manager import (
 )
 from toshi_hazard_store.model.hazard_models_pydantic import HazardCurveProducerConfig
 from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
-from toshi_hazard_store.oq_import import export_rlzs_rev4  # noqa: E402
 
 from .revision_4 import aws_ecr_docker_image as aws_ecr
 from .revision_4 import toshi_api_client  # noqa: E402
 from .revision_4 import oq_config
 
-try:
-    from openquake.calculators.extract import Extractor
-except (ModuleNotFoundError, ImportError):
-    print("WARNING: the transform module uses the optional openquake dependencies - h5py, pandas and openquake.")
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pynamodb').setLevel(logging.INFO)
@@ -87,21 +82,9 @@ def get_producer_config_key(subtask_info: SubtaskRecord) -> ProducerConfigKey:
     return ProducerConfigKey(producer_software, producer_version_id, configuration_hash)
 
 
-def handle_import_subtask_rev4(
-    subtask_info: 'SubtaskRecord',
-    compatible_calc,
-    target,
-    output_folder,
-    verbose,
-    update,
-    with_rlzs,
-    dry_run=False,
-    use_64bit_values=False,
-):
+def build_producers(subtask_info: 'SubtaskRecord', compatible_calc, verbose, update):
     if verbose:
         click.echo(subtask_info)
-
-    extractor = None
 
     hpc_key = get_producer_config_key(subtask_info)
     hpc_md5 = hashlib.md5(str(hpc_key).encode())
@@ -118,7 +101,8 @@ def handle_import_subtask_rev4(
         if update:
             producer_config.notes = "notes 2"
             hpc_manager.update(producer_config.unique_id, producer_config.model_dump())
-            click.echo(f'updated producer_config {producer_config.unique_id,} ')
+            if verbose:
+                click.echo(f'updated producer_config {producer_config.unique_id,} ')
     else:
         producer_config = HazardCurveProducerConfig(
             unique_id=hpc_md5.hexdigest(),
@@ -140,30 +124,30 @@ def handle_import_subtask_rev4(
                 f" {producer_config.updated_at})"
             )
 
-    if with_rlzs:
-        if target == 'ARROW':
-            # this uses the direct to parquet dataset exporter, approx 100times faster
-            model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
-                hdf5_file=str(subtask_info.hdf5_path),
-                calculation_id=subtask_info.hazard_calc_id,
-                compatible_calc_fk=compatible_calc.unique_id,
-                producer_config_fk=hpc_md5.hexdigest(),
-                use_64bit_values=use_64bit_values,
-            )
-            pyarrow_dataset.append_models_to_dataset(model_generator, output_folder)
-        else:
-            # this uses the pynamodb model exporter
-            extractor = Extractor(str(subtask_info.hdf5_path))
-            export_rlzs_rev4(
-                extractor,
-                compatible_calc=compatible_calc,
-                producer_config=producer_config,
-                hazard_calc_id=subtask_info.hazard_calc_id,
-                vs30=subtask_info.vs30,
-                return_rlz=False,
-                update_producer=True,
-            )
-            print(f"exported all models in {subtask_info.hdf5_path.parent.name} to {target}")
+
+def build_realisations(
+    subtask_info: 'SubtaskRecord',
+    compatible_calc,
+    output_folder,
+    verbose,
+    use_64bit_values=False,
+):
+    if verbose:
+        click.echo(subtask_info)
+
+    hpc_key = get_producer_config_key(subtask_info)
+    hpc_md5 = hashlib.md5(str(hpc_key).encode())
+
+    producer_config = hpc_manager.load(hpc_md5.hexdigest())
+
+    model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
+        hdf5_file=str(subtask_info.hdf5_path),
+        calculation_id=subtask_info.hazard_calc_id,
+        compatible_calc_fk=compatible_calc.unique_id,
+        producer_config_fk=producer_config.unique_id,
+        use_64bit_values=use_64bit_values,
+    )
+    pyarrow_dataset.append_models_to_dataset(model_generator, output_folder)
 
 
 def handle_subtasks(
@@ -245,108 +229,28 @@ def main():
 
 
 @main.command()
-@click.argument('gt_list', type=click.File('rb'))
-@click.option(
-    '--compatible_calc_fk',
-    '-CCF',
-    required=True,
-    help="foreign key of the compatible_calc",
-)
-@click.option('-v', '--verbose', is_flag=True, default=False)
-@click.option('-d', '--dry-run', is_flag=True, default=False)
-@click.pass_context
-def prod_from_gtfile(
-    context,
-    gt_list,
-    compatible_calc_fk,
-    # update,
-    # software, version, hashed, config, notes,
-    verbose,
-    dry_run,
-):
-    """Prepare and validate Producer Configs a given file of GT_IDa in a PARTITION"""
-    for gt_id in gt_list:
-        click.echo(F"call producers for {gt_id.decode().strip()}")
-        # continue
-        context.invoke(
-            producers,
-            gt_id=gt_id.decode().strip(),
-            compatible_calc_fk=compatible_calc_fk,
-            update=False,
-            # software, version, hashed, config, notes,
-            verbose=verbose,
-            dry_run=dry_run,
-        )
-    click.echo("ALL DONE")
-
-
-@main.command()
 @click.argument('gt_id')
-@click.option(
-    '-T',
-    '--target',
-    type=click.Choice(['AWS', 'LOCAL', 'ARROW'], case_sensitive=False),
-    default='LOCAL',
-    help="set the target store. defaults to LOCAL. ARROW produces parquet instead of dynamoDB tables",
-)
+@click.argument('compatible_calc_fk')
 @click.option('-W', '--work_folder', default=lambda: os.getcwd(), help="defaults to current directory")
-@click.option(
-    '-O',
-    '--output_folder',
-    type=click.Path(path_type=pathlib.Path, exists=False),
-    help="arrow target folder (only used with `-T ARROW`",
-)
-@click.option(
-    '--compatible_calc_fk',
-    '-CCF',
-    required=True,
-    help="foreign key of the compatible_calc",
-)
 @click.option(
     '--update',
     '-U',
     is_flag=True,
     default=False,
-    help="overwrite existing producer record (versioned table).",
-)
-@click.option(
-    '--with_rlzs',
-    '-R',
-    is_flag=True,
-    default=False,
-    help="also get the realisations",
+    help="overwrite existing producer record.",
 )
 @click.option('-v', '--verbose', is_flag=True, default=False)
-@click.option('-d', '--dry-run', is_flag=True, default=False)
-@click.option('-f64', '--use_64bit', is_flag=True, default=False)
-def producers(
-    # model_id,
-    gt_id,
-    target,
-    work_folder,
-    output_folder,
-    compatible_calc_fk,
-    update,
-    with_rlzs,
-    # process_v3,
-    # software, version, hashed, config, notes,
-    verbose,
-    dry_run,
-    use_64bit,
-):
-    """Prepare and validate Producer Configs for a given GT_ID in a PARTITION
+def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
+    r"""Prepare and validate Producer Configs a given GT_ID
 
     GT_ID is an NSHM General task id containing HazardAutomation Tasks\n
-    PARTITION is a table partition (hash)
+    compatible_calc_fk is the unique key of the compatible_calc
 
-    Notes:\n
-    - pull the configs and check we have a compatible producer config\n
+    Notes:
+    - pull the configs and check we have a compatible producer config
     - optionally, create any new producer configs
+
     """
-
-    # if verbose:
-    #    echo_settings(work_folder)
-
     headers = {"x-api-key": API_KEY}
     gtapi = toshi_api_client.ApiClient(API_URL, None, with_schema_validation=False, headers=headers)
 
@@ -360,10 +264,64 @@ def producers(
     # query the API for general task and
     query_res = gtapi.get_gt_subtasks(gt_id)
 
-    count = 0
-    for subtask_info in handle_subtasks(gt_id, gtapi, get_hazard_task_ids(query_res), work_folder, with_rlzs, verbose):
+    compatible_calc = chc_manager.load(compatible_calc_fk)
 
+    count = 0
+    for subtask_info in handle_subtasks(
+        gt_id, gtapi, get_hazard_task_ids(query_res), work_folder, with_rlzs=False, verbose=verbose
+    ):
         count += 1
+        build_producers(subtask_info, compatible_calc, verbose, update)
+
+
+@main.command()
+@click.argument('gt_id')
+@click.argument('compatible_calc_fk')
+@click.option('-W', '--work_folder', default=lambda: os.getcwd(), help="defaults to current directory")
+@click.option(
+    '-O',
+    '--output_folder',
+    type=click.Path(path_type=pathlib.Path, exists=False),
+    help="arrow target folder (only used with `-T ARROW`",
+)
+@click.option('-v', '--verbose', is_flag=True, default=False)
+@click.option('-d', '--dry-run', is_flag=True, default=False)
+@click.option('-f64', '--use_64bit', is_flag=True, default=False)
+def rlzs(
+    gt_id,
+    compatible_calc_fk,
+    work_folder,
+    output_folder,
+    verbose,
+    dry_run,
+    use_64bit,
+):
+    """Prepare and validate Producer Configs for a given GT_ID
+
+    GT_ID is an NSHM General task id containing HazardAutomation Tasks\n
+    compatible_calc_fk is the unique key of the compatible_calc
+
+    Notes:\n
+    - pull the configs and check we have a compatible producer config\n
+    - optionally, create any new producer configs
+    """
+
+    headers = {"x-api-key": API_KEY}
+    gtapi = toshi_api_client.ApiClient(API_URL, None, with_schema_validation=False, headers=headers)
+
+    if verbose:
+        click.echo('fetching General Task subtasks')
+
+    def get_hazard_task_ids(query_res):
+        for edge in query_res['children']['edges']:
+            yield edge['node']['child']['id']
+
+    # query the API for general task and
+    query_res = gtapi.get_gt_subtasks(gt_id)
+    count = 0
+    for subtask_info in handle_subtasks(
+        gt_id, gtapi, get_hazard_task_ids(query_res), work_folder, with_rlzs=True, verbose=verbose
+    ):
         if dry_run:
             click.echo(f'DRY RUN. otherwise, would be processing subtask {count} {subtask_info} ')
             continue
@@ -374,17 +332,8 @@ def producers(
         if verbose:
             click.echo(f'Compatible calc: {compatible_calc}')
 
-        handle_import_subtask_rev4(
-            subtask_info,
-            compatible_calc,
-            target,
-            output_folder,
-            verbose,
-            update,
-            with_rlzs,
-            dry_run,
-            use_64bit,
-        )
+        build_realisations(subtask_info, compatible_calc, output_folder, verbose, use_64bit)
+        count += 1
 
 
 if __name__ == "__main__":
