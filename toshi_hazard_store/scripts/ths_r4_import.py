@@ -46,7 +46,6 @@ from .revision_4 import aws_ecr_docker_image as aws_ecr
 from .revision_4 import toshi_api_client  # noqa: E402
 from .revision_4 import oq_config
 
-
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pynamodb').setLevel(logging.INFO)
 logging.getLogger('botocore').setLevel(logging.INFO)

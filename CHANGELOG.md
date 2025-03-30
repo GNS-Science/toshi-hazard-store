@@ -14,7 +14,9 @@
  - ths_r4_migrate script
  - store_hazard_v4 script
  - migrate_v3_to_v4 module (dynamodb specific)
-
+ - sanity_csv_vs_hdf5.py module
+ - export_rlzs_v3() method and tests
+ 
 ## [1.0.0-alpha]
 ### Removed
  - support for local storage (sqlite)
