@@ -6,11 +6,14 @@
  - new `ths_compat script` to maintain CompatibleHazardCalculation models
 
 ### Changed
- - import script (ths_import) uses new json storage
+ - import script (ths_import) uses new json storage classes for meta tables.
 
 ### Removed
  - v3 -> v4 migration code
  - use of DynamoDB for V4+ models 
+ - ths_r4_migrate script
+ - store_hazard_v4 script
+ - migrate_v3_to_v4 module (dynamodb specific)
 
 ## [1.0.0-alpha]
 ### Removed
