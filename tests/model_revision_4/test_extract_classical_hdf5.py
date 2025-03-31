@@ -3,8 +3,7 @@ from pathlib import Path
 
 import pyarrow.dataset as ds
 import pytest
-from nzshm_common.location import coded_location, location
-
+from nzshm_common.location import location
 try:
     import openquake  # noqa
 
@@ -20,59 +19,36 @@ from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_gmm_map
 from toshi_hazard_store.transform import parse_logic_tree_branches
 
 
-@pytest.mark.skip('showing my working')
-def test_binning_locations():
+def build_maps(hdf5_file):
+    extractor = Extractor(str(hdf5_file))
+    # oqparam = json.loads(extractor.get('oqparam').json)
+    source_lt, gsim_lt, rlz_lt = parse_logic_tree_branches(extractor)
 
-    # from nzshm_common.location import coded_location
-    good_file = Path(__file__).parent.parent / 'fixtures' / 'oq_import' / 'calc_1.hdf5'
-    extractor = Extractor(str(good_file))
-
-    nloc_001_locations = []
-    for props in extractor.get('sitecol').to_dict()['array']:
-        site_loc = coded_location.CodedLocation(lat=props[2], lon=props[1], resolution=0.001)
-        nloc_001_locations.append(site_loc)  # locations in OG order
-
-    nloc_0_map = extract_classical_hdf5.build_nloc_0_mapping(nloc_001_locations)
-    print(nloc_0_map)
-    nloc_0_series = extract_classical_hdf5.build_nloc0_series(nloc_001_locations, nloc_0_map)
-    print(nloc_0_series)
-    # nloc_0_dict = extract_classical_hdf5.build_nloc_0_dictionary(nloc_001_locations, nloc_0_map)
-    # print(nloc_0_dict)
-
-    assert 0
+    # check gsims
+    build_rlz_gmm_map(gsim_lt)
+    # check sources
+    try:
+        build_rlz_source_map(source_lt)
+    except KeyError as exc:
+        print(exc)
+        raise
+        # return False
+    return True
 
 
-@pytest.mark.skip('large inputs not checked in')
 def test_logic_tree_registry_lookup():
-
     good_file = Path(__file__).parent.parent / 'fixtures' / 'oq_import' / 'calc_1.hdf5'
+    assert build_maps(good_file)
+
+
+@pytest.mark.skip('fixtures not checked in')
+def test_logic_tree_registry_lookup_bad_examples():
 
     disagg = Path('/GNSDATA/LIB/toshi-hazard-store/WORKING/DISAGG')
     bad_file_1 = disagg / 'calc_1.hdf5'
-    bad_file_2 = disagg / 'openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazoxMDYzMzU3' / 'calc_1.hdf5'
+    # bad_file_2 = disagg / 'openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazoxMDYzMzU3' / 'calc_1.hdf5'
     bad_file_3 = disagg / 'openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTI2MTg2' / 'calc_1.hdf5'
     bad_file_4 = disagg / 'openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazoxMzU5MTQ1' / 'calc_1.hdf5'
-
-    # rewrite_calc_gsims(bad_file_4)
-    # assert 0
-
-    def build_maps(hdf5_file):
-        extractor = Extractor(str(hdf5_file))
-        # oqparam = json.loads(extractor.get('oqparam').json)
-        source_lt, gsim_lt, rlz_lt = parse_logic_tree_branches(extractor)
-
-        # check gsims
-        build_rlz_gmm_map(gsim_lt)
-        # check sources
-        try:
-            build_rlz_source_map(source_lt)
-        except KeyError as exc:
-            print(exc)
-            raise
-            # return False
-        return True
-
-    assert build_maps(good_file)
 
     # first subtask of first gt in gt_index
     # >>> ValueError: Unknown GSIM: ParkerEtAl2021SInter
@@ -83,7 +59,9 @@ def test_logic_tree_registry_lookup():
     #
     # raises KeyError: 'disaggregation sources'
 
-    assert not build_maps(bad_file_4), "bad_file_4 build map fails"
+    with pytest.raises(KeyError) as exc_info:
+        build_maps(bad_file_4)
+    assert 'disaggregation sources' in str(exc_info)
 
     # first subtask of last gt in gt_index
     # T3BlbnF1YWtlSGF6YXJkVGFzazo2OTI2MTg2 from R2VuZXJhbFRhc2s6NjkwMTk2Mw==
@@ -92,26 +70,29 @@ def test_logic_tree_registry_lookup():
     # Description: Disaggregation NSHM_v1.0.4
     #
     # raises KeyError: '[dm0.7, bN[0.902, 4.6], C4.0, s0.28]'
-
     """
     >>> args = gt_index['R2VuZXJhbFRhc2s6NjkwMTk2Mw==']['arguments']
-
     """
-    assert not build_maps(bad_file_3), "bad_file_3 build map fails"
+    with pytest.raises(KeyError) as exc_info:
+        build_maps(bad_file_3)
+    assert '[dm0.7, bN[0.902, 4.6], C4.0, s0.28]' in str(exc_info)
 
     # 2nd random choice (weird setup) ++ ValueError: Unknown GSIM: ParkerEtAl2021SInter
     # T3BlbnF1YWtlSGF6YXJkVGFzazoxMDYzMzU3 from ??
     # Created: February 2nd, 2023 at 9:22:36 AM GMT+13
     # raises KeyError: 'disaggregation sources'
 
-    assert not build_maps(bad_file_2), "bad_file_2 build map fails"
+    # with pytest.raises(KeyError) as exc_info:
+    #     build_maps(bad_file_2)
+    # assert 'disaggregation sources' in str(exc_info)
 
     # first random choice
     # raises KeyError: '[dmTL, bN[0.95, 16.5], C4.0, s0.42]'
-    assert not build_maps(bad_file_1), "bad_file_1 build map fails"
+    with pytest.raises(KeyError) as exc_info:
+        build_maps(bad_file_1)
+    assert '[dmTL, bN[0.95, 16.5], C4.0, s0.42]' in str(exc_info)
 
 
-@pytest.mark.skip('large inputs not checked in')
 @pytest.mark.skipif(not HAVE_OQ, reason="This test fails if openquake is not installed")
 def test_hdf5_realisations_direct_to_parquet_roundtrip(tmp_path):
 
