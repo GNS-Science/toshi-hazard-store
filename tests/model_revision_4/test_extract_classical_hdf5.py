@@ -4,6 +4,7 @@ from pathlib import Path
 import pyarrow.dataset as ds
 import pytest
 from nzshm_common.location import location
+
 try:
     import openquake  # noqa
 

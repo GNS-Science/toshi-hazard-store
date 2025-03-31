@@ -6,7 +6,10 @@
  - new `ths_compat script` to maintain CompatibleHazardCalculation models
 
 ### Changed
- - import script (ths_import) uses new json storage classes for meta tables.
+ - import script `ths_import` uses new json storage classes for meta tables.
+ - improved `ths_ds_check` script
+ - improved `ths_r4_sanity` script
+ - improved `ths_r4_defrag` script
 
 ### Removed
  - v3 -> v4 migration code
@@ -16,7 +19,8 @@
  - migrate_v3_to_v4 module (dynamodb specific)
  - sanity_csv_vs_hdf5.py module
  - export_rlzs_v3() method and tests
- 
+ - saving any model to DynamoDB
+
 ## [1.0.0-alpha]
 ### Removed
  - support for local storage (sqlite)

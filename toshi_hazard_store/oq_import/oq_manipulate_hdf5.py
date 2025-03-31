@@ -67,3 +67,8 @@ def rewrite_calc_gsims(hdf5_path: pathlib.Path):
         dataset[idx] = migrate_gsim_row(GsimRow(*row))
 
     hdf5_file.close()
+
+
+if __name__ == "__main__":
+    fpath = pathlib.Path('./tests/fixtures/oq_import/calc_9.hdf5')
+    rewrite_calc_gsims(fpath)

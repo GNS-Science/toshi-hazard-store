@@ -34,7 +34,6 @@ def rlz_mapper_from_dataframes(
 
 
 def build_rlz_mapper(extractor: 'Extractor') -> Dict[int, RealizationRecord]:
-    # extractor = Extractor(str(hdf5))
     return rlz_mapper_from_dataframes(*parse_logic_tree_branches(extractor))
 
 
