@@ -14,6 +14,14 @@ log = logging.getLogger()
 
 logging.basicConfig(level=logging.INFO)
 
+DATASET_FORMAT = 'parquet'  # TODO: make this an argument
+MEMORY_WARNING_BYTES = 8e9  # At 8 GB let the user know they might run into trouble!!!
+
+
+def human_size(bytes, units=[' bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']):
+    """Returns a human readable string representation of bytes"""
+    return str(bytes) + units[0] if bytes < 1024 else human_size(bytes >> 10, units[1:])
+
 
 #  _ __ ___   __ _(_)_ __
 # | '_ ` _ \ / _` | | '_ \
@@ -30,57 +38,103 @@ def main(context):
 @main.command()
 @click.argument('dataset0', type=str)
 @click.argument('dataset1', type=str)
+@click.option('-l', '--levels', help="how many partition (folder) levels to subdivide the source folder by", default=0)
 @click.option('--count', '-n', type=int, default=10)
+@click.option('-v', '--verbose', is_flag=True, default=False)
+@click.option('-x', '--exit-on-error', is_flag=True, default=False)
 @click.pass_context
-def rlzs(context, dataset0, dataset1, count):
+def rlzs(context, dataset0, dataset1, levels, count, verbose, exit_on_error):
     """randomly select realisations loc, hazard_id, rlz, source and compare the results
 
-    between two rlz datasets having the hive layers: vs30, nloc_0.
+    between two rlz datasetsn both having the hive layers: vs30, nloc_0.
     """
 
     folder0 = pathlib.Path(dataset0)
     folder1 = pathlib.Path(dataset1)
+
     assert folder0.exists(), f'dataset not found: {dataset0}'
     assert folder1.exists(), f'dataset not found: {dataset1}'
 
-    # random_args_list = list(get_random_args(gt_info, count))
-    segment = 'vs30=275/nloc_0=-37.0~174.0'
-    ds0 = ds.dataset(folder0 / segment, format='parquet', partitioning='hive')
-    ds1 = ds.dataset(folder1 / segment, format='parquet', partitioning='hive')
+    def source_folder_iterator(source_folder, levels):
+        if levels == 0:
+            yield source_folder
+        elif levels == 1:
+            for partition_folder in source_folder.iterdir():
+                yield partition_folder.name
+        elif levels == 2:
+            for folder in source_folder.iterdir():
+                for partition_folder in folder.iterdir():
+                    yield f"{folder.name}/{partition_folder.name}"
+        else:
+            raise NotImplementedError("max of two levels is supported.")
 
-    df = ds0.to_table().to_pandas()
-    imts = df['imt'].unique().tolist()
-    nloc_3s = df['nloc_001'].unique().tolist()
-    # rlzs = df['rlz'].unique().tolist()
-    src_digests = df['sources_digest'].unique().tolist()
+    src_folders = random.choices(population=[s for s in source_folder_iterator(folder0, levels)], k=5)
 
-    ## Random checks
-    for i in range(count):
+    all_checked = 0
+    for sub_folder in src_folders:
 
-        imt = random.choice(imts)
-        # rlz = random.choice(rlzs[:11])
-        nloc_3 = random.choice(nloc_3s)
-        src_digest = random.choice(src_digests)
+        source_folder_a, source_folder_b = (folder0 / sub_folder), (folder1 / sub_folder)
 
-        flt = (pc.field("nloc_001") == nloc_3) & (pc.field("imt") == imt) & (pc.field('sources_digest') == src_digest)
-        # (pc.field('rlz') == rlz) &\
+        assert source_folder_b.exists()
 
-        df0 = ds0.to_table(filter=flt).to_pandas().set_index('rlz').sort_index()
-        df1 = ds1.to_table(filter=flt).to_pandas().set_index('rlz').sort_index()
+        usage = sum(file.stat().st_size for file in source_folder_a.rglob('*'))
+        if usage > MEMORY_WARNING_BYTES:
+            click.echo(f'partition {source_folder_a} has size: {human_size(usage)}.')
+            click.echo('NB. you can use the `--levels` argument to divide this job into smaller chunks.')
+            click.confirm('Do you want to continue?', abort=True)
+        elif verbose:
+            click.echo(f'partition {source_folder_a} has disk size: {human_size(usage)}')
 
-        for idx in range(df0.shape[0]):
-            l0 = df0.iloc[idx]['values']
-            l1 = df1.iloc[idx]['values']
-            if not (l0 == l1).all():
-                print("l0 and l1 differ... ")
-                print((l0 == l1))
+        # random_args_list = list(get_random_args(gt_info, count))
+        ds0 = ds.dataset(source_folder_a, format='parquet', partitioning='hive')
+        ds1 = ds.dataset(source_folder_b, format='parquet', partitioning='hive')
 
-                print()
-                print(f'l0: {df0.iloc[idx]}')
-                print()
-                print(f'l1: {df1.iloc[idx]}')
+        df = ds0.to_table().to_pandas()
 
-                assert 0
+        imts = df['imt'].unique().tolist()
+        nloc_3s = df['nloc_001'].unique().tolist()
+        src_digests = df['sources_digest'].unique().tolist()
+
+        ## Random checks
+        partition_checked = 0
+        for i in range(count):
+
+            imt = random.choice(imts)
+            nloc_3 = random.choice(nloc_3s)
+            src_digest = random.choice(src_digests)
+
+            flt = (
+                (pc.field("nloc_001") == nloc_3) & (pc.field("imt") == imt) & (pc.field('sources_digest') == src_digest)
+            )
+
+            if verbose:
+                click.echo(f'Checking values for {flt}')
+
+            df0 = ds0.to_table(filter=flt).to_pandas().set_index('rlz').sort_index()
+            df1 = ds1.to_table(filter=flt).to_pandas().set_index('rlz').sort_index()
+
+            for idx in range(df0.shape[0]):
+                l0 = df0.iloc[idx]['values']
+                l1 = df1.iloc[idx]['values']
+                if not (l0 == l1).all():
+                    click.echo("\tl0 and l1 differ... ")
+                    click.echo((l0 == l1))
+
+                    click.echo()
+                    click.echo(f'\tl0: {df0.iloc[idx]}')
+                    click.echo()
+                    click.echo(f'\tl1: {df1.iloc[idx]}')
+
+                    if exit_on_error:
+                        break
+                partition_checked += 1
+                all_checked += 1
+
+        if verbose:
+            click.echo(f'Checked {partition_checked} random value arrays from {flt}.')
+
+    if verbose:
+        click.echo(f'Checked {all_checked} random value arrays in total.')
 
 
 @main.command()

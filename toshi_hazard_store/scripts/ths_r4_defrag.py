@@ -58,19 +58,15 @@ def write_metadata(base_path, visited_file):
 @click.command()
 @click.argument('source')
 @click.argument('target')
-@click.option('-l', '--levels', help="how many partition (folder) levels to subdivide the source folder by", default=0)
-@click.option("-p", "--parts", help="comma-separated list of partition keys", default="")
+@click.option("-p", "--parts", help="comma-separated list of partition keys for the target DS", default="")
 @click.option('-v', '--verbose', is_flag=True, default=False)
-@click.option('-d', '--dry-run', is_flag=True, default=False)
 def main(
     source,
     target,
-    levels,
     parts,
     verbose,
-    dry_run,
 ):
-    """Compact the dataset within each partition.
+    """Compact the dataset
 
     Can be used on both realisation and aggregate datasets.
     """
@@ -92,55 +88,23 @@ def main(
 
     filesystem = fs.LocalFileSystem()
     writemeta_fn = partial(write_metadata, target_folder)
+
     dataset = ds.dataset(source_folder, filesystem=filesystem, format=DATASET_FORMAT, partitioning='hive')
+    arrow_scanner = ds.Scanner.from_dataset(dataset)
 
-    count = 0
-
-    def source_folder_iterator(source_folder, levels):
-        if levels == 0:
-            yield source_folder
-        elif levels == 1:
-            for partition_folder in source_folder.iterdir():
-                yield partition_folder
-        else:
-            raise NotImplementedError("max of one level is supported.")
-
-    for partition_folder in source_folder_iterator(source_folder, levels):
-
-        usage = sum(file.stat().st_size for file in partition_folder.rglob('*'))
-        if usage > MEMORY_WARNING_BYTES:
-            click.echo(f'partition {partition_folder} has size: {human_size(usage)}.')
-            click.echo('NB. you can use the `--levels` argument to divide this job into smaller chunks.')
-            click.confirm('Do you want to continue?', abort=True)
-        elif verbose:
-            click.echo(f'partition {partition_folder} has disk size: {human_size(usage)}')
-
-        # TODO: this aproach doesn't handle different field types
-        # _name, _value = partition_folder.name.split('=')
-        # flt0 = pc.field(_name) == pc.scalar(_value)
-
-        arrow_scanner = ds.Scanner.from_dataset(dataset)
-        # tbl = arrow_scanner.to_table()
-        # print(tbl)
-        # assert 0
-        ds.write_dataset(
-            arrow_scanner,
-            base_dir=str(target_folder),
-            basename_template="%s-part-{i}.%s" % (uuid.uuid4(), DATASET_FORMAT),
-            partitioning=partition_keys,
-            partitioning_flavor="hive",
-            existing_data_behavior="delete_matching",
-            format=DATASET_FORMAT,
-            file_visitor=writemeta_fn,
-            max_rows_per_file=200 * 1024,
-            max_rows_per_group=200 * 1024,
-            min_rows_per_group=100 * 1024,
-        )
-        count += 1
-        if verbose:
-            click.echo(f'pyarrow RSS memory: {human_size(pa.total_allocated_bytes())}')
-
-    click.echo(f'compacted {count} partitions for {target_folder.parent}')
+    ds.write_dataset(
+        arrow_scanner,
+        base_dir=str(target_folder),
+        basename_template="%s-part-{i}.%s" % (uuid.uuid4(), DATASET_FORMAT),
+        partitioning=partition_keys,
+        partitioning_flavor="hive",
+        existing_data_behavior="delete_matching",
+        format=DATASET_FORMAT,
+        file_visitor=writemeta_fn,
+        max_rows_per_file=200 * 1024,
+        max_rows_per_group=200 * 1024,
+        min_rows_per_group=100 * 1024,
+    )
 
 
 if __name__ == "__main__":
