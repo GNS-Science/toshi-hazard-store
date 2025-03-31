@@ -5,8 +5,6 @@ Console script for querying tables before and after import/migration to ensure t
 TODO this script needs a little housekeeping.
 """
 import ast
-import importlib
-import itertools
 import json
 import logging
 import pathlib
@@ -21,16 +19,13 @@ import pyarrow.dataset as ds
 log = logging.getLogger()
 
 logging.basicConfig(level=logging.INFO)
-# logging.getLogger('pynamodb').setLevel(logging.DEBUG)
 logging.getLogger('botocore').setLevel(logging.WARNING)
 logging.getLogger('toshi_hazard_store').setLevel(logging.WARNING)
-# logging.getLogger('toshi_hazard_store.db_adapter.sqlite.pynamodb_sql').setLevel(logging.DEBUG)
 
 from nzshm_common import CodedLocation, LatLon, location
 from nzshm_common.grids import load_grid
 from nzshm_model import branch_registry
 from nzshm_model.psha_adapter.openquake import gmcm_branch_from_element_text
-from pynamodb.models import Model
 
 import toshi_hazard_store  # noqa: E402
 import toshi_hazard_store.config
@@ -373,9 +368,11 @@ def count_rlz(context, source, ds_name, report, strict, verbose, dry_run):
 @click.argument('dataset', type=str)
 @click.argument('count', type=int)
 @click.option('--iterations', '-i', type=int, default=1)
+@click.option('-df', '--defragged', is_flag=True, default=False, help="use defragged partition structure")
+@click.option('-v', '--verbose', is_flag=True, default=False)
 @click.pass_context
-def random_rlz_new(context, dataset, count, iterations):
-    """randomly select realisations loc, hazard_id, rlx and compare the results"""
+def random_rlz_new(context, dataset, count, iterations, defragged, verbose):
+    """Randomly select realisations from Dynamodb and compare with dataset values."""
 
     dataset_folder = pathlib.Path(dataset)
     assert dataset_folder.exists(), 'dataset not found'
@@ -383,17 +380,26 @@ def random_rlz_new(context, dataset, count, iterations):
     gtfile = pathlib.Path(__file__).parent / "migration" / "GT_HAZ_IDs_R2VuZXJhbFRhc2s6MTMyODQxNA==.json"
     gt_info = json.load(open(str(gtfile)))
 
+    all_checked = 0
     for iteration in range(iterations):
 
         random_args_list = list(get_random_args(gt_info, count))
-        print(f'Iteration: {iteration}')
-        print('===============')
-        print()
 
-        set_dynamo = get_table_rows(random_args_list)
-        for key, obj in set_dynamo.items():
-            print(key)
-            segment = f"vs30={obj['vs30']}/nloc_0={obj['nloc_0']}"
+        if verbose:
+            click.echo(f'Iteration: {iteration}')
+            click.echo('===============')
+
+        dynamodb_set = get_table_rows(random_args_list)
+        iteration_checked = 0
+        for key, obj in dynamodb_set.items():
+            if verbose:
+                click.echo(f"dynamo key: {key}")
+
+            if defragged:
+                segment = f"vs30={obj['vs30']}/nloc_0={obj['nloc_0']}"
+            else:
+                segment = f"nloc_0={obj['nloc_0']}"
+
             dataset = ds.dataset(dataset_folder / segment, format='parquet', partitioning='hive')
             for value in obj['values']:
 
@@ -404,66 +410,27 @@ def random_rlz_new(context, dataset, count, iterations):
                     & (pc.field('gmms_digest') == obj['gmms_digest'].replace('|', ''))
                 )
                 # (pc.field("vs30") == obj['vs30']) &\
-                print(flt)
-                print()
+                if verbose:
+                    click.echo(f" ds filter: {flt}")
 
                 df = dataset.to_table(filter=flt).to_pandas()
                 if not (df.iloc[0]['values'] == np.array(value['vals'])).all():
-                    print(key, obj)
-                    print()
-                    print(value['imt'], value['vals'])
-                    print("FAIL")
+                    click.echo(key, obj)
+                    click.echo()
+                    click.echo(value['imt'], value['vals'])
+                    click.echo("FAIL")
                     assert 0
 
+                iteration_checked += 1
+                all_checked += 1
 
-@main.command()
-@click.argument('count', type=int)
-@click.pass_context
-def random_rlz_og(context, count):
-    """randomly select realisations loc, hazard_id, rlx and compare the results"""
+        if verbose:
+            click.echo()
+            click.echo(f'Checked {iteration_checked} random value arrays from {flt}.')
+            click.echo()
 
-    gtfile = pathlib.Path(__file__).parent / "GT_HAZ_IDs_R2VuZXJhbFRhc2s6MTMyODQxNA==.json"
-    gt_info = json.load(open(str(gtfile)))
-
-    random_args_list = list(get_random_args(gt_info, count))
-
-    print(random_args_list)
-    assert 0
-    set_one = get_table_rows(random_args_list)
-    print(set_one)
-    assert 0
-
-    def report_differences(dict1, dict2, ignore_keys):
-        # print(dict1['sort_key'])
-        # print(dict1.keys())
-        # print(dict2.keys())
-        # print(f"missing_in_dict1_but_in_dict2: {dict2.keys() - dict1}")
-        # print(f"missing_in_dict2_but_in_dict1: {dict1.keys() - dict2}")
-        diff_cnt = 0
-        for key in dict1.keys():
-            if key in ignore_keys:
-                continue
-            if dict1[key] == dict2[key]:
-                continue
-
-            print(f"key {key} differs")
-            print(dict1[key], dict2[key])
-            diff_cnt += 1
-
-        if diff_cnt:
-            return 1
-        return 0
-
-    set_two = get_table_rows(random_args_list)
-
-    assert len(set_one) == len(set_two)
-    ignore_keys = ['uniq_id', 'created', 'source_ids', 'source_tags']
-    diff_count = 0
-    for key, obj in set_one.items():
-        if not obj == set_two[key]:
-            diff_count += report_differences(obj, set_two[key], ignore_keys)
-
-    click.echo(f"compared {len(set_one)} realisations with {diff_count} material differences")
+    if verbose:
+        click.echo(f'Checked {all_checked} random value arrays in total.')
 
 
 if __name__ == "__main__":

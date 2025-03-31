@@ -30,7 +30,7 @@ import hashlib
 import logging
 import os
 import pathlib
-from typing import Iterable
+from typing import Iterable, Optional
 
 import click
 
@@ -56,7 +56,6 @@ logging.getLogger('urllib3').setLevel(logging.INFO)
 logging.getLogger('root').setLevel(logging.INFO)
 
 log = logging.getLogger(__name__)
-
 
 API_URL = os.getenv('NZSHM22_TOSHI_API_URL', "http://127.0.0.1:5000/graphql")
 API_KEY = os.getenv('NZSHM22_TOSHI_API_KEY', "")
@@ -156,6 +155,7 @@ def handle_subtasks(
     work_folder: str,
     with_rlzs: bool,
     verbose: bool,
+    skip_until_id: Optional[str] = None,  # task_id for fast_forwarding
 ):
 
     subtasks_folder = pathlib.Path(work_folder, gt_id, 'subtasks')
@@ -168,7 +168,8 @@ def handle_subtasks(
         ECR_REPONAME, oldest_image_date=dt.datetime(2023, 3, 20, tzinfo=dt.timezone.utc)
     ).fetch()
 
-    fast_forward = False
+    skipping = True if skip_until_id else False
+
     for task_id in subtask_ids:
 
         # completed already
@@ -182,10 +183,12 @@ def handle_subtasks(
         #     continue
         # # problems
 
-        if fast_forward:
-            if task_id == 'T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NTA4':
-                fast_forward = False
+        if skipping:
+            # 'T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NTA4'
+            if task_id == skip_until_id:
+                skipping = False
             else:
+                log.info(f'skipping task_id {task_id}')
                 continue
 
         query_res = gtapi.get_oq_hazard_task(task_id)
@@ -286,15 +289,8 @@ def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
 @click.option('-v', '--verbose', is_flag=True, default=False)
 @click.option('-d', '--dry-run', is_flag=True, default=False)
 @click.option('-f64', '--use_64bit', is_flag=True, default=False)
-def rlzs(
-    gt_id,
-    compatible_calc_fk,
-    work_folder,
-    output_folder,
-    verbose,
-    dry_run,
-    use_64bit,
-):
+@click.option('-ff', '--skip_until_id', default=None)
+def rlzs(gt_id, compatible_calc_fk, work_folder, output_folder, verbose, dry_run, use_64bit, skip_until_id):
     """Prepare and validate Producer Configs for a given GT_ID
 
     GT_ID is an NSHM General task id containing HazardAutomation Tasks\n
@@ -310,6 +306,8 @@ def rlzs(
 
     if verbose:
         click.echo('fetching General Task subtasks')
+        if skip_until_id:
+            click.echo(f'skipping until task_id: {skip_until_id}')
 
     def get_hazard_task_ids(query_res):
         for edge in query_res['children']['edges']:
@@ -319,7 +317,13 @@ def rlzs(
     query_res = gtapi.get_gt_subtasks(gt_id)
     count = 0
     for subtask_info in handle_subtasks(
-        gt_id, gtapi, get_hazard_task_ids(query_res), work_folder, with_rlzs=True, verbose=verbose
+        gt_id,
+        gtapi,
+        get_hazard_task_ids(query_res),
+        work_folder,
+        with_rlzs=True,
+        verbose=verbose,
+        skip_until_id=skip_until_id,
     ):
         if dry_run:
             click.echo(f'DRY RUN. otherwise, would be processing subtask {count} {subtask_info} ')

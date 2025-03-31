@@ -35,15 +35,42 @@ def main(context):
     context.ensure_object(dict)
 
 
+def source_folder_iterator(source_folder, levels):
+    """Yields a sequence of source folders.
+
+    Args:
+        source_folder (pathlib.Path): The source folder to iterate over.
+        levels (int): The number of partition (folder) levels to subdivide the source folder by.
+
+    Yields:
+        str: A string representation of the current partition folder(s).
+
+    Raises:
+        NotImplementedError: If more than two levels are specified.
+    """
+    if levels == 0:
+        yield source_folder
+    elif levels == 1:
+        for partition_folder in source_folder.iterdir():
+            yield partition_folder.name
+    elif levels == 2:
+        for folder in source_folder.iterdir():
+            for partition_folder in folder.iterdir():
+                yield f"{folder.name}/{partition_folder.name}"
+    else:
+        raise NotImplementedError("max of two levels is supported.")
+
+
 @main.command()
 @click.argument('dataset0', type=str)
 @click.argument('dataset1', type=str)
 @click.option('-l', '--levels', help="how many partition (folder) levels to subdivide the source folder by", default=0)
+@click.option('-cid', '--calc-id', default=None)
 @click.option('--count', '-n', type=int, default=10)
 @click.option('-v', '--verbose', is_flag=True, default=False)
 @click.option('-x', '--exit-on-error', is_flag=True, default=False)
 @click.pass_context
-def rlzs(context, dataset0, dataset1, levels, count, verbose, exit_on_error):
+def rlzs(context, dataset0, dataset1, levels, calc_id, count, verbose, exit_on_error):
     """randomly select realisations loc, hazard_id, rlz, source and compare the results
 
     between two rlz datasetsn both having the hive layers: vs30, nloc_0.
@@ -55,19 +82,6 @@ def rlzs(context, dataset0, dataset1, levels, count, verbose, exit_on_error):
     assert folder0.exists(), f'dataset not found: {dataset0}'
     assert folder1.exists(), f'dataset not found: {dataset1}'
 
-    def source_folder_iterator(source_folder, levels):
-        if levels == 0:
-            yield source_folder
-        elif levels == 1:
-            for partition_folder in source_folder.iterdir():
-                yield partition_folder.name
-        elif levels == 2:
-            for folder in source_folder.iterdir():
-                for partition_folder in folder.iterdir():
-                    yield f"{folder.name}/{partition_folder.name}"
-        else:
-            raise NotImplementedError("max of two levels is supported.")
-
     src_folders = random.choices(population=[s for s in source_folder_iterator(folder0, levels)], k=5)
 
     all_checked = 0
@@ -75,6 +89,7 @@ def rlzs(context, dataset0, dataset1, levels, count, verbose, exit_on_error):
 
         source_folder_a, source_folder_b = (folder0 / sub_folder), (folder1 / sub_folder)
 
+        assert source_folder_a.exists()
         assert source_folder_b.exists()
 
         usage = sum(file.stat().st_size for file in source_folder_a.rglob('*'))
@@ -106,6 +121,8 @@ def rlzs(context, dataset0, dataset1, levels, count, verbose, exit_on_error):
             flt = (
                 (pc.field("nloc_001") == nloc_3) & (pc.field("imt") == imt) & (pc.field('sources_digest') == src_digest)
             )
+            if calc_id:
+                flt = flt & (pc.field("calculation_id") == calc_id)
 
             if verbose:
                 click.echo(f'Checking values for {flt}')
@@ -126,7 +143,8 @@ def rlzs(context, dataset0, dataset1, levels, count, verbose, exit_on_error):
                     click.echo(f'\tl1: {df1.iloc[idx]}')
 
                     if exit_on_error:
-                        break
+                        raise ValueError()
+
                 partition_checked += 1
                 all_checked += 1
 
