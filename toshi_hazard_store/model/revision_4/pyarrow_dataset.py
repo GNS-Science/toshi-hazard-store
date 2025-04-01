@@ -15,7 +15,7 @@ from pyarrow import fs
 log = logging.getLogger(__name__)
 
 
-def write_metadata(output_folder: pathlib.Path, visited_file: pyarrow.dataset.WrittenFile) -> None:
+def write_metadata(output_folder: pathlib.Path, visited_file: pyarrow.dataset.WrittenFile) -> None:  # pragma: no cover
     meta = [
         pathlib.Path(visited_file.path).relative_to(output_folder),
         visited_file.size,

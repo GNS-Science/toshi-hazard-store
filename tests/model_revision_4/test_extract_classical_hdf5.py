@@ -1,4 +1,4 @@
-import uuid
+import json
 from pathlib import Path
 
 import pyarrow.dataset as ds
@@ -15,7 +15,7 @@ except ImportError:
 if HAVE_OQ:
     from openquake.calculators.extract import Extractor
 
-from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
+from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
 from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_gmm_map, build_rlz_source_map
 from toshi_hazard_store.transform import parse_logic_tree_branches
 
@@ -36,9 +36,13 @@ def build_maps(hdf5_file):
         # return False
     return True
 
+
 # @pytest.mark.skip('fixtures not checked in')
 def test_logic_tree_registry_lookup():
-    good_file = Path(__file__).parent.parent / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz/calc_1.hdf5'
+    good_file = (
+        Path(__file__).parent.parent
+        / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz/calc_1.hdf5'
+    )
     assert build_maps(good_file)
 
 
@@ -94,41 +98,52 @@ def test_logic_tree_registry_lookup_bad_examples():
     assert '[dmTL, bN[0.95, 16.5], C4.0, s0.42]' in str(exc_info)
 
 
-@pytest.mark.skipif(not HAVE_OQ, reason="This test fails if openquake is not installed")
+@pytest.mark.skipif(not HAVE_OQ, reason="Test fails if openquake is not installed")
+def test_realisation_batches_from_hdf5(tmp_path):
+
+    hdf5_fixture = (
+        Path(__file__).parent.parent
+        / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz/calc_1.hdf5'
+    )
+
+    extractor = Extractor(str(hdf5_fixture))
+    oqparam = json.loads(extractor.get('oqparam').json)
+    assert oqparam['calculation_mode'] == 'classical', "calculation_mode is not 'classical'"
+    vs30 = int(oqparam['reference_vs30_value'])
+    oq = extractor.dstore['oqparam']  # old skool way
+    imtl_keys = sorted(list(oq.imtls.keys()))
+
+    batches = list(extract_classical_hdf5.generate_rlz_record_batches(extractor, vs30, imtl_keys, 'A', 'B', 'C'))
+    assert len(batches) == 12
+
+
+@pytest.mark.skipif(not HAVE_OQ, reason="Test fails if openquake is not installed")
 def test_hdf5_realisations_direct_to_parquet_roundtrip(tmp_path):
 
-    hdf5_fixture = Path(__file__).parent.parent / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz/calc_1.hdf5'
-    
+    hdf5_fixture = (
+        Path(__file__).parent.parent
+        / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz/calc_1.hdf5'
+    )
+
     # hdf5_fixture = Path(__file__).parent.parent / 'fixtures' / 'oq_import' / 'calc_9.hdf5'
 
-    record_batch_reader = extract_classical_hdf5.rlzs_to_record_batch_reader(
+    model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
         str(hdf5_fixture), calculation_id="dummy_calc_id", compatible_calc_fk="CCFK", producer_config_fk="PCFK"
     )
 
-    print(record_batch_reader)
+    print(model_generator)
 
     # now write out to parquet and validate
     output_folder = tmp_path / "ds_direct"
 
     # write the dataset
-    dataset_format = 'parquet'
-    ds.write_dataset(
-        record_batch_reader,
-        base_dir=output_folder,
-        basename_template="%s-part-{i}.%s" % (uuid.uuid4(), dataset_format),
-        partitioning=['nloc_0'],
-        partitioning_flavor="hive",
-        existing_data_behavior="overwrite_or_ignore",
-        format=dataset_format,
-    )
+    pyarrow_dataset.append_models_to_dataset(model_generator, output_folder)
 
     # read and check the dataset
     dataset = ds.dataset(output_folder, format='parquet', partitioning='hive')
     table = dataset.to_table()
     df = table.to_pandas()
 
-    # assert table.shape[0] == model_count
-    # assert df.shape[0] == model_count
     print(df)
     print(df.shape)
     print(df.tail())

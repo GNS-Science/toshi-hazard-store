@@ -41,6 +41,7 @@ def build_rlz_gmm_map(gsim_lt: 'pandas.DataFrame') -> Dict[str, branch_registry.
     branch_ids = gsim_lt.branch.tolist()
     rlz_gmm_map = dict()
     for idx, uncertainty in enumerate(gsim_lt.uncertainty.tolist()):
+        log.debug(f"build_rlz_gmm_map(gsim_lt): {idx} {uncertainty}")
         branch = gmcm_branch_from_element_text(uncertainty)
         entry = registry.gmm_registry.get_by_identity(branch.registry_identity)
         rlz_gmm_map[branch_ids[idx][1:-1]] = entry
@@ -51,17 +52,22 @@ def build_rlz_source_map(source_lt: 'pandas.DataFrame') -> Dict[str, branch_regi
     branch_ids = source_lt.index.tolist()
     rlz_source_map = dict()
     for idx, source_str in enumerate(source_lt.branch.tolist()):
-        log.debug(f"processing {idx} {source_str}")
+        log.debug(f"build_rlz_source_map(source_lt): {idx} {source_str}")
 
+        # handle special case found in
+        # INFO:scripts.ths_r4_migrate:task: T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NTA0 hash: bdc5476361cd
+        # gt: R2VuZXJhbFRhc2s6MTMyODQxNA==  hazard_id: T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTMyODU2MA==
         if source_str[0] == '|':
-            # handle special case found in
-            # INFO:scripts.ths_r4_migrate:task: T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NTA0 hash: bdc5476361cd
-            # gt: R2VuZXJhbFRhc2s6MTMyODQxNA==  hazard_id: T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTMyODU2MA==
-            ###
             source_str = source_str[1:]
 
-        sources = "|".join(sorted(source_str.split('|')))
-        entry = registry.source_registry.get_by_identity(sources)
+        # handle special case where tag was stored in calc instead of toshi_ids
+        # e.g. T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz
+        if source_str[0] == '[' and source_str[-1] == ']':
+            entry = registry.source_registry.get_by_extra(source_str)
+        else:
+            sources = "|".join(sorted(source_str.split('|')))
+            entry = registry.source_registry.get_by_identity(sources)
+
         rlz_source_map[branch_ids[idx]] = entry
     return rlz_source_map
 
