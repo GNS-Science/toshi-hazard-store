@@ -36,9 +36,9 @@ def build_maps(hdf5_file):
         # return False
     return True
 
-
+# @pytest.mark.skip('fixtures not checked in')
 def test_logic_tree_registry_lookup():
-    good_file = Path(__file__).parent.parent / 'fixtures' / 'oq_import' / 'calc_1.hdf5'
+    good_file = Path(__file__).parent.parent / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz/calc_1.hdf5'
     assert build_maps(good_file)
 
 
@@ -97,7 +97,9 @@ def test_logic_tree_registry_lookup_bad_examples():
 @pytest.mark.skipif(not HAVE_OQ, reason="This test fails if openquake is not installed")
 def test_hdf5_realisations_direct_to_parquet_roundtrip(tmp_path):
 
-    hdf5_fixture = Path(__file__).parent.parent / 'fixtures' / 'oq_import' / 'calc_1.hdf5'
+    hdf5_fixture = Path(__file__).parent.parent / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz/calc_1.hdf5'
+    
+    # hdf5_fixture = Path(__file__).parent.parent / 'fixtures' / 'oq_import' / 'calc_9.hdf5'
 
     record_batch_reader = extract_classical_hdf5.rlzs_to_record_batch_reader(
         str(hdf5_fixture), calculation_id="dummy_calc_id", compatible_calc_fk="CCFK", producer_config_fk="PCFK"
@@ -131,21 +133,21 @@ def test_hdf5_realisations_direct_to_parquet_roundtrip(tmp_path):
     print(df.shape)
     print(df.tail())
     print(df.info())
-    assert df.shape == (1293084, 10)
+    assert df.shape == (192, 10)
 
-    test_loc = location.get_locations(['MRO'])[0]
+    test_loc = location.get_locations(['CHC'])[0]
 
     test_loc_df = df[df['nloc_001'] == test_loc.code]
     print(test_loc_df[['nloc_001', 'nloc_0', 'imt', 'rlz', 'vs30', 'sources_digest', 'gmms_digest']])  # 'rlz_key'
     # print(test_loc_df.tail())
 
-    assert test_loc_df.shape == (1293084 / 3991, 10)
+    assert test_loc_df.shape == (192 / 4, 10)
     assert test_loc_df['imt'].tolist()[0] == 'PGA'
     assert (
-        test_loc_df['imt'].tolist()[-1] == 'SA(7.5)'
+        test_loc_df['imt'].tolist()[-1] == 'SA(3.0)'
     ), "not so weird, as the IMT keys are sorted alphnumerically in openquake now."
     assert (
-        test_loc_df['imt'].tolist().index('SA(10.0)') == 17
+        test_loc_df['imt'].tolist().index('SA(3.0)') == 3
     ), "also not so weird, as the IMT keys are sorted alphnumerically"
 
     assert test_loc_df['nloc_001'].tolist()[0] == test_loc.code
