@@ -74,6 +74,15 @@ hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc
 
 
 def get_producer_config_key(subtask_info: SubtaskRecord) -> ProducerConfigKey:
+    """
+    Extracts the producer configuration key from a subtask record.
+
+    Args:
+        subtask_info (SubtaskRecord): The subtask record to extract the producer config key from.
+
+    Returns:
+        ProducerConfigKey: A tuple containing the producer software, version ID, and configuration hash.
+    """
     producer_software = f"{ECR_REGISTRY_ID}/{ECR_REPONAME}"
     producer_version_id = subtask_info.image['imageDigest'][7:27]  # first 20 bits of hashdigest
     configuration_hash = subtask_info.config_hash
@@ -81,6 +90,18 @@ def get_producer_config_key(subtask_info: SubtaskRecord) -> ProducerConfigKey:
 
 
 def build_producers(subtask_info: 'SubtaskRecord', compatible_calc, verbose, update):
+    """
+    Build producers for a given subtask info.
+
+    Args:
+        subtask_info (SubtaskRecord): Subtask information.
+        compatible_calc (CompatibleHazardCalculationManager): Compatible hazard calculation manager.
+        verbose (bool): Verbose flag.
+        update (bool): Update flag.
+
+    Returns:
+        None
+    """
     if verbose:
         click.echo(subtask_info)
 
@@ -130,6 +151,19 @@ def build_realisations(
     verbose,
     use_64bit_values=False,
 ):
+    """
+    Build realisations for a given subtask info.
+
+    Args:
+        subtask_info (SubtaskRecord): Subtask information.
+        compatible_calc (CompatibleHazardCalculationManager): Compatible hazard calculation manager.
+        output_folder (str): Output folder path.
+        verbose (bool): Verbose flag.
+        use_64bit_values (bool): Flag to use 64-bit values.
+
+    Returns:
+        None
+    """
     if verbose:
         click.echo(subtask_info)
 
@@ -157,7 +191,21 @@ def handle_subtasks(
     verbose: bool,
     skip_until_id: Optional[str] = None,  # task_id for fast_forwarding
 ):
+    """
+    Handle subtasks for a given general task ID.
 
+    Args:
+        gt_id (str): General task ID.
+        gtapi (toshi_api_client.ApiClient): Toshi API client.
+        subtask_ids (Iterable): Iterable of subtask IDs.
+        work_folder (str): Work folder path.
+        with_rlzs (bool): Flag to process realisations.
+        verbose (bool): Verbose flag.
+        skip_until_id (Optional[str]): Task ID for fast forwarding.
+
+    Returns:
+        None
+    """
     subtasks_folder = pathlib.Path(work_folder, gt_id, 'subtasks')
     subtasks_folder.mkdir(parents=True, exist_ok=True)
 
@@ -177,10 +225,8 @@ def handle_subtasks(
         #     continue
 
         # # problems
-        # if task_id in ['T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDE4', 'T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDI0',
-        #  "T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDI2",
-        #  "T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDMy"]: # "T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDI5",
-        #     continue
+        # if task_id in ['T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDE4', 'T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDI4',
+        #  "T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDI5", "T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDI2",
         # # problems
 
         if skipping:
