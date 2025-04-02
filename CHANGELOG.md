@@ -3,8 +3,9 @@
 ## [1.0.0-alpha-0] - 2025-04-02
 ### Added
  - local json storage with pydantic models CompatibleHazardCalculation, HazardCurveProducerConfig
- - new `ths_compat script` to maintain CompatibleHazardCalculation models
-
+ - `ths_compat` cli script to maintain CompatibleHazardCalculation models
+ - `ths_ds_check` cli script to compare two parquet dataset
+ 
 ### Changed
  - import script `ths_import` uses new json storage classes for meta tables.
  - improved `ths_ds_check` script
