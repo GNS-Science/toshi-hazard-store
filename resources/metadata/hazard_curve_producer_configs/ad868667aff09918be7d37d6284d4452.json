@@ -1,0 +1,18 @@
+{
+  "unique_id": "ad868667aff09918be7d37d6284d4452",
+  "compatible_calc_fk": "NZSHM22",
+  "created_at": "2025-03-27T02:06:22.919455Z",
+  "updated_at": "2025-03-27T02:06:22.919467Z",
+  "effective_from": "2023-03-20T21:27:21+13:00",
+  "last_used": "2023-03-31T11:18:42.418000+13:00",
+  "tags": [
+    "runzi-5b0b3b4_nz_openquake-nightly_20230320"
+  ],
+  "producer_software": "461564345538.dkr.ecr.us-east-1.amazonaws.com/nzshm22/runzi-openquake",
+  "producer_version_id": "8c09bffb9f4cf88bbcc9",
+  "configuration_hash": "bdc5476361cd",
+  "configuration_data": null,
+  "imts": null,
+  "imt_levels": null,
+  "notes": "notes"
+}
