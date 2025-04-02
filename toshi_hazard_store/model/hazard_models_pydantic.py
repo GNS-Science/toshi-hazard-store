@@ -1,4 +1,4 @@
-"""the hazard metatdata models are pydantic for (de)serialisation as json."""
+"""the hazard metatdata models for (de)serialisation as json."""
 
 from datetime import datetime, timezone
 

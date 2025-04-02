@@ -27,6 +27,17 @@ RealizationRecord = collections.namedtuple('RealizationRecord', 'idx, path, sour
 def rlz_mapper_from_dataframes(
     source_lt: 'pandas.DataFrame', gsim_lt: 'pandas.DataFrame', rlz_lt: 'pandas.DataFrame'
 ) -> Dict[int, RealizationRecord]:
+    """
+    Maps realizations from dataframes.
+
+    Args:
+        source_lt (pandas.DataFrame): Source logic tree dataframe.
+        gsim_lt (pandas.DataFrame): GSIM logic tree dataframe.
+        rlz_lt (pandas.DataFrame): Realization logic tree dataframe.
+
+    Returns:
+        Dict[int, RealizationRecord]: A dictionary of realization records.
+    """
     gmm_map = build_rlz_gmm_map(gsim_lt)
     source_map = build_rlz_source_map(source_lt)
     rlz_map = build_rlz_map(rlz_lt, source_map, gmm_map)
@@ -34,10 +45,28 @@ def rlz_mapper_from_dataframes(
 
 
 def build_rlz_mapper(extractor: 'Extractor') -> Dict[int, RealizationRecord]:
+    """
+    Builds a realization mapper from an extractor.
+
+    Args:
+        extractor (Extractor): An OpenQuake Extractor object.
+
+    Returns:
+        Dict[int, RealizationRecord]: A dictionary of realization records.
+    """
     return rlz_mapper_from_dataframes(*parse_logic_tree_branches(extractor))
 
 
 def build_rlz_gmm_map(gsim_lt: 'pandas.DataFrame') -> Dict[str, branch_registry.BranchRegistryEntry]:
+    """
+    Builds a map of realizations to GMMs.
+
+    Args:
+        gsim_lt (pandas.DataFrame): GSIM logic tree dataframe.
+
+    Returns:
+        Dict[str, BranchRegistryEntry]: A dictionary mapping realization IDs to branch registry entries.
+    """
     branch_ids = gsim_lt.branch.tolist()
     rlz_gmm_map = dict()
     for idx, uncertainty in enumerate(gsim_lt.uncertainty.tolist()):
@@ -49,6 +78,16 @@ def build_rlz_gmm_map(gsim_lt: 'pandas.DataFrame') -> Dict[str, branch_registry.
 
 
 def build_rlz_source_map(source_lt: 'pandas.DataFrame') -> Dict[str, branch_registry.BranchRegistryEntry]:
+    """
+    Build a map of realizations to source registry entries.
+
+    Args:
+        source_lt (pandas.DataFrame): DataFrame containing the source logic tree branches.
+
+    Returns:
+        Dict[str, branch_registry.BranchRegistryEntry]: A dictionary mapping realization IDs to
+            their corresponding source registry entries.
+    """
     branch_ids = source_lt.index.tolist()
     rlz_source_map = dict()
     for idx, source_str in enumerate(source_lt.branch.tolist()):
@@ -73,6 +112,19 @@ def build_rlz_source_map(source_lt: 'pandas.DataFrame') -> Dict[str, branch_regi
 
 
 def build_rlz_map(rlz_lt: 'pandas.DataFrame', source_map: Dict, gmm_map: Dict) -> Dict[int, RealizationRecord]:
+    """
+    Builds a dictionary mapping realization indices to their corresponding
+    RealizationRecord objects.
+
+    Args:
+        rlz_lt (pandas.DataFrame): The dataframe containing the logic tree branches.
+        source_map (Dict): A map of source identifiers to BranchRegistryEntry objects.
+        gmm_map (Dict): A map of GMM identifiers to BranchRegistryEntry objects.
+
+    Returns:
+        Dict[int, RealizationRecord]: A dictionary mapping realization indices
+            to their corresponding RealizationRecord objects.
+    """
     paths = rlz_lt.branch_path.tolist()
     rlz_map = dict()
     for idx, path in enumerate(paths):
