@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.0-alpha-0]
+## [1.0.0-alpha-0] - 2025-04-02
 ### Added
  - local json storage with pydantic models CompatibleHazardCalculation, HazardCurveProducerConfig
  - new `ths_compat script` to maintain CompatibleHazardCalculation models
@@ -10,6 +10,8 @@
  - improved `ths_ds_check` script
  - improved `ths_r4_sanity` script
  - improved `ths_r4_defrag` script
+ - update to `nzshm-model 0.13.6`
+ - update `pytest`
 
 ### Removed
  - v3 -> v4 migration code

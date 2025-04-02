@@ -60,7 +60,7 @@ openquake-engine = {version = "<3.21", optional = true}
 pandas = ">2,<3"
 pyarrow = "^19.0.1"
 pydantic = "^2.10.6"
-nzshm-model = {path = "../nzshm-model"}
+nzshm-model = "^0.13.6"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.2.0"
