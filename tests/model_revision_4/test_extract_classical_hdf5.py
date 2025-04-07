@@ -17,7 +17,7 @@ if HAVE_OQ:
 
 from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
 from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_gmm_map, build_rlz_source_map
-from toshi_hazard_store.transform import parse_logic_tree_branches
+from toshi_hazard_store.oq_import.transform import parse_logic_tree_branches
 
 
 def build_maps(hdf5_file):

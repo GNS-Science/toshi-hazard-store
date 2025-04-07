@@ -3,7 +3,7 @@ import pathlib
 
 import pytest
 
-from toshi_hazard_store.scripts.revision_4 import oq_config
+from toshi_hazard_store.oq_import import oq_config
 
 mid_skool_config_example = {
     'vs30': 275,

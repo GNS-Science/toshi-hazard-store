@@ -37,10 +37,9 @@ from toshi_hazard_store.model.hazard_models_manager import (
 )
 from toshi_hazard_store.model.hazard_models_pydantic import HazardCurveProducerConfig
 from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
-
-from .revision_4 import aws_ecr_docker_image as aws_ecr
-from .revision_4 import toshi_api_client  # noqa: E402
-from .revision_4 import oq_config
+from toshi_hazard_store.oq_import import aws_ecr_docker_image as aws_ecr
+from toshi_hazard_store.oq_import import toshi_api_client  # noqa: E402
+from toshi_hazard_store.oq_import import oq_config
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pynamodb').setLevel(logging.INFO)
