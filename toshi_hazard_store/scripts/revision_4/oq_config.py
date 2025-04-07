@@ -125,15 +125,26 @@ def hdf5_from_task(task_id, subtasks_folder):
     return hdf5_file
 
 
-def config_from_task(task_id, subtasks_folder) -> OpenquakeConfig:
-    """Use nzshm-model to build a compatibility config"""
+def config_from_task(task_id: int, subtasks_folder: pathlib.Path) -> OpenquakeConfig:
+    """Use nzshm-model to build an openquake config.
+
+    This method attempts to handle the three styles stored in toshi api.
+
+    Args:
+        task_id (int): The ID of the task.
+        subtasks_folder (pathlib.Path): The folder where subtasks are stored.
+
+    Returns:
+        OpenquakeConfig: A modern configuration for openquake.
+
+    Raises:
+        ValueError: If the file does not exist or is not a valid JSON file.
+    """
     subtask_folder = subtasks_folder / str(task_id)
     ta = json.load(open(subtask_folder / TASK_ARGS_JSON, 'r'))
 
     if ta.get('hazard_model-hazard_config'):
         log.info('latest style config')
-        # print()
-        # print(ta.get('hazard_model-hazard_config'))
         confstr = (
             ta.get('hazard_model-hazard_config')
             .replace("``-", "``")
@@ -143,9 +154,12 @@ def config_from_task(task_id, subtasks_folder) -> OpenquakeConfig:
             .replace("-}", "}")
             .replace(",-", ",")
         )
-        conf = json.loads(confstr)
-        config = OpenquakeConfig(conf.get('config'))
-        config.set_parameter("site_params", "reference_vs30_value", ta.get('site_params-vs30'))
+
+        config = OpenquakeConfig.from_dict(json.loads(confstr))
+
+        config.set_description(SYNTHETIC_INI).set_uniform_site_params(vs30=ta['site_params-vs30']).set_iml(
+            ta["hazard_curve-imts"], ta["hazard_curve-imtls"]
+        )
 
     else:
         if ta.get("oq"):
@@ -153,7 +167,7 @@ def config_from_task(task_id, subtasks_folder) -> OpenquakeConfig:
             config = OpenquakeConfig(ta.get("oq"))
 
         else:
-            log.info('old-skool config')
+            log.info('mid-skool config')
             config = (
                 OpenquakeConfig(DEFAULT_HAZARD_CONFIG)
                 .set_parameter("erf", "rupture_mesh_spacing", str(ta['rupture_mesh_spacing']))
@@ -164,12 +178,12 @@ def config_from_task(task_id, subtasks_folder) -> OpenquakeConfig:
         config.set_description(SYNTHETIC_INI).set_uniform_site_params(vs30=ta['vs30']).set_iml(
             ta['intensity_spec']['measures'], ta['intensity_spec']['levels']
         )
-        with open(subtask_folder / SYNTHETIC_INI, 'w') as f:
-            config.write(f)
+
+        # write the config as INI style (for debugging)
+        # with open(subtask_folder / SYNTHETIC_INI, 'w') as f:
+        #     config.write(f)
 
     return config
-
-    # check_hashes(task_id, config)
 
 
 """
