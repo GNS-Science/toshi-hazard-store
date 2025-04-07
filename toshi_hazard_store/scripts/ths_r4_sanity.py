@@ -377,6 +377,7 @@ def random_rlz_new(context, dataset, count, iterations, defragged, verbose):
     dataset_folder = pathlib.Path(dataset)
     assert dataset_folder.exists(), 'dataset not found'
 
+    # TODO: this needs to handle any GT
     gtfile = pathlib.Path(__file__).parent / "migration" / "GT_HAZ_IDs_R2VuZXJhbFRhc2s6MTMyODQxNA==.json"
     gt_info = json.load(open(str(gtfile)))
 

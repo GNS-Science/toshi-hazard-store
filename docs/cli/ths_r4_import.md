@@ -3,8 +3,6 @@
     options:
     	members: no
 
-# Click CLI documentation
-
 ::: mkdocs-click
     :module: toshi_hazard_store.scripts.ths_r4_import
     :command: main

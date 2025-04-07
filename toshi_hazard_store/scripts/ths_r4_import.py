@@ -15,12 +15,8 @@ Process outline:
         - optionally create new producer configs automatically, and record info about these
     - if new producer configs are created, then it is the users responsibility to assign
       a CompatibleCalculation to each
-    - Hazard curves are acquired either:
-        - directly form the original HDF5 files stored in Toshi API
-        - from V3 RealisationCurves stored as PynamoDB records (dynamodb or sqlite3)
-    - Hazard curves are output as either:
-        - new THS Rev4 PynamoDB records (dynamodb or sqlite3).
-        - directly to a parquet dataset (ARROW options). Thsi is the newest/fastest option.
+    - Hazard curves are extrasted from the original HDF5 files stored in Toshi API
+    - Hazard curves are output as a parquet dataset.
 
 """
 
@@ -49,8 +45,8 @@ from .revision_4 import oq_config
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pynamodb').setLevel(logging.INFO)
 logging.getLogger('botocore').setLevel(logging.INFO)
-logging.getLogger('toshi_hazard_store').setLevel(logging.DEBUG)
-logging.getLogger('nzshm_model').setLevel(logging.DEBUG)
+logging.getLogger('toshi_hazard_store').setLevel(logging.INFO)
+# logging.getLogger('nzshm_model').setLevel(logging.DEBUG)
 logging.getLogger('gql.transport').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.INFO)
 logging.getLogger('root').setLevel(logging.INFO)
@@ -103,7 +99,7 @@ def build_producers(subtask_info: 'SubtaskRecord', compatible_calc, verbose, upd
         None
     """
     if verbose:
-        click.echo(subtask_info)
+        click.echo(f"{str(subtask_info)[:80]} ...")
 
     hpc_key = get_producer_config_key(subtask_info)
     hpc_md5 = hashlib.md5(str(hpc_key).encode())
@@ -165,7 +161,7 @@ def build_realisations(
         None
     """
     if verbose:
-        click.echo(subtask_info)
+        click.echo(f"{str(subtask_info)[:80]} ...")
 
     hpc_key = get_producer_config_key(subtask_info)
     hpc_md5 = hashlib.md5(str(hpc_key).encode())
@@ -336,7 +332,8 @@ def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
 @click.option('-d', '--dry-run', is_flag=True, default=False)
 @click.option('-f64', '--use_64bit', is_flag=True, default=False)
 @click.option('-ff', '--skip_until_id', default=None)
-def rlzs(gt_id, compatible_calc_fk, work_folder, output_folder, verbose, dry_run, use_64bit, skip_until_id):
+@click.option('--debug', is_flag=True, default=False, help="turn on debug logging")
+def rlzs(gt_id, compatible_calc_fk, work_folder, output_folder, verbose, dry_run, use_64bit, skip_until_id, debug):
     """Prepare and validate Producer Configs for a given GT_ID
 
     GT_ID is an NSHM General task id containing HazardAutomation Tasks\n
@@ -349,6 +346,9 @@ def rlzs(gt_id, compatible_calc_fk, work_folder, output_folder, verbose, dry_run
 
     headers = {"x-api-key": API_KEY}
     gtapi = toshi_api_client.ApiClient(API_URL, None, with_schema_validation=False, headers=headers)
+
+    if debug:
+        logging.getLogger('toshi_hazard_store').setLevel(logging.DEBUG)
 
     if verbose:
         click.echo('fetching General Task subtasks')
@@ -379,7 +379,7 @@ def rlzs(gt_id, compatible_calc_fk, work_folder, output_folder, verbose, dry_run
         compatible_calc = chc_manager.load(compatible_calc_fk)
 
         if verbose:
-            click.echo(f'Compatible calc: {compatible_calc}')
+            click.echo(f'Compatible calc: {compatible_calc.unique_id}')
 
         build_realisations(subtask_info, compatible_calc, output_folder, verbose, use_64bit)
         count += 1

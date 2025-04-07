@@ -29,8 +29,9 @@ def migrate_nshm_uncertainty_string(uncertainty: str) -> str:
     Returns:
         str: The updated uncertainty string with any necessary modifications.
     """
+
     # handle GMM modifications ...
-    if "[Atkinson2022" in uncertainty:
+    if ("[Atkinson2022" in uncertainty) & ("modified_sigma=" not in uncertainty):
         uncertainty += '\nmodified_sigma = "true"'
     elif "[AbrahamsonGulerce2020S" in uncertainty:
         uncertainty = uncertainty.replace("AbrahamsonGulerce2020S", "NZNSHM2022_AbrahamsonGulerce2020S")
@@ -82,7 +83,10 @@ def rewrite_calc_gsims(hdf5_path: pathlib.Path):
     dataset = hdf5_file['full_lt']['gsim_lt']
 
     for idx, row in enumerate(dataset):
+        log.debug(f'{idx}, {row}')
+        log.debug(f'pre: {dataset[idx]}')
         dataset[idx] = migrate_gsim_row(GsimRow(*row))
+        log.debug(f'post: {dataset[idx]}')
 
     hdf5_file.close()
 

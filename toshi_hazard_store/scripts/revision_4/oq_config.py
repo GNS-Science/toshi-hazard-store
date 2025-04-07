@@ -1,3 +1,4 @@
+import itertools
 import json
 import logging
 import pathlib
@@ -49,8 +50,8 @@ def save_file(filepath: pathlib.Path, url: str):
         raise (RuntimeError(f'Error downloading file {filepath.name}: Status code {r.status_code}'))
 
 
-def download_artefacts(gtapi, task_id, hazard_task_detail, subtasks_folder, include_hdf5=False):
-    """Pull down the files and store localling in WORKFOLDER"""
+def download_artefacts(gtapi, task_id, hazard_task_detail, subtasks_folder):
+    """Pull down the files and store in WORKFOLDER"""
 
     subtask_folder = subtasks_folder / str(task_id)
     subtask_folder.mkdir(exist_ok=True)
@@ -59,33 +60,57 @@ def download_artefacts(gtapi, task_id, hazard_task_detail, subtasks_folder, incl
 
 def process_hdf5(gtapi, task_id, hazard_task_detail, subtasks_folder, manipulate=True):
     """
-    download and unpack the hdf5_file, returnng the path object.
+    download and unpack the hdf5_file, returning the path object.
+
+    this now supports calculations that match the pattern calc_N.hdf5 filename
     """
     log.info(f"processing hdf5 file for {hazard_task_detail['hazard_solution']['id']}")
 
     subtask_folder = subtasks_folder / str(task_id)
     assert subtask_folder.exists()
+    assert subtask_folder.is_dir()
 
-    hdf5_file = subtask_folder / "calc_1.hdf5"
-    newpath = pathlib.Path(hdf5_file.parent, str(hdf5_file.name) + ".original")
+    # Find all files matching the pattern calc_N.hdf5 or calc_NN.hdf5
+    hdf5_files = list(
+        itertools.chain(subtask_folder.glob("calc_[0-9].hdf5"), subtask_folder.glob("calc_[0-9][0-9].hdf5"))
+    )
 
-    if not hdf5_file.exists():
+    if not hdf5_files:
         hazard_task_detail['hazard_solution']['hdf5_archive']['file_name']
+
         hdf5_archive = save_file(
             subtask_folder / hazard_task_detail['hazard_solution']['hdf5_archive']['file_name'],
             hazard_task_detail['hazard_solution']['hdf5_archive']['file_url'],
         )
 
-        # TODO handle possibly different filename ??
+        # Extract the first file found in the archive
         with zipfile.ZipFile(hdf5_archive) as myzip:
-            myzip.extract('calc_1.hdf5', subtask_folder)
-        hdf5_archive.unlink()  # delete the zip
-    else:
-        log.info(f"skip download, file exists at  {hdf5_file}")
+            calc_files = [name for name in myzip.namelist() if name.startswith('calc_') and name.endswith('.hdf5')]
+            if len(calc_files) != 1:
+                raise ValueError("Archive must contain exactly one 'calc_' file.")
+            hdf5_file_name = calc_files[0]
+            log.info(f"extracting {hdf5_file_name} from {hdf5_archive} into {subtask_folder}")
+            myzip.extract(hdf5_file_name, subtask_folder)
+            hdf5_archive.unlink()  # delete the zip
 
+    # Find again files matching the pattern calc_N.hdf5 or calc_NN.hdf5
+    hdf5_files = list(
+        itertools.chain(subtask_folder.glob("calc_[0-9].hdf5"), subtask_folder.glob("calc_[0-9][0-9].hdf5"))
+    )
+
+    # validation
+    if len(hdf5_files) > 1:
+        raise FileExistsError(f"Multiple HDF5 files found in {subtask_folder}")
+    if len(hdf5_files) == 0:
+        raise FileNotFoundError("HDF5 is missing")
+
+    # Assuming there is only one such file, get the first one
+    hdf5_file = hdf5_files[0]
+
+    newpath = pathlib.Path(subtask_folder, str(hdf5_file.name) + ".original")
     if manipulate and not newpath.exists():
         # make a copy, just in case
-        log.info("make copy, and manipulate ..")
+        log.info(f"make copy, and manipulate: {hdf5_file}")
         copyfile(hdf5_file, newpath)
         rewrite_calc_gsims(hdf5_file)
 
@@ -105,154 +130,47 @@ def config_from_task(task_id, subtasks_folder) -> OpenquakeConfig:
     subtask_folder = subtasks_folder / str(task_id)
     ta = json.load(open(subtask_folder / TASK_ARGS_JSON, 'r'))
 
-    if ta.get("oq"):
-        log.info('new-skool config')
-        config = OpenquakeConfig(ta.get("oq"))
-    else:
-        log.info('old-skool config')
-        config = (
-            OpenquakeConfig(DEFAULT_HAZARD_CONFIG)
-            .set_parameter("erf", "rupture_mesh_spacing", str(ta['rupture_mesh_spacing']))
-            .set_parameter("general", "ps_grid_spacing", str(ta["ps_grid_spacing"]))
+    if ta.get('hazard_model-hazard_config'):
+        log.info('latest style config')
+        # print()
+        # print(ta.get('hazard_model-hazard_config'))
+        confstr = (
+            ta.get('hazard_model-hazard_config')
+            .replace("``-", "``")
+            .replace("``", '"')
+            .replace("{-", "{")
+            .replace("}-", "}")
+            .replace("-}", "}")
+            .replace(",-", ",")
         )
+        conf = json.loads(confstr)
+        config = OpenquakeConfig(conf.get('config'))
+        config.set_parameter("site_params", "reference_vs30_value", ta.get('site_params-vs30'))
 
-    # both old and new-skool get these args from top-level of task_args
-    config.set_description(SYNTHETIC_INI).set_uniform_site_params(vs30=ta['vs30']).set_iml(
-        ta['intensity_spec']['measures'], ta['intensity_spec']['levels']
-    )
-    with open(subtask_folder / SYNTHETIC_INI, 'w') as f:
-        config.write(f)
+    else:
+        if ta.get("oq"):
+            log.info('new-skool config')
+            config = OpenquakeConfig(ta.get("oq"))
+
+        else:
+            log.info('old-skool config')
+            config = (
+                OpenquakeConfig(DEFAULT_HAZARD_CONFIG)
+                .set_parameter("erf", "rupture_mesh_spacing", str(ta['rupture_mesh_spacing']))
+                .set_parameter("general", "ps_grid_spacing", str(ta["ps_grid_spacing"]))
+            )
+
+        # both old and new-skool get these args from top-level of task_args
+        config.set_description(SYNTHETIC_INI).set_uniform_site_params(vs30=ta['vs30']).set_iml(
+            ta['intensity_spec']['measures'], ta['intensity_spec']['levels']
+        )
+        with open(subtask_folder / SYNTHETIC_INI, 'w') as f:
+            config.write(f)
 
     return config
 
     # check_hashes(task_id, config)
 
-
-new_skool_example = {
-    'general': {'random_seed': 25, 'calculation_mode': 'classical', 'ps_grid_spacing': 30},
-    'logic_tree': {'number_of_logic_tree_samples': 0},
-    'erf': {
-        'rupture_mesh_spacing': 4,
-        'width_of_mfd_bin': 0.1,
-        'complex_fault_mesh_spacing': 10.0,
-        'area_source_discretization': 10.0,
-    },
-    'site_params': {'reference_vs30_type': 'measured'},
-    'calculation': {
-        'investigation_time': 1.0,
-        'truncation_level': 4,
-        'maximum_distance': {'Active Shallow Crust': '[[4.0, 0], [5.0, 100.0], [6.0, 200.0], [9.5, 300.0]]'},
-    },
-    'output': {'individual_curves': 'true'},
-}
-
-old_skool_example = {
-    'config_archive_id': 'RmlsZToxMjkxNjk4',
-    'model_type': 'COMPOSITE',
-    'logic_tree_permutations': [
-        {
-            'tag': 'GRANULAR',
-            'weight': 1.0,
-            'permute': [
-                {
-                    'group': 'ALL',
-                    'members': [
-                        {
-                            'tag': 'geodetic, TI, N2.7, b0.823 C4.2 s1.41',
-                            'inv_id': 'SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEyOTE1MDI=',
-                            'bg_id': 'RmlsZToxMzA3MTM=',
-                            'weight': 1.0,
-                        }
-                    ],
-                }
-            ],
-        }
-    ],
-    'intensity_spec': {
-        'tag': 'fixed',
-        'measures': [
-            'PGA',
-            'SA(0.1)',
-            'SA(0.2)',
-            'SA(0.3)',
-            'SA(0.4)',
-            'SA(0.5)',
-            'SA(0.7)',
-            'SA(1.0)',
-            'SA(1.5)',
-            'SA(2.0)',
-            'SA(3.0)',
-            'SA(4.0)',
-            'SA(5.0)',
-            'SA(6.0)',
-            'SA(7.5)',
-            'SA(10.0)',
-            'SA(0.15)',
-            'SA(0.25)',
-            'SA(0.35)',
-            'SA(0.6)',
-            'SA(0.8)',
-            'SA(0.9)',
-            'SA(1.25)',
-            'SA(1.75)',
-            'SA(2.5)',
-            'SA(3.5)',
-            'SA(4.5)',
-        ],
-        'levels': [
-            0.0001,
-            0.0002,
-            0.0004,
-            0.0006,
-            0.0008,
-            0.001,
-            0.002,
-            0.004,
-            0.006,
-            0.008,
-            0.01,
-            0.02,
-            0.04,
-            0.06,
-            0.08,
-            0.1,
-            0.2,
-            0.3,
-            0.4,
-            0.5,
-            0.6,
-            0.7,
-            0.8,
-            0.9,
-            1.0,
-            1.2,
-            1.4,
-            1.6,
-            1.8,
-            2.0,
-            2.2,
-            2.4,
-            2.6,
-            2.8,
-            3.0,
-            3.5,
-            4,
-            4.5,
-            5.0,
-            6.0,
-            7.0,
-            8.0,
-            9.0,
-            10.0,
-        ],
-    },
-    'vs30': 275,
-    'location_list': ['NZ', 'NZ_0_1_NB_1_1', 'SRWG214'],
-    'disagg_conf': {'enabled': False, 'config': {}},
-    'rupture_mesh_spacing': 4,
-    'ps_grid_spacing': 30,
-    'split_source_branches': False,
-}
 
 """
 INFO:scripts.revision_4.oq_config:old-skool config

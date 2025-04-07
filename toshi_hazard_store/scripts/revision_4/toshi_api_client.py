@@ -86,17 +86,6 @@ class ApiClient(toshi_client_base.ToshiClientBase):
                             }
                           }
                         }
-                        template_archive {
-                          id
-                          meta {
-                            k
-                            v
-                          }
-                          file_url
-                          file_name
-                          file_size
-
-                        }
                         created
                       }
                       meta {

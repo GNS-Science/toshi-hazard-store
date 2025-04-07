@@ -115,11 +115,11 @@ if __name__ == "__main__":
 
     rs = ECRRepoStash(REPONAME, since)
     rs.fetch()
-    print(len(list(rs.images)))
-    print()
-    print(rs.active_image_asat(datetime(2024, 1, 28, tzinfo=timezone.utc)))
+    # print(len(list(rs.images)))
+    # print()
+    # print(rs.active_image_asat(datetime(2024, 1, 28, tzinfo=timezone.utc)))
 
-    print(rs.active_image_asat(datetime(2024, 1, 1, tzinfo=timezone.utc)))
+    # print(rs.active_image_asat(datetime(2024, 1, 1, tzinfo=timezone.utc)))
 
     # count = 0
     # since_map = {}
