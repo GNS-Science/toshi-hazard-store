@@ -14,7 +14,7 @@ from toshi_hazard_store.model.revision_4 import hazard_aggregate_curve, pyarrow_
 
 
 @pytest.fixture(scope='function')
-def generate_rev4_aggregation_models(many_rlz_args, adapted_model):
+def generate_rev4_aggregation_models(many_rlz_args):
     def model_generator():
         values = list(map(lambda x: x / 1e6, range(1, 51)))
         for loc, vs30, imt, agg in itertools.product(
