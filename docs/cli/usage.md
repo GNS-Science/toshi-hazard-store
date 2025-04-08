@@ -69,9 +69,21 @@ poetry run ths_r4_defrag ./WORKING/ARROW/DS1 ./WORKING/ARROW/DS1_DFG -p 'vs30,nl
 poetry run ths_r4_sanity count-rlz -D ./WORKING/ARROW/DS1_DFG -R ALL -x -v
 ```
 
+### Step 5. Dataset comparison
 
+ - similar to ths_sanity but dataset vs dataset, instead of dataset vs dynamodb.
+ - useful if you say two defragged datasets and want to check that they contain the same  data
+ - NB currently this just does random tests, you can set how many
 
+```bash
+poetry run ths_ds_check rlzs ./WORKING/ARROW/DS1_DFG/ ./WORKING/ARROW/DS2_DFG/ -l2 -x -v
+```
 
+Or for just one calculation ...
+
+```
+poetry run ths_ds_check rlzs ./WORKING/ARROW/DS1_DFG/ ./WORKING/ARROW/DS2_DFG/ -l2 -x -v -n 5 -cid T3BlbnF1YWtlSGF6YXJkU29sdXRpb246NjkzMTg5NA==
+```
 
 
 

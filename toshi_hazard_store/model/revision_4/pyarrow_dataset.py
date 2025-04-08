@@ -5,7 +5,7 @@ import logging
 import pathlib
 import uuid
 from functools import partial
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import pyarrow as pa
 import pyarrow.dataset
@@ -49,6 +49,7 @@ def append_models_to_dataset(
     base_dir: str,
     dataset_format: str = 'parquet',
     filesystem: Optional[fs.FileSystem] = None,
+    partitioning: Optional[List[str]] = None,
 ):
     """
     append realisation models to dataset using the pyarrow library
@@ -56,12 +57,14 @@ def append_models_to_dataset(
     TODO: option to BAIL if realisation exists, assume this is a duplicated operation
     TODO: schema checks
     """
+    partitioning = partitioning or ['nloc_0']
+
     write_metadata_fn = partial(write_metadata, pathlib.Path(base_dir))
     ds.write_dataset(
         table_or_batchreader,
         base_dir=base_dir,
         basename_template="%s-part-{i}.%s" % (uuid.uuid4(), dataset_format),
-        partitioning=['nloc_0'],
+        partitioning=partitioning,
         partitioning_flavor="hive",
         existing_data_behavior="overwrite_or_ignore",
         format=dataset_format,

@@ -45,12 +45,14 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger('pynamodb').setLevel(logging.INFO)
 logging.getLogger('botocore').setLevel(logging.INFO)
 logging.getLogger('toshi_hazard_store').setLevel(logging.INFO)
-logging.getLogger('toshi_hazard_store.oq_import.toshi_api_client').setLevel(logging.DEBUG)
 
 # logging.getLogger('nzshm_model').setLevel(logging.DEBUG)
 logging.getLogger('gql.transport').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.INFO)
 logging.getLogger('root').setLevel(logging.INFO)
+
+# for logging API query/reponses:
+# logging.getLogger('toshi_hazard_store.oq_import.toshi_api_client').setLevel(logging.DEBUG)
 
 log = logging.getLogger(__name__)
 
@@ -147,6 +149,7 @@ def build_realisations(
     output_folder,
     verbose,
     use_64bit_values=False,
+    partition_by_calc_id=False,
 ):
     """
     Build realisations for a given subtask info.
@@ -169,6 +172,8 @@ def build_realisations(
 
     producer_config = hpc_manager.load(hpc_md5.hexdigest())
 
+    partitioning = ["calculation_id"] if partition_by_calc_id else ['nloc_0']
+
     model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
         hdf5_file=str(subtask_info.hdf5_path),
         calculation_id=subtask_info.hazard_calc_id,
@@ -176,10 +181,10 @@ def build_realisations(
         producer_config_fk=producer_config.unique_id,
         use_64bit_values=use_64bit_values,
     )
-    pyarrow_dataset.append_models_to_dataset(model_generator, output_folder)
+    pyarrow_dataset.append_models_to_dataset(model_generator, output_folder, partitioning=partitioning)
 
 
-def handle_subtasks(
+def generate_subtasks(
     gt_id: str,
     gtapi: toshi_api_client.ApiClient,
     subtask_ids: Iterable,
@@ -312,7 +317,7 @@ def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
     compatible_calc = chc_manager.load(compatible_calc_fk)
 
     count = 0
-    for subtask_info in handle_subtasks(
+    for subtask_info in generate_subtasks(
         gt_id, gtapi, get_hazard_task_ids(query_res), work_folder, with_rlzs=False, verbose=verbose
     ):
         count += 1
@@ -331,10 +336,22 @@ def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
 )
 @click.option('-v', '--verbose', is_flag=True, default=False)
 @click.option('-d', '--dry-run', is_flag=True, default=False)
-@click.option('-f64', '--use_64bit', is_flag=True, default=False)
-@click.option('-ff', '--skip_until_id', default=None)
+@click.option('-CID', '--partition-by-calc-id', is_flag=True, default=False)
+@click.option('-f64', '--use-64bit', is_flag=True, default=False)
+@click.option('-ff', '--skip-until-id', default=None)
 @click.option('--debug', is_flag=True, default=False, help="turn on debug logging")
-def rlzs(gt_id, compatible_calc_fk, work_folder, output_folder, verbose, dry_run, use_64bit, skip_until_id, debug):
+def rlzs(
+    gt_id,
+    compatible_calc_fk,
+    work_folder,
+    output_folder,
+    verbose,
+    dry_run,
+    partition_by_calc_id,
+    use_64bit,
+    skip_until_id,
+    debug,
+):
     """Prepare and validate Producer Configs for a given GT_ID
 
     GT_ID is an NSHM General task id containing HazardAutomation Tasks\n
@@ -363,7 +380,7 @@ def rlzs(gt_id, compatible_calc_fk, work_folder, output_folder, verbose, dry_run
     # query the API for general task and
     query_res = gtapi.get_gt_subtasks(gt_id)
     count = 0
-    for subtask_info in handle_subtasks(
+    for subtask_info in generate_subtasks(
         gt_id,
         gtapi,
         get_hazard_task_ids(query_res),
@@ -382,7 +399,9 @@ def rlzs(gt_id, compatible_calc_fk, work_folder, output_folder, verbose, dry_run
         if verbose:
             click.echo(f'Compatible calc: {compatible_calc.unique_id}')
 
-        build_realisations(subtask_info, compatible_calc, output_folder, verbose, use_64bit)
+        build_realisations(
+            subtask_info, compatible_calc, output_folder, verbose, use_64bit, partition_by_calc_id=partition_by_calc_id
+        )
         count += 1
 
 
