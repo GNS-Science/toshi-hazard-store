@@ -16,6 +16,15 @@ class ApiClient(toshi_client_base.ToshiClientBase):
                   title
                   description
                   created
+                  meta {
+                        k
+                        v
+                  }
+                  argument_lists {
+                      k
+                      v
+                  }
+                  swept_arguments             
                   children {
                     total_count
                     edges {
@@ -36,6 +45,8 @@ class ApiClient(toshi_client_base.ToshiClientBase):
         log.debug(qry)
         input_variables = dict(id=id)
         executed = self.run_query(qry, input_variables)
+        log.debug(f"ARG_LISTS: {executed['node']['argument_lists']}")
+        log.debug(f"SWEPT ARGS: {executed['node']['swept_arguments']}")
         return executed['node']
 
     def get_oq_hazard_task(self, id):
@@ -108,4 +119,5 @@ class ApiClient(toshi_client_base.ToshiClientBase):
         log.debug(qry)
         input_variables = dict(id=id)
         executed = self.run_query(qry, input_variables)
+        log.debug(f"TASK ENV: {executed['node']['environment']}")
         return executed['node']
