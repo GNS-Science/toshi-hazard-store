@@ -24,7 +24,7 @@ class ApiClient(toshi_client_base.ToshiClientBase):
                       k
                       v
                   }
-                  swept_arguments             
+                  swept_arguments
                   children {
                     total_count
                     edges {
