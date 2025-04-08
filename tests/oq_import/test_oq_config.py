@@ -112,7 +112,7 @@ def mid_skool_config(tmpdir_factory):
 @pytest.fixture
 def latest_config():
     fname = "R2VuZXJhbFRhc2s6NjkzMTg5Mg==/subtasks/T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz/task_args.json"
-    yield pathlib.Path(__file__).parent.parent / "fixtures" / fname
+    yield pathlib.Path(__file__).parent / "fixtures" / fname
 
 
 def test_parse_old_skool(old_skool_config):
