@@ -1,18 +1,16 @@
+import itertools
 from datetime import datetime, timezone
 from pathlib import Path
 
-import itertools
 import pytest
+from moto import mock_dynamodb
+from nzshm_common.location.coded_location import CodedLocation
+from nzshm_common.location.location import LOCATIONS_BY_ID
 
 from toshi_hazard_store.model.hazard_models_manager import (
     CompatibleHazardCalculationManager,
     HazardCurveProducerConfigManager,
 )
-
-from moto import mock_dynamodb
-from nzshm_common.location.coded_location import CodedLocation
-from nzshm_common.location.location import LOCATIONS_BY_ID
-
 from toshi_hazard_store.model.revision_4 import hazard_models  # noqa
 from toshi_hazard_store.model.revision_4 import hazard_aggregate_curve, hazard_realization_curve
 
@@ -71,6 +69,7 @@ def hcp_manager(storage_path, hazard_curve_producer_config_data, compatible_haza
 #
 ######
 
+
 # ref https://docs.pytest.org/en/7.3.x/example/parametrize.html#deferring-the-setup-of-parametrized-resources
 def pytest_generate_tests(metafunc):
     if "adapted_model" in metafunc.fixturenames:
@@ -81,6 +80,7 @@ def pytest_generate_tests(metafunc):
             ],
             indirect=True,
         )
+
 
 @pytest.fixture
 def adapted_model(request, tmp_path):
