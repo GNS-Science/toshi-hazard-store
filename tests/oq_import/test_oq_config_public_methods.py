@@ -1,4 +1,6 @@
 from unittest.mock import MagicMock, patch
+import pathlib
+import json
 
 import pytest
 
@@ -11,14 +13,10 @@ from toshi_hazard_store.oq_import import oq_config
 
 
 # Mocking the API client and other dependencies
+TASK_ARGS_JSON = "task_args.json"
+
 @pytest.fixture
 def mock_gtapi():
-    with patch('toshi_hazard_store.oq_import.toshi_api_client.ApiClient') as mock:
-        yield mock.return_value
-
-
-@pytest.fixture
-def mock_chc_manager():
     return CompatibleHazardCalculationManager(pathlib.Path('/mock/storage_folder'))
 
 
