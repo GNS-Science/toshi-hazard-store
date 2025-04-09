@@ -54,7 +54,7 @@ def test_process_hdf5(mock_gtapi, tmp_path):
     }
 
     mock_gtapi.get_oq_hazard_task.return_value = hazard_task_detail
-    hdf5_file = oq_config.process_hdf5(mock_gtapi, task_id, hazard_task_detail, subtasks_folder)
+    oq_config.process_hdf5(mock_gtapi, task_id, hazard_task_detail, subtasks_folder)
 
     assert (subtasks_folder / '12345' / 'calc_1.hdf5').exists()
     assert (subtasks_folder / '12345' / 'calc_1.hdf5.original').exists()
