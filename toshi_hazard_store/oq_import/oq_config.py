@@ -12,15 +12,8 @@ from nzshm_model.psha_adapter.openquake.hazard_config_compat import DEFAULT_HAZA
 
 from toshi_hazard_store.oq_import.oq_manipulate_hdf5 import rewrite_calc_gsims
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from toshi_hazard_store.oq_import import toshi_api_client
-
-try:
-    from openquake.calculators.extract import Extractor
-except (ModuleNotFoundError, ImportError):
-    print("WARNING: the transform module uses the optional openquake dependencies - h5py, pandas and openquake.")
-    raise
-
 
 __all__ = ["config_from_task", "download_artefacts", "process_hdf5"]  # constrain what gets imported with `import *.`
 
@@ -32,21 +25,6 @@ SYNTHETIC_INI = 'synthetic_job.ini'
 TASK_ARGS_JSON = "task_args.json"
 
 
-def _get_extractor(calc_id: str):
-    """return an extractor for given calc_id or path to hdf5"""
-    hdf5_path = pathlib.Path(calc_id)
-    try:
-        if hdf5_path.exists():
-            # we have a file path to work with
-            extractor = Extractor(str(hdf5_path))
-        else:
-            extractor = Extractor(int(calc_id))
-    except Exception as err:
-        log.info(err)
-        return None
-    return extractor
-
-
 def _save_api_file(filepath: pathlib.Path, url: str):
     r = requests.get(url, stream=True)
     if r.ok:
@@ -54,16 +32,8 @@ def _save_api_file(filepath: pathlib.Path, url: str):
             f.write(r.content)
             log.info(f"saving download to {filepath}")
         return filepath
-    else:
+    else:  # pragma: no cover
         raise (RuntimeError(f'Error downloading file {filepath.name}: Status code {r.status_code}'))
-
-
-def _hdf5_from_task(task_id: str, subtasks_folder: pathlib.Path) -> pathlib.Path:
-    """Use nzshm-model to build a compatibility config"""
-    subtask_folder = subtasks_folder / str(task_id)
-    hdf5_file = subtask_folder / "calc_1.hdf5"
-    assert hdf5_file.exists()
-    return hdf5_file
 
 
 def download_artefacts(
@@ -135,12 +105,14 @@ def process_hdf5(
         # Extract the first file found in the archive
         with zipfile.ZipFile(hdf5_archive) as myzip:
             calc_files = [name for name in myzip.namelist() if name.startswith('calc_') and name.endswith('.hdf5')]
-            if len(calc_files) != 1:
+            if len(calc_files) != 1:  # pragma: no cover
                 raise ValueError("Archive must contain exactly one 'calc_' file.")
             hdf5_file_name = calc_files[0]
             log.info(f"extracting {hdf5_file_name} from {hdf5_archive} into {subtask_folder}")
             myzip.extract(hdf5_file_name, subtask_folder)
             hdf5_archive.unlink()  # delete the zip
+    else:  # pragma: no cover
+        log.info('skipping hdf5 download - files exist.')
 
     # Find again files matching the pattern calc_N.hdf5 or calc_NN.hdf5
     hdf5_files = list(
@@ -148,9 +120,9 @@ def process_hdf5(
     )
 
     # validation
-    if len(hdf5_files) > 1:
+    if len(hdf5_files) > 1:  # pragma: no cover
         raise FileExistsError(f"Multiple HDF5 files found in {subtask_folder}")
-    if len(hdf5_files) == 0:
+    if len(hdf5_files) == 0:  # pragma: no cover
         raise FileNotFoundError("HDF5 is missing")
 
     # Assuming there is only one such file, get the first one
@@ -164,6 +136,21 @@ def process_hdf5(
         rewrite_calc_gsims(hdf5_file)
 
     return hdf5_file
+
+
+def parse_config_from_task_args(ta: dict) -> OpenquakeConfig:
+    # runzi_latest_config_
+    confstr = ta['hazard_model-hazard_config']
+    confstr = (
+        confstr.replace("``-", "``")
+        .replace("``", '"')
+        .replace("{-", "{")
+        .replace("}-", "}")
+        .replace("-}", "}")
+        .replace(",-", ",")
+    )
+    log.debug(f"out> {confstr}")
+    return OpenquakeConfig.from_dict(json.loads(confstr))
 
 
 def config_from_task(task_id: str, subtasks_folder: pathlib.Path) -> OpenquakeConfig:
@@ -186,22 +173,11 @@ def config_from_task(task_id: str, subtasks_folder: pathlib.Path) -> OpenquakeCo
 
     if ta.get('hazard_model-hazard_config'):
         log.info('latest style config')
-        confstr = (
-            ta.get('hazard_model-hazard_config')
-            .replace("``-", "``")
-            .replace("``", '"')
-            .replace("{-", "{")
-            .replace("}-", "}")
-            .replace("-}", "}")
-            .replace(",-", ",")
-        )
-
-        config = OpenquakeConfig.from_dict(json.loads(confstr))
-
+        config = parse_config_from_task_args(ta)
         config.set_description(SYNTHETIC_INI).set_uniform_site_params(vs30=ta['site_params-vs30']).set_iml(
             ta["hazard_curve-imts"], ta["hazard_curve-imtls"]
         )
-
+        log.info(f"config: {type(config)}")
     else:
         if ta.get("oq"):
             log.info('new-skool config')
