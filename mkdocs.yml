@@ -25,6 +25,10 @@ nav:
       - ths_check: cli/ths_ds_check.md
       - ths_filter: cli/ths_r4_filter_dataset.md
       - ths_query: cli/ths_r4_query.md
+  - API:
+    - api/index.md
+    - oq_import:
+      - oq config: api/oq_import/oq_config.md
   - Legacy Migrations:
       # - Overview: migration_overview.md
       - Hazard dataset May-2024: migration/hazard_import_processing-may-2024.md
