@@ -1,4 +1,3 @@
-import json
 import pathlib
 from unittest.mock import MagicMock
 
@@ -46,19 +45,6 @@ def mock_gtapi():
 def the_config(request):
     """Fixture to provide numbers for testing."""
     return request.param
-
-
-@pytest.fixture
-def solution_archive_fixture(tmpdir_factory):
-    storage_folder = pathlib.Path(tmpdir_factory.mktemp("solution_archive_fixture"))
-    fixture = (
-        pathlib.Path(__file__).parent / 'fixtures' / 'openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazoxMDYzMzU3.zip'
-    )
-
-    # copy fixture data
-    tmp_file = storage_folder / fixture.name
-    tmp_file.write_bytes(fixture.read_bytes())
-    return tmp_file
 
 
 # Test cases for oq_config functions
@@ -112,29 +98,8 @@ def test_process_hdf5(mock_gtapi, solution_archive_fixture, tmp_path, monkeypatc
     assert (subtasks_folder / '12345' / 'calc_1.hdf5.original').exists() == manipulate
 
 
-def test_config_from_task_args_latest(tmp_path, latest_config):
-    subtasks_folder = tmp_path / 'subtasks'
-    subtasks_folder.mkdir()
-    task_id = '12345'
-
-    ta_fixt = json.load(open(latest_config, 'r'))
-    ta = {
-        "hazard_model-hazard_config": ta_fixt.get("hazard_model-hazard_config"),
-        'site_params-vs30': 760,
-        'intensity_spec': {'measures': ['PGA'], 'levels': [0.01, 0.02]},
-        "hazard_curve-imts": ["PGA", "SA(0.5)", "SA(1.5)", "SA(3.0)"],
-        "hazard_curve-imtls": [
-            0.0001,
-            0.0002,
-            0.0004,
-        ],
-        "site_params-locations": ["WLG", "AKL", "DUD", "CHC"],
-        "site_params-locations_file": None,
-    }
-
-    task_args_file = subtasks_folder / str(task_id) / TASK_ARGS_JSON
-    task_args_file.parent.mkdir()
-    task_args_file.write_text(json.dumps(ta))
+def test_config_from_task_args_latest(tmp_path, latest_config, mock_task_args_file_path, task_id):
+    subtasks_folder = mock_task_args_file_path.parent.parent
     config = oq_config.config_from_task(task_id, subtasks_folder)
 
     assert config.get_uniform_site_params()[0] == 760
