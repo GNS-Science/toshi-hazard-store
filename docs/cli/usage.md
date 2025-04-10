@@ -8,7 +8,7 @@ The following steps process a single GeneralTask (GT). Usually a GT this would i
 
 ### Step 1. Check Hazard curve compatability. 
 
-First we want to ensure there's a suitable **CompatibleHazardConfig** for these curves and obtain the identifier.
+We want to ensure there's a suitable **CompatibleHazardConfig** for these curves and obtain the identifier.
 
 **List the identifiers**
 
@@ -38,10 +38,19 @@ $ AWS_PROFILE=chrisbc poetry run ths_r4_import producers R2VuZXJhbFRhc2s6NjkzMTg
 ...
 ```
 
-### Step 2. Extract hazard curves to a local dataset.
+### Step 3. Extract hazard curves to a local dataset.
+
+
+#### Either A, with location partitioning
 
 ```bash
 AWS_PROFILE=chrisbc poetry run ths_r4_import rlzs R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS1 -v
+```
+
+#### OR B, with calculation_id partitioning
+
+```bash
+AWS_PROFILE=chrisbc poetry run ths_r4_import rlzs R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS2 -v -CID
 ```
 
 ### Step 3. Sanity checks

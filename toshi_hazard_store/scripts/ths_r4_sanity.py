@@ -235,9 +235,9 @@ def report_rlzs_grouped_by_calc(ds_name, verbose, bail_on_error=True):
     click.echo()
     click.echo(f"Grand total: {count_all}")
 
-    if verbose:
-        click.echo()
-        click.echo(df0)
+    # if verbose:
+    #     click.echo()
+    #     click.echo(df0)
 
 
 def report_v3_grouped_by_calc(verbose, bail_on_error=True):
@@ -254,7 +254,7 @@ def report_v3_grouped_by_calc(verbose, bail_on_error=True):
         click.echo(calc_ids)
         click.echo()
         click.echo("Location Partitions")
-        click.echo(all_partitions)
+        # click.echo(all_partitions)
 
     count_all = 0
     click.echo("calculation_id, uniq_rlzs, uniq_locs, uniq_imts, uniq_gmms, uniq_srcs, uniq_vs30, consistent")
