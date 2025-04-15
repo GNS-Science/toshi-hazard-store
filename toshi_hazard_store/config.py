@@ -1,6 +1,7 @@
 """This module exports comfiguration for the current system."""
 
 import os
+from pathlib import PurePath
 
 from dotenv import load_dotenv
 
@@ -23,3 +24,10 @@ NUM_BATCH_WORKERS = int(os.getenv('NZSHM22_HAZARD_STORE_NUM_WORKERS', 1))
 SOURCE_REGION = os.getenv('NZSHM22_HAZARD_STORE_MIGRATE_SOURCE_REGION')
 SOURCE_DEPLOYMENT_STAGE = os.getenv('NZSHM22_HAZARD_STORE_SOURCE_STAGE')
 # TARGET_REGION = os.getenv('NZSHM22_HAZARD_STORE_MIGRATE_TARGET_REGION')
+
+RESOURCES_FOLDER = str(PurePath(os.path.realpath(__file__)).parent.parent / "resources")
+STORAGE_FOLDER = str(PurePath(RESOURCES_FOLDER) / "metadata")
+
+
+ECR_REGISTRY_ID = '461564345538.dkr.ecr.us-east-1.amazonaws.com'
+ECR_REPONAME = "nzshm22/runzi-openquake"

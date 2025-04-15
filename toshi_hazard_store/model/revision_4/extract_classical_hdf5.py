@@ -1,18 +1,18 @@
 import json
 import logging
-from typing import Dict, List
+from typing import Dict, Iterable, List
 
 import numpy as np
 import pyarrow as pa
 
-try:
+try:  # pragma: no cover
     import openquake  # noqa
 
     HAVE_OQ = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAVE_OQ = False
 
-if HAVE_OQ:
+if HAVE_OQ:  # pragma: no cover
     from openquake.calculators.extract import Extractor
 
 from nzshm_common.location import coded_location
@@ -42,6 +42,94 @@ def build_nloc0_series(nloc_001_locations: List[coded_location.CodedLocation], n
     return nloc_0_series
 
 
+def generate_rlz_record_batches(
+    extractor,
+    vs30: float,
+    imtl_keys: Iterable[str],
+    calculation_id: str,
+    compatible_calc_fk: str,
+    producer_config_fk: str,
+) -> pa.RecordBatch:
+    rlzs = extractor.get('hcurves?kind=rlzs', asdict=True)
+    rlz_keys = [k for k in rlzs.keys() if 'rlz-' in k]
+    rlz_map = build_rlz_mapper(extractor)
+
+    # get the site index values
+    nloc_001_locations = []
+    for props in extractor.get('sitecol').to_dict()['array']:
+        site_loc = coded_location.CodedLocation(lat=props[2], lon=props[1], resolution=0.001)
+        nloc_001_locations.append(site_loc)  # locations in OG order
+
+    nloc_0_map = build_nloc_0_mapping(nloc_001_locations)
+    nloc_0_series = build_nloc0_series(nloc_001_locations, nloc_0_map)
+
+    # build the has digest dict arrays
+    sources_digests = [r.sources.hash_digest for i, r in rlz_map.items()]
+    gmms_digests = [r.gmms.hash_digest for i, r in rlz_map.items()]
+
+    # iterate through all the rlzs, yielding the pyarrow record batches
+    for r_idx, rlz_key in enumerate(rlz_keys):
+        a3d = rlzs[rlz_key]  # 3D array for the given rlz_key
+
+        n_sites, n_imts, n_values = a3d.shape
+
+        # create the np.arrays for our series
+        values = a3d.reshape(n_sites * n_imts, n_values)
+        nloc_001_idx = np.repeat(np.arange(n_sites), n_imts)  # 0,0,0,0,0..........3991,3991
+        nloc_0_idx = np.repeat(nloc_0_series, n_imts)  # 0,0.0,0,0..............56,56
+        imt_idx = np.tile(np.arange(n_imts), n_sites)  # 0,1,2,3.....0,1,2,3....26,27
+        rlz_idx = np.full(n_sites * n_imts, r_idx)  # 0..........................0
+        vs30s_series = np.full(n_sites * n_imts, vs30)
+        calculation_id_idx = np.full(n_sites * n_imts, 0)
+        compatible_calc_idx = np.full(n_sites * n_imts, 0)
+        producer_config_idx = np.full(n_sites * n_imts, 0)
+
+        # Build the categorised series as pa.DictionaryArray objects
+        compatible_calc_cat = pa.DictionaryArray.from_arrays(compatible_calc_idx, [compatible_calc_fk])
+        producer_config_cat = pa.DictionaryArray.from_arrays(producer_config_idx, [producer_config_fk])
+        calculation_id_cat = pa.DictionaryArray.from_arrays(calculation_id_idx, [calculation_id])
+        nloc_001_cat = pa.DictionaryArray.from_arrays(nloc_001_idx, [loc.code for loc in nloc_001_locations])
+        nloc_0_cat = pa.DictionaryArray.from_arrays(nloc_0_idx, nloc_0_map.keys())
+        imt_cat = pa.DictionaryArray.from_arrays(imt_idx, imtl_keys)
+        rlz_cat = pa.DictionaryArray.from_arrays(
+            rlz_idx, rlz_keys
+        )  # there's only one value in the dictionary on each rlz loop
+        sources_digest_cat = pa.DictionaryArray.from_arrays(rlz_idx, sources_digests)
+        gmms_digest_cat = pa.DictionaryArray.from_arrays(rlz_idx, gmms_digests)
+
+        # while values are kept in list form
+        values_series = values.tolist()
+        batch = pa.RecordBatch.from_arrays(
+            [
+                compatible_calc_cat,
+                producer_config_cat,
+                calculation_id_cat,
+                nloc_001_cat,
+                nloc_0_cat,
+                imt_cat,
+                vs30s_series,
+                rlz_cat,
+                sources_digest_cat,
+                gmms_digest_cat,
+                values_series,
+            ],
+            [
+                "compatible_calc_fk",
+                "producer_config_fk",
+                "calculation_id",
+                "nloc_001",
+                "nloc_0",
+                "imt",
+                "vs30",
+                "rlz",
+                "sources_digest",
+                "gmms_digest",
+                "values",
+            ],
+        )
+        yield batch
+
+
 def rlzs_to_record_batch_reader(
     hdf5_file: str,
     calculation_id: str,
@@ -66,87 +154,6 @@ def rlzs_to_record_batch_reader(
     oq = extractor.dstore['oqparam']  # old skool way
     imtl_keys = sorted(list(oq.imtls.keys()))
 
-    def generate_rlz_record_batches(extractor, vs30) -> pa.RecordBatch:
-
-        rlzs = extractor.get('hcurves?kind=rlzs', asdict=True)
-        rlz_keys = [k for k in rlzs.keys() if 'rlz-' in k]
-        rlz_map = build_rlz_mapper(extractor)
-
-        # get the site index values
-        nloc_001_locations = []
-        for props in extractor.get('sitecol').to_dict()['array']:
-            site_loc = coded_location.CodedLocation(lat=props[2], lon=props[1], resolution=0.001)
-            nloc_001_locations.append(site_loc)  # locations in OG order
-
-        nloc_0_map = build_nloc_0_mapping(nloc_001_locations)
-        nloc_0_series = build_nloc0_series(nloc_001_locations, nloc_0_map)
-
-        # build the has digest dict arrays
-        sources_digests = [r.sources.hash_digest for i, r in rlz_map.items()]
-        gmms_digests = [r.gmms.hash_digest for i, r in rlz_map.items()]
-
-        # iterate through all the rlzs, yielding the pyarrow record batches
-        for r_idx, rlz_key in enumerate(rlz_keys):
-            a3d = rlzs[rlz_key]  # 3D array for the given rlz_key
-
-            n_sites, n_imts, n_values = a3d.shape
-
-            # create the np.arrays for our series
-            values = a3d.reshape(n_sites * n_imts, n_values)
-            nloc_001_idx = np.repeat(np.arange(n_sites), n_imts)  # 0,0,0,0,0..........3991,3991
-            nloc_0_idx = np.repeat(nloc_0_series, n_imts)  # 0,0.0,0,0..............56,56
-            imt_idx = np.tile(np.arange(n_imts), n_sites)  # 0,1,2,3.....0,1,2,3....26,27
-            rlz_idx = np.full(n_sites * n_imts, r_idx)  # 0..........................0
-            vs30s_series = np.full(n_sites * n_imts, vs30)
-            calculation_id_idx = np.full(n_sites * n_imts, 0)
-            compatible_calc_idx = np.full(n_sites * n_imts, 0)
-            producer_config_idx = np.full(n_sites * n_imts, 0)
-
-            # Build the categorised series as pa.DictionaryArray objects
-            compatible_calc_cat = pa.DictionaryArray.from_arrays(compatible_calc_idx, [compatible_calc_fk])
-            producer_config_cat = pa.DictionaryArray.from_arrays(producer_config_idx, [producer_config_fk])
-            calculation_id_cat = pa.DictionaryArray.from_arrays(calculation_id_idx, [calculation_id])
-            nloc_001_cat = pa.DictionaryArray.from_arrays(nloc_001_idx, [loc.code for loc in nloc_001_locations])
-            nloc_0_cat = pa.DictionaryArray.from_arrays(nloc_0_idx, nloc_0_map.keys())
-            imt_cat = pa.DictionaryArray.from_arrays(imt_idx, imtl_keys)
-            rlz_cat = pa.DictionaryArray.from_arrays(
-                rlz_idx, rlz_keys
-            )  # there's only one value in the dictionary on each rlz loop
-            sources_digest_cat = pa.DictionaryArray.from_arrays(rlz_idx, sources_digests)
-            gmms_digest_cat = pa.DictionaryArray.from_arrays(rlz_idx, gmms_digests)
-
-            # while values are kept in list form
-            values_series = values.tolist()
-            batch = pa.RecordBatch.from_arrays(
-                [
-                    compatible_calc_cat,
-                    producer_config_cat,
-                    calculation_id_cat,
-                    nloc_001_cat,
-                    nloc_0_cat,
-                    imt_cat,
-                    vs30s_series,
-                    rlz_cat,
-                    sources_digest_cat,
-                    gmms_digest_cat,
-                    values_series,
-                ],
-                [
-                    "compatible_calc_fk",
-                    "producer_config_fk",
-                    "calculation_id",
-                    "nloc_001",
-                    "nloc_0",
-                    "imt",
-                    "vs30",
-                    "rlz",
-                    "sources_digest",
-                    "gmms_digest",
-                    "values",
-                ],
-            )
-            yield batch
-
     # create a schema...
     vtype = pa.float64() if use_64bit_values else pa.float32()
     values_type = pa.list_(vtype)
@@ -156,7 +163,7 @@ def rlzs_to_record_batch_reader(
         [
             ("compatible_calc_fk", dict_type),  # id for hazard-calc equivalence, for PSHA engines interoperability
             # ("producer_config_fk", dict_type),    # id for the look up
-            ("calculation_id", dict_type),  # a refernce to the original calculation that produced this item
+            ("calculation_id", dict_type),  # a reference to the original calculation that produced this item
             ("nloc_001", dict_type),  # the location string to three places e.g. "-38.330~17.550"
             ("nloc_0", dict_type),  # the location string to zero places e.g.  "-38.0~17.0" (used for partioning)
             ('imt', dict_type),  # the imt label e.g. 'PGA', 'SA(5.0)''
@@ -169,8 +176,16 @@ def rlzs_to_record_batch_reader(
     )
 
     # print('schema', schema)
+    batches = generate_rlz_record_batches(
+        extractor,
+        vs30,
+        imtl_keys,
+        calculation_id,
+        compatible_calc_fk,
+        producer_config_fk,
+    )
 
-    record_batch_reader = pa.RecordBatchReader.from_batches(schema, generate_rlz_record_batches(extractor, vs30))
+    record_batch_reader = pa.RecordBatchReader.from_batches(schema, batches)
     return record_batch_reader
 
 

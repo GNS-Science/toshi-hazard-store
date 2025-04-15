@@ -1,4 +1,7 @@
-"""This module defines the pynamodb tables used to store openquake data. Third iteration"""
+"""This module defines the pynamodb tables used to store openquake data. Third iteration.
+
+DynamoDB is now deprecated, and replaced with parquet datasets.
+"""
 
 import logging
 from typing import Iterable, Iterator, Sequence, Union

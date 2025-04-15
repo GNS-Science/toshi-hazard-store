@@ -1,4 +1,7 @@
-"""This module defines the pynamodb tables used to store THH."""
+"""This module defines the pynamodb tables used to store THH.
+
+DynamoDB is deprecated, and replaced with parquet datasets.
+"""
 
 import logging
 from datetime import datetime, timezone

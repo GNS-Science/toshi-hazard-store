@@ -1,3 +1,8 @@
+"""This module defines a base model LocationIndexedModel.
+
+DynamoDB is now deprecated, and replaced with parquet datasets.
+"""
+
 import uuid
 from datetime import datetime, timezone
 
