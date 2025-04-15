@@ -236,7 +236,7 @@ class HazardCurveProducerConfigManager(ManagerBase):
 
         # Check referential integrity
         if model.compatible_calc_fk not in self.ch_manager.get_all_ids():
-            raise ValueError("Referenced compatible hazard calculation {model.compatible_calc_fk} does not exist.")
+            raise ValueError(f"Referenced compatible hazard calculation {model.compatible_calc_fk} does not exist.")
 
         self._save_json(model, path)
 

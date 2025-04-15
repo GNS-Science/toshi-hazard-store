@@ -1,12 +1,11 @@
-import hashlib
 import pathlib
 from unittest import mock
 
 import pytest
 
+import toshi_hazard_store.model.hazard_models_manager as hazard_models_manager
 from toshi_hazard_store.oq_import import oq_config, toshi_api_subtask
 from toshi_hazard_store.oq_import.toshi_api_subtask import (
-    ProducerConfigKey,
     SubtaskRecord,
     build_producers,
     build_realisations,
@@ -77,63 +76,52 @@ def mock_hazard_producer_config():
 
 
 # Tests for build_producers
-@pytest.mark.skip("WIP")
-def test_build_producers_existing_config(mock_subtask_info, mock_compatible_calc, mocker):
-    hpc_manager_load = mocker.patch('toshi_hazard_store.oq_import.toshi_api_subtask.hpc_manager.load')
-    hpc_manager_update = mocker.patch('toshi_hazard_store.oq_import.toshi_api_subtask.hpc_manager.update')
-
-    # Mock existing producer config
-    mock_producer_config = {"unique_id": "existing_config_1"}
-    hpc_manager_load.return_value = mock_producer_config
-
-    build_producers(mock_subtask_info, mock_compatible_calc, verbose=True, update=True)
-
-    hpc_manager_update.assert_called_once_with("existing_config_1", mock_producer_config.model_dump())
 
 
-@pytest.mark.skip("WIP")
-def test_build_producers_new_config(mock_subtask_info, mock_compatible_calc, mocker):
-    # hpc_manager_load = mocker.patch(
-    #     'toshi_hazard_store.oq_import.toshi_api_subtask.hpc_manager.load', side_effect=FileNotFoundError
-    # )
-    hpc_manager_create = mocker.patch('toshi_hazard_store.oq_import.toshi_api_subtask.hpc_manager.create')
+@pytest.mark.parametrize("verbose", [True, False])
+@pytest.mark.parametrize("update", [False, True])
+def test_build_producers_existing_config(mock_subtask_info, mock_compatible_calc, monkeypatch, verbose, update):
+    # hpc_manager_load = mock.patch('toshi_hazard_store.oq_import.toshi_api_subtask.hpc_manager.load')
+    # hpc_manager_update = mock.patch('toshi_hazard_store.oq_import.toshi_api_subtask.hpc_manager.update')
 
-    build_producers(mock_subtask_info, mock_compatible_calc, verbose=True, update=False)
+    mock_hpc = mock.MagicMock(hazard_models_manager.HazardCurveProducerConfigManager)
+    monkeypatch.setattr(toshi_api_subtask, "hpc_manager", mock_hpc)
 
-    expected_config = {
-        "unique_id": hashlib.md5(
-            str(
-                ProducerConfigKey(
-                    "461564345538.dkr.ecr.us-east-1.amazonaws.com/nzshm22/runzi-openquake",
-                    "abcdef1234567890",
-                    "config_hash_1",
-                )
-            ).encode()
-        ).hexdigest(),
-        "compatible_calc_fk": "compatible_calc_1",
-        "tags": ["tag1"],
-        "effective_from": "2023-03-20T09:02:35.314495+00:00",
-        "last_used": "2023-03-20T09:02:35.314495+00:00",
-        "producer_software": "461564345538.dkr.ecr.us-east-1.amazonaws.com/nzshm22/runzi-openquake",
-        "producer_version_id": "abcdef1234567890",
-        "configuration_hash": "config_hash_1",
-        "notes": "notes",
-    }
-    hpc_manager_create.assert_called_once_with(expected_config)
+    build_producers(mock_subtask_info, mock_compatible_calc, verbose=verbose, update=update)
+
+    mock_hpc.return_value.load.return_value.assert_called
+
+
+@pytest.mark.parametrize("verbose", [True, False])
+@pytest.mark.parametrize("update", [False, True])
+def test_build_producers_new_config(
+    mock_subtask_info, mock_compatible_calc, mock_hazard_producer_config, tmpdir_factory, monkeypatch, verbose, update
+):
+
+    mock_hpc = mock.MagicMock(hazard_models_manager.HazardCurveProducerConfigManager)
+    monkeypatch.setattr(toshi_api_subtask, "hpc_manager", mock_hpc)
+
+    build_producers(mock_subtask_info, mock_compatible_calc, verbose=verbose, update=update)
+
+    mock_hpc.return_value.load.assert_called
+    mock_hpc.return_value.create.assert_called_once
 
 
 # Tests for build_realisations
+@pytest.mark.parametrize("verbose", [True, False])
 def test_build_realisations(
-    mock_subtask_info, mock_compatible_calc, mock_hazard_producer_config, tmpdir_factory, monkeypatch
+    mock_subtask_info, mock_compatible_calc, mock_hazard_producer_config, tmpdir_factory, monkeypatch, verbose
 ):
 
-    # mocker = mock.Mock()
-    # monkeypatch.setattr(toshi_api_subtask.pyarrow_dataset, "append_models_to_dataset", mocker)
-    monkeypatch.setattr(toshi_api_subtask.hpc_manager, 'load', lambda id: mock_hazard_producer_config)
+    mock_hpc = mock.MagicMock(hazard_models_manager.HazardCurveProducerConfigManager)
+    # mock_hpc.return_value.load = lambda id: mock_hazard_producer_config
+
+    monkeypatch.setattr(toshi_api_subtask, "hpc_manager", mock_hpc)
+    monkeypatch.setattr(mock_hpc, 'load', lambda id: mock_hazard_producer_config)
 
     output_folder = pathlib.Path(tmpdir_factory.mktemp("build_realisations"))
 
-    build_realisations(mock_subtask_info, mock_compatible_calc, output_folder=output_folder, verbose=True)
+    build_realisations(mock_subtask_info, mock_compatible_calc, output_folder=output_folder, verbose=verbose)
 
     partitions = list(output_folder.glob("nloc_0*"))
     assert len(partitions) == 4  # this calc create 4 nloc_0 partitions
@@ -142,9 +130,8 @@ def test_build_realisations(
 
 
 # Tests for generate_subtasks
-# TODO: rework mocking ... this is slow
 @pytest.mark.parametrize("verbose", [True, False])
-@pytest.mark.parametrize("with_rlzs", [True, False])
+@pytest.mark.parametrize("with_rlzs", [False, True])
 def test_generate_subtasks(
     task_id,
     general_task_id,
@@ -155,13 +142,13 @@ def test_generate_subtasks(
     verbose,
     with_rlzs,
 ):
-    # hpc_manager_load = mocker.patch('toshi_hazard_store.oq_import.toshi_api_subtask.hpc_manager.load')
-
-    ecr_repo_stash_fetch = mock.patch('toshi_hazard_store.oq_import.toshi_api_subtask.aws_ecr.ECRRepoStash.fetch')
-    mock_ecr_images = [{"imageDigest": "sha256:abcdef1234567890"}]
-    ecr_repo_stash_fetch.return_value = mock_ecr_images
-
     work_folder = mock_task_args_file_path.parent.parent.parent.parent
+    mock_ecr_images = [{"imageDigest": "sha256:abcdef1234567890"}]
+
+    mock_ecr = mock.MagicMock(toshi_api_subtask.aws_ecr.ECRRepoStash)
+    mock_ecr.return_value.active_image_asat.return_value = mock_ecr_images[0]
+
+    monkeypatch.setattr(toshi_api_subtask.aws_ecr.ECRRepoStash, 'fetch', lambda *args, **kwargs: mock_ecr)
 
     monkeypatch.setattr(oq_config, 'download_artefacts', lambda *args, **kwargs: None)
     monkeypatch.setattr(oq_config, '_save_api_file', lambda *args, **kwargs: solution_archive_fixture)
@@ -170,6 +157,7 @@ def test_generate_subtasks(
         generate_subtasks(general_task_id, mock_gtapi, [task_id], work_folder, with_rlzs=with_rlzs, verbose=verbose)
     )
 
+    assert mock_ecr.return_value.active_image_asat.called_once
     assert len(subtasks) == 1
     assert isinstance(subtasks[0], SubtaskRecord)
     assert subtasks[0].vs30 == '760'

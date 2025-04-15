@@ -13,7 +13,7 @@ from toshi_hazard_store.model.hazard_models_manager import (
     CompatibleHazardCalculationManager,
     HazardCurveProducerConfigManager,
 )
-from toshi_hazard_store.model.hazard_models_pydantic import HazardCurveProducerConfig
+from toshi_hazard_store.model.hazard_models_pydantic import CompatibleHazardCalculation, HazardCurveProducerConfig
 from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
 
 from . import aws_ecr_docker_image as aws_ecr
@@ -54,13 +54,15 @@ def get_producer_config_key(subtask_info: SubtaskRecord) -> ProducerConfigKey:
     return ProducerConfigKey(producer_software, producer_version_id, configuration_hash)
 
 
-def build_producers(subtask_info: 'SubtaskRecord', compatible_calc, verbose, update):
+def build_producers(
+    subtask_info: 'SubtaskRecord', compatible_calc: "CompatibleHazardCalculation", verbose: bool, update: bool
+):
     """
     Build producers for a given subtask info.
 
     Args:
         subtask_info (SubtaskRecord): Subtask information.
-        compatible_calc (CompatibleHazardCalculationManager): Compatible hazard calculation manager.
+        compatible_calc (CompatibleHazardCalculation): Compatible hazard calculation
         verbose (bool): Verbose flag.
         update (bool): Update flag.
 
