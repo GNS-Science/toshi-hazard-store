@@ -47,8 +47,9 @@ def generate_rlz_record_batches(
     vs30: float,
     imtl_keys: Iterable[str],
     calculation_id: str,
-    compatible_calc_fk: str,
-    producer_config_fk: str,
+    compatible_calc_id: str,
+    producer_digest: str,
+    config_digest: str,
 ) -> pa.RecordBatch:
     rlzs = extractor.get('hcurves?kind=rlzs', asdict=True)
     rlz_keys = [k for k in rlzs.keys() if 'rlz-' in k]
@@ -82,11 +83,13 @@ def generate_rlz_record_batches(
         vs30s_series = np.full(n_sites * n_imts, vs30)
         calculation_id_idx = np.full(n_sites * n_imts, 0)
         compatible_calc_idx = np.full(n_sites * n_imts, 0)
-        producer_config_idx = np.full(n_sites * n_imts, 0)
+        producer_digest_idx = np.full(n_sites * n_imts, 0)
+        config_digest_idx = np.full(n_sites * n_imts, 0)
 
         # Build the categorised series as pa.DictionaryArray objects
-        compatible_calc_cat = pa.DictionaryArray.from_arrays(compatible_calc_idx, [compatible_calc_fk])
-        producer_config_cat = pa.DictionaryArray.from_arrays(producer_config_idx, [producer_config_fk])
+        compatible_calc_cat = pa.DictionaryArray.from_arrays(compatible_calc_idx, [compatible_calc_id])
+        producer_digest_cat = pa.DictionaryArray.from_arrays(producer_digest_idx, [producer_digest])
+        config_digest_cat = pa.DictionaryArray.from_arrays(config_digest_idx, [config_digest])
         calculation_id_cat = pa.DictionaryArray.from_arrays(calculation_id_idx, [calculation_id])
         nloc_001_cat = pa.DictionaryArray.from_arrays(nloc_001_idx, [loc.code for loc in nloc_001_locations])
         nloc_0_cat = pa.DictionaryArray.from_arrays(nloc_0_idx, nloc_0_map.keys())
@@ -102,7 +105,8 @@ def generate_rlz_record_batches(
         batch = pa.RecordBatch.from_arrays(
             [
                 compatible_calc_cat,
-                producer_config_cat,
+                producer_digest_cat,
+                config_digest_cat,
                 calculation_id_cat,
                 nloc_001_cat,
                 nloc_0_cat,
@@ -114,8 +118,9 @@ def generate_rlz_record_batches(
                 values_series,
             ],
             [
-                "compatible_calc_fk",
-                "producer_config_fk",
+                "compatible_calc_id",
+                "producer_digest",
+                "config_digest",
                 "calculation_id",
                 "nloc_001",
                 "nloc_0",
@@ -133,14 +138,15 @@ def generate_rlz_record_batches(
 def rlzs_to_record_batch_reader(
     hdf5_file: str,
     calculation_id: str,
-    compatible_calc_fk: str,
-    producer_config_fk: str,  # TODO: decide if we actually want this column
+    compatible_calc_id: str,
+    producer_digest: str,
+    config_digest: str,
     use_64bit_values: bool = False,
 ) -> pa.RecordBatchReader:
     """extract realizations from a 'classical' openquake calc file as a pyarrow batch reader"""
     log.info(
         'rlzs_to_record_batch_reader called with '
-        f'{hdf5_file}, {calculation_id}, {compatible_calc_fk}, {producer_config_fk}'
+        f'{hdf5_file}, {calculation_id}, {compatible_calc_id}, {producer_digest}, {config_digest}'
     )
 
     extractor = Extractor(str(hdf5_file))
@@ -161,8 +167,9 @@ def rlzs_to_record_batch_reader(
     dict_type = pa.dictionary(pa.int32(), pa.string(), True)
     schema = pa.schema(
         [
-            ("compatible_calc_fk", dict_type),  # id for hazard-calc equivalence, for PSHA engines interoperability
-            # ("producer_config_fk", dict_type),    # id for the look up
+            ("compatible_calc_id", dict_type),  # for hazard-calc equivalence, for PSHA engines interoperability
+            ("producer_digest", dict_type),  # digest for the producer look up
+            ("config_digest", dict_type),  # digest for the job configutation
             ("calculation_id", dict_type),  # a reference to the original calculation that produced this item
             ("nloc_001", dict_type),  # the location string to three places e.g. "-38.330~17.550"
             ("nloc_0", dict_type),  # the location string to zero places e.g.  "-38.0~17.0" (used for partioning)
@@ -177,12 +184,7 @@ def rlzs_to_record_batch_reader(
 
     # print('schema', schema)
     batches = generate_rlz_record_batches(
-        extractor,
-        vs30,
-        imtl_keys,
-        calculation_id,
-        compatible_calc_fk,
-        producer_config_fk,
+        extractor, vs30, imtl_keys, calculation_id, compatible_calc_id, producer_digest, config_digest
     )
 
     record_batch_reader = pa.RecordBatchReader.from_batches(schema, batches)

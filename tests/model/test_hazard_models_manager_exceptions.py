@@ -128,23 +128,22 @@ def test_hazard_curve_producer_config_create_existing_id(storage_path, ch_manage
     data = {
         "unique_id": "duplicate_hcp_id",
         "compatible_calc_fk": compatible_hazard_calc_data["unique_id"],
-        "producer_software": "software1",
-        "producer_version_id": "v1",
         "configuration_hash": "hash1",
-        "imts": ["PGA"],
-        "imt_levels": [0.1],
+        "ecr_image_digest": "digest_string",
+        "config_digest": "hash_digest",
+        "notes": "Some additional notes",
     }
+
     manager.create(data)
 
     # Try to create with the same ID
     data2 = {
         "unique_id": "duplicate_hcp_id",
         "compatible_calc_fk": compatible_hazard_calc_data["unique_id"],
-        "producer_software": "software2",
-        "producer_version_id": "v2",
-        "configuration_hash": "hash2",
-        "imts": ["PGA"],
-        "imt_levels": [0.2],
+        "configuration_hash": "hash1",
+        "ecr_image_digest": "digest_string",
+        "config_digest": "hash_digest",
+        "notes": "Some additional notes",
     }
     with pytest.raises(FileExistsError):
         manager.create(data2)
@@ -181,11 +180,8 @@ def test_hazard_curve_producer_config_with_instance(storage_path, ch_manager, co
     model = HazardCurveProducerConfig(
         unique_id="model_hcp_instance_id",
         compatible_calc_fk=compatible_hazard_calc_data["unique_id"],
-        producer_software="test_software",
-        producer_version_id="test_version",
-        configuration_hash="test_hash",
-        imts=["PGA"],
-        imt_levels=[0.1, 0.2],
+        ecr_image_digest="test_software",
+        config_digest="test_hash",
     )
     manager.create(model)
 
@@ -201,11 +197,10 @@ def test_hazard_curve_producer_config_referential_integrity_create(storage_path,
     data = {
         "unique_id": "ref_integrity_test",
         "compatible_calc_fk": "non_existent_chc_id",
-        "producer_software": "test_software",
-        "producer_version_id": "test_version",
-        "configuration_hash": "test_hash",
-        "imts": ["PGA"],
-        "imt_levels": [0.1, 0.2],
+        "configuration_hash": "hash1",
+        "ecr_image_digest": "digest_string",
+        "config_digest": "hash_digest",
+        "notes": "Some additional notes",
     }
     with pytest.raises(ValueError):
         manager.create(data)
@@ -221,11 +216,10 @@ def test_hazard_curve_producer_config_referential_integrity_update(
     data = {
         "unique_id": "ref_integrity_update_test",
         "compatible_calc_fk": compatible_hazard_calc_data["unique_id"],
-        "producer_software": "test_software",
-        "producer_version_id": "test_version",
-        "configuration_hash": "test_hash",
-        "imts": ["PGA"],
-        "imt_levels": [0.1, 0.2],
+        "configuration_hash": "hash1",
+        "ecr_image_digest": "digest_string",
+        "config_digest": "hash_digest",
+        "notes": "Some additional notes",
     }
     manager.create(data)
 
@@ -239,18 +233,6 @@ def test_hazard_curve_producer_config_loading_broken_json(
 ):
     """Test loading a hazard curve producer config with invalid JSON."""
     manager = HazardCurveProducerConfigManager(storage_path, ch_manager)
-
-    # Create a valid config
-    data = {
-        "unique_id": "broken_json_test",
-        "compatible_calc_fk": compatible_hazard_calc_data["unique_id"],
-        "producer_software": "test_software",
-        "producer_version_id": "test_version",
-        "configuration_hash": "test_hash",
-        "imts": ["PGA"],
-        "imt_levels": [0.1, 0.2],
-    }
-    manager.create(data)
 
     # Write invalid JSON to the file
     file_path = manager._get_path("broken_json_test")

@@ -1,30 +1,32 @@
 """
-Console script for preparing to load NSHM hazard curves to new REV4 tables using General Task(s)
-and the nzshm-model python library.
-
-The use case for this is reprocessing a set of hazard outputs produced by the NSHM hazards pipeline.
+Console script for extracting NSHM hazard curves to parquet format
+ - either from a given General Task
+ - or for a single HDF5 file (as used in AWS batch jobs)
 
 NSHM specific prerequisites are:
     - that hazard producer metadata is available from the NSHM toshi-api via **nshm-toshi-client** library
     - NSHM model characteristics are available in the **nzshm-model** library
 
-Process outline:
-    - Given a general task containing hazard calcs used in NHSM, we want to iterate over the sub-tasks and do
-      the setup required for importing the hazard curves:
-        - pull the configs and check we have a compatible producer config (or ...) cmd `producers`
-        - optionally create new producer configs automatically, and record info about these
-    - if new producer configs are created, then it is the users responsibility to assign
-      a CompatibleCalculation to each
-    - Hazard curves are extracted from the original HDF5 files stored in Toshi API
-    - Hazard curves are output as a parquet dataset.
+# Process outline:
+#     - Given a general task containing hazard calcs used in NHSM, we want to iterate over the sub-tasks and do
+#       the setup required for importing the hazard curves:
+#         - pull the configs and check we have a compatible producer config (or ...) cmd `producers`
+#         - optionally create new producer configs automatically, and record info about these
+#     - if new producer configs are created, then it is the users responsibility to assign
+#       a CompatibleCalculation to each
+#     - Hazard curves are extracted from the original HDF5 files stored in Toshi API
+#     - Hazard curves are output as a parquet dataset.
 
 """
 
+import hashlib
+import json
 import logging
 import os
 import pathlib
 
 import click
+from nzshm_model.psha_adapter.openquake.hazard_config import OpenquakeConfig
 
 from toshi_hazard_store.config import STORAGE_FOLDER
 from toshi_hazard_store.model.hazard_models_manager import (
@@ -118,7 +120,7 @@ def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
 
 @main.command()
 @click.argument('gt_id')
-@click.argument('compatible_calc_fk')
+@click.argument('compatible_calc_id')
 @click.option('-W', '--work_folder', default=lambda: os.getcwd(), help="defaults to current directory")
 @click.option(
     '-O',
@@ -132,9 +134,9 @@ def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
 @click.option('-f64', '--use-64bit', is_flag=True, default=False)
 @click.option('-ff', '--skip-until-id', default=None)
 @click.option('--debug', is_flag=True, default=False, help="turn on debug logging")
-def rlzs(
+def extract(
     gt_id,
-    compatible_calc_fk,
+    compatible_calc_id,
     work_folder,
     output_folder,
     verbose,
@@ -144,10 +146,14 @@ def rlzs(
     skip_until_id,
     debug,
 ):
-    """Prepare and validate Producer Configs for a given GT_ID
+    """Extract openquake hazard curves for the given GT_ID, writing to OUTPUT_FOLDER in parquet format.
 
-    GT_ID is an NSHM General task id containing HazardAutomation Tasks\n
-    compatible_calc_fk is the unique key of the compatible_calc
+    Arguments:\n
+
+    GT_ID: is an NSHM General task id containing HazardAutomation Tasks\n
+    COMPATIBLE_CALC_ID: FK of the compatible calculation.\n
+    WORK_FOLDER: is used to cache and process the downloaded artefacts.\n
+    OUTPUT_FOLDER: path to the output file OR S3 URI.\n
 
     Notes:\n
     - pull the configs and check we have a compatible producer config\n
@@ -186,7 +192,7 @@ def rlzs(
             continue
 
         # normal processing
-        compatible_calc = chc_manager.load(compatible_calc_fk)
+        compatible_calc = chc_manager.load(compatible_calc_id)
 
         if verbose:
             click.echo(f'Compatible calc: {compatible_calc.unique_id}')
@@ -199,31 +205,31 @@ def rlzs(
 
 @main.command()
 @click.argument('hdf5_path')
+@click.argument('config_path')
 @click.argument('compatible_calc_id')
 @click.argument('hazard_calc_id')
+@click.argument('ecr_image_uri')
 @click.argument('output')
-@click.option('-v', '--verbose', is_flag=True, default=False)
-@click.option('-d', '--dry-run', is_flag=True, default=False)
-@click.option('--debug', is_flag=True, default=False, help="turn on debug logging")
 def store_hazard(
     hdf5_path,
+    config_path,
     compatible_calc_id,
     hazard_calc_id,
+    ecr_image_uri,
     output,
-    verbose,
-    dry_run,
-    debug,
 ):
-    """Store openquake hazard realizations to parquet dataset.
+    """Extract openquake hazard curves from HDF5_PATH writing to OUTPUT in parquet format.
 
-    args:
-        hdf5_path: path to the hazard realization HDF5 file
-        compatible_calc_id: FK of the compatible calculation
-        hazard_calc_id: FK of the hazard calculation
-        output: path to the output file or S3 URI
-        verbose: print more information
-        dry_run: do not actually run the command
-        debug: turn on debug logging
+    Compatablity metadata is extracted from the CONFIG_PATH.
+
+    Arguments:\n
+
+    HDF5_PATH: path to the hazard realization HDF5 file.\n
+    CONFIG_PATH: path to the `oq_config.json` file.\n
+    HAZARD_CALC_ID: FK of the hazard calculation.\n
+    COMPATIBLE_CALC_ID: FK of the compatible calculation.\n
+    ECR_IMAGE_URI: AWS URI of the hazard docker image.\n
+    OUTPUT: path to the output file OR S3 URI.\n
     """
     if output[:5] == "s3://":
         # we have an AWS S3 URI
@@ -232,39 +238,38 @@ def store_hazard(
         # we have a local path
         output = pathlib.Path(output).resolve()
 
+    # Check paths
     output_folder = pathlib.Path(output)
-    assert output_folder.is_dir() or output_folder.parent.is_dir(), "output folder or its parent folder must exist"
+    config_file_path = pathlib.Path(config_path)
+    hdf5_file_path = pathlib.Path(hdf5_path)
 
-    if verbose:
-        pass
+    assert (
+        output_folder.is_dir() or output_folder.parent.is_dir()
+    ), f"output folder {output} or its parent folder must exist."
+    assert config_file_path.is_file(), f"config file {config_path} is not a file."
+    assert hdf5_file_path.is_file(), f"hdf5 {hdf5_path} is not a file."
 
     # validate the compatible_calc_id
     assert chc_manager.load(compatible_calc_id)
 
-    # validate the producer configuration
-    # TODO: confirm awhat's needed here with CDC and some thought experimments
-    #  get the engine details for the current calculation
-    #  os, openquake version / github versiuon
-    #  ```
-    #   ecr_repo_stash = aws_ecr.ECRRepoStash(
-    #     ECR_REPONAME, oldest_image_date=dt.datetime(2023, 3, 20, tzinfo=dt.timezone.utc)
-    #  ).fetch()
-    #  latest_engine_image = ecr_repo_stash.active_image_asat(dt.datetime.now(tz=dt.timezone.utc))
-    #  ```
-    # ## get the job configuration
-    # ```
-    #  jobconf = OpenquakeConfig.from_dict(json.load(path_to_config)
-    #  config_hash = jobconf.compatible_hash_digest()
-    # ````
+    # calculate the producer digest
+    producer_digest = hashlib.shake_256(ecr_image_uri.encode()).hexdigest(6)
+
+    # calculate the openquake job configuration digest
+    jobconf = OpenquakeConfig.from_dict(json.load(open(config_path, 'r')))
+    config_digest = jobconf.compatible_hash_digest()
 
     model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
         hdf5_file=str(hdf5_path),
         calculation_id=hazard_calc_id,
-        compatible_calc_fk=compatible_calc_id,
-        producer_config_fk="producer_config.unique_id",
+        compatible_calc_id=compatible_calc_id,
+        producer_digest=producer_digest,
+        config_digest=config_digest,
         use_64bit_values=False,
     )
-    # write dataset (on;ly file system)
+
+    # TODO: SUPPORT S3 URI
+    # write dataset (only file system)
     pyarrow_dataset.append_models_to_dataset(model_generator, output_folder, partitioning=["calculation_id"])
 
 

@@ -13,7 +13,7 @@ from toshi_hazard_store.model.hazard_models_manager import (
     CompatibleHazardCalculationManager,
     HazardCurveProducerConfigManager,
 )
-from toshi_hazard_store.model.hazard_models_pydantic import CompatibleHazardCalculation, HazardCurveProducerConfig
+from toshi_hazard_store.model.hazard_models_pydantic import CompatibleHazardCalculation, HazardCurveProducerConfig  # noqa
 from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
 
 from . import aws_ecr_docker_image as aws_ecr
@@ -90,24 +90,25 @@ def build_producers(
             if verbose:
                 click.echo(f'updated producer_config {producer_config.unique_id,} ')
     else:
-        producer_config = HazardCurveProducerConfig(
-            unique_id=hpc_md5.hexdigest(),
-            compatible_calc_fk=compatible_calc.unique_id,
-            tags=subtask_info.image['imageTags'],
-            effective_from=subtask_info.image['imagePushedAt'],
-            last_used=subtask_info.image['lastRecordedPullTime'],
-            producer_software=hpc_key.producer_software,
-            producer_version_id=hpc_key.producer_version_id,
-            configuration_hash=hpc_key.configuration_hash,
-            # configuration_data=config.config_hash,
-            notes="notes",
-        )
-        hpc_manager.create(producer_config)
+        # TODO: refactor
+        # producer_config = HazardCurveProducerConfig(
+        #     unique_id=hpc_md5.hexdigest(),
+        #     compatible_calc_fk=compatible_calc.unique_id,
+        #     tags=subtask_info.image['imageTags'],
+        #     effective_from=subtask_info.image['imagePushedAt'],
+        #     last_used=subtask_info.image['lastRecordedPullTime'],
+        #     producer_software=hpc_key.producer_software,
+        #     producer_version_id=hpc_key.producer_version_id,
+        #     configuration_hash=hpc_key.configuration_hash,
+        #     # configuration_data=config.config_hash,
+        #     notes="notes",
+        # )
+        # hpc_manager.create(producer_config)
         if verbose:
             click.echo(
-                f"{producer_config.unique_id} has foreign key "
-                f" {producer_config.compatible_calc_fk}"
-                f" {producer_config.updated_at})"
+                # f"{producer_config.unique_id} has foreign key "
+                # f" {producer_config.compatible_calc_fk}"
+                # f" {producer_config.updated_at})"
             )
 
 
@@ -135,9 +136,9 @@ def build_realisations(
     if verbose:  # pragma: no-cover
         click.echo(f"{str(subtask_info)[:80]} ...")
 
+    ## TODO: REFACTOR
     hpc_key = get_producer_config_key(subtask_info)
     hpc_md5 = hashlib.md5(str(hpc_key).encode())
-
     producer_config = hpc_manager.load(hpc_md5.hexdigest())
 
     partitioning = ["calculation_id"] if partition_by_calc_id else ['nloc_0']
@@ -145,8 +146,9 @@ def build_realisations(
     model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
         hdf5_file=str(subtask_info.hdf5_path),
         calculation_id=subtask_info.hazard_calc_id,
-        compatible_calc_fk=compatible_calc.unique_id,
-        producer_config_fk=producer_config.unique_id,
+        compatible_calc_id=compatible_calc.unique_id,
+        producer_digest=producer_config.unique_id,
+        config_digest="TODO",
         use_64bit_values=use_64bit_values,
     )
     pyarrow_dataset.append_models_to_dataset(model_generator, output_folder, partitioning=partitioning)

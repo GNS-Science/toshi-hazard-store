@@ -11,6 +11,7 @@ from toshi_hazard_store.model.hazard_models_manager import (
     CompatibleHazardCalculationManager,
     HazardCurveProducerConfigManager,
 )
+from toshi_hazard_store.model.hazard_models_pydantic import ElasticContainerRegistryImage
 from toshi_hazard_store.model.revision_4 import hazard_models  # noqa
 from toshi_hazard_store.model.revision_4 import hazard_aggregate_curve, hazard_realization_curve
 
@@ -29,20 +30,23 @@ def compatible_hazard_calc_data():
 @pytest.fixture
 def hazard_curve_producer_config_data(compatible_hazard_calc_data):
     now = datetime.now(timezone.utc)
+
+    ecr_image = ElasticContainerRegistryImage(
+        image_uri='461564345538.....runzi-openquake:runzi-ffc9af8_nz_openquake-3-19-0_patch_v2',
+        image_digest='sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6',
+        tags=['runzi-ffc9af8_nz_openquake-3-19-0_patch_v2'],
+        pushed_at=datetime.fromisoformat("2024-10-24T14:07:02+12:00"),
+        last_pulled_at=datetime.fromisoformat("2024-10-24T14:10:56+12:00"),
+    )
+
     return {
         "unique_id": "hcp1",
         "compatible_calc_fk": compatible_hazard_calc_data["unique_id"],
         "created_at": now,
         "updated_at": now,
-        "effective_from": None,
-        "last_used": None,
-        "tags": ["tag1", "tag2"],
-        "producer_software": "software_name",
-        "producer_version_id": "version_1.0",
-        "configuration_hash": "hash_value",
-        "configuration_data": "{\"key\": \"value\"}",
-        "imts": ["PGA", "SA(1.0)"],
-        "imt_levels": [0.1, 0.2],
+        "ecr_image": ecr_image.model_dump(),
+        "ecr_image_digest": ecr_image.image_hash_digest(),
+        "config_digest": "hash_value",
         "notes": "Some additional notes",
     }
 

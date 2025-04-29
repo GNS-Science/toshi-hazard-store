@@ -113,7 +113,7 @@ def test_realisation_batches_from_hdf5(tmp_path):
     oq = extractor.dstore['oqparam']  # old skool way
     imtl_keys = sorted(list(oq.imtls.keys()))
 
-    batches = list(extract_classical_hdf5.generate_rlz_record_batches(extractor, vs30, imtl_keys, 'A', 'B', 'C'))
+    batches = list(extract_classical_hdf5.generate_rlz_record_batches(extractor, vs30, imtl_keys, 'A', 'B', 'C', 'D'))
     assert len(batches) == 12
 
 
@@ -128,7 +128,11 @@ def test_hdf5_realisations_direct_to_parquet_roundtrip(tmp_path):
     # hdf5_fixture = Path(__file__).parent.parent / 'fixtures' / 'oq_import' / 'calc_9.hdf5'
 
     model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
-        str(hdf5_fixture), calculation_id="dummy_calc_id", compatible_calc_fk="CCFK", producer_config_fk="PCFK"
+        str(hdf5_fixture),
+        calculation_id="dummy_calc_id",
+        compatible_calc_id="CCFK",
+        producer_digest="PCFK",
+        config_digest="CCFFFG",
     )
 
     print(model_generator)
@@ -148,7 +152,7 @@ def test_hdf5_realisations_direct_to_parquet_roundtrip(tmp_path):
     print(df.shape)
     print(df.tail())
     print(df.info())
-    assert df.shape == (192, 10)
+    assert df.shape == (192, 12)
 
     test_loc = location.get_locations(['CHC'])[0]
 
@@ -156,7 +160,7 @@ def test_hdf5_realisations_direct_to_parquet_roundtrip(tmp_path):
     print(test_loc_df[['nloc_001', 'nloc_0', 'imt', 'rlz', 'vs30', 'sources_digest', 'gmms_digest']])  # 'rlz_key'
     # print(test_loc_df.tail())
 
-    assert test_loc_df.shape == (192 / 4, 10)
+    assert test_loc_df.shape == (192 / 4, 12)
     assert test_loc_df['imt'].tolist()[0] == 'PGA'
     assert (
         test_loc_df['imt'].tolist()[-1] == 'SA(3.0)'
