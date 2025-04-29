@@ -23,19 +23,17 @@ Process outline:
 import logging
 import os
 import pathlib
-import datetime as dt
 
 import click
 
+from toshi_hazard_store.config import STORAGE_FOLDER
 from toshi_hazard_store.model.hazard_models_manager import (
     CompatibleHazardCalculationManager,
     HazardCurveProducerConfigManager,
 )
-from toshi_hazard_store.oq_import import toshi_api_client  # noqa: E402
-from toshi_hazard_store.oq_import import aws_ecr_docker_image as aws_ecr
-from toshi_hazard_store.oq_import.toshi_api_subtask import build_producers, build_realisations, generate_subtasks, SubtaskRecord
-from toshi_hazard_store.config import STORAGE_FOLDER, ECR_REPONAME
 from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
+from toshi_hazard_store.oq_import import toshi_api_client  # noqa: E402
+from toshi_hazard_store.oq_import.toshi_api_subtask import build_producers, build_realisations, generate_subtasks
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pynamodb').setLevel(logging.INFO)
@@ -217,16 +215,15 @@ def store_hazard(
     debug,
 ):
     """Store openquake hazard realizations to parquet dataset.
-    
-    args:  
 
-        hdf5_path: path to the hazard realization HDF5 file 
+    args:
+        hdf5_path: path to the hazard realization HDF5 file
         compatible_calc_id: FK of the compatible calculation
         hazard_calc_id: FK of the hazard calculation
         output: path to the output file or S3 URI
         verbose: print more information
         dry_run: do not actually run the command
-        debug: turn on debug logging    
+        debug: turn on debug logging
     """
     if output[:5] == "s3://":
         # we have an AWS S3 URI
@@ -239,32 +236,37 @@ def store_hazard(
     assert output_folder.is_dir() or output_folder.parent.is_dir(), "output folder or its parent folder must exist"
 
     if verbose:
-        click.echo('fetching ECR stash')
+        pass
 
-    ## get the engine details for the current calculation
-    #  os, openquake version / github versiuon 
-    ecr_repo_stash = aws_ecr.ECRRepoStash(
-        ECR_REPONAME, oldest_image_date=dt.datetime(2023, 3, 20, tzinfo=dt.timezone.utc)
-    ).fetch()
-    latest_engine_image = ecr_repo_stash.active_image_asat(dt.datetime.now(tz=dt.timezone.utc))
+    # validate the compatible_calc_id
+    assert chc_manager.load(compatible_calc_id)
 
+    # validate the producer configuration
+    # TODO: confirm awhat's needed here with CDC and some thought experimments
+    #  get the engine details for the current calculation
+    #  os, openquake version / github versiuon
+    #  ```
+    #   ecr_repo_stash = aws_ecr.ECRRepoStash(
+    #     ECR_REPONAME, oldest_image_date=dt.datetime(2023, 3, 20, tzinfo=dt.timezone.utc)
+    #  ).fetch()
+    #  latest_engine_image = ecr_repo_stash.active_image_asat(dt.datetime.now(tz=dt.timezone.utc))
+    #  ```
     # ## get the job configuration
-    # # TODO: this step could be done better ??
-    # jobconf = OpenquakeConfig.from_dict(json.load(path_to_config)                                     
-    # config_hash = jobconf.compatible_hash_digest()
-
-    # ## get the producer configuration
-    # # this is where we test that 
+    # ```
+    #  jobconf = OpenquakeConfig.from_dict(json.load(path_to_config)
+    #  config_hash = jobconf.compatible_hash_digest()
+    # ````
 
     model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
         hdf5_file=str(hdf5_path),
         calculation_id=hazard_calc_id,
         compatible_calc_fk=compatible_calc_id,
         producer_config_fk="producer_config.unique_id",
-        use_64bit_values=False
+        use_64bit_values=False,
     )
     # write dataset (on;ly file system)
-    pyarrow_dataset.append_models_to_dataset(model_generator, output_folder, partitioning = ["calculation_id"])
+    pyarrow_dataset.append_models_to_dataset(model_generator, output_folder, partitioning=["calculation_id"])
+
 
 if __name__ == "__main__":
     main()

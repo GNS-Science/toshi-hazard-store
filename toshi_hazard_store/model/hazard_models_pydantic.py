@@ -6,7 +6,15 @@ from pydantic import BaseModel, Field
 
 
 class CompatibleHazardCalculation(BaseModel):
-    """Provides a unique identifier for compatible Hazard Calculations"""
+    """
+    Provides a unique identifier for compatible Hazard Calculations.
+
+    Attributes:
+        unique_id: A unique identifier for the Hazard Calculation.
+        notes (optional): Additional information about the Hazard Calculation.
+        created_at: The date and time this record was created. Defaults to utcnow.
+        updated_at: The date and time this record was last updated. Defaults to utcnow.
+    """
 
     unique_id: str  # NB Field(...) means that this field is required, no default value.
     notes: str | None = None

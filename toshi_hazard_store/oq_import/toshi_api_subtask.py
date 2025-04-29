@@ -212,15 +212,24 @@ def generate_subtasks(
         task_created = dt.datetime.fromisoformat(query_res["created"])  # "2023-03-20T09:02:35.314495+00:00",
         log.debug(f"task created: {task_created}")
 
-        # MOCK THIS
+        # MOCK / DISCUSS USAGE THIS
+        #
+        # Here we rely on nshm model psha-adapter to provide the compatablity hash
+        # and we use the ECR repo to find the docker image that was used to produce the task
+        # this last bit works for post-processing, and for any cloud processing, but not for local processing
+        # because the user might have a local image that is not ever pushed to ECR.
+        #
+        # This last scenario is needed to support faster scientific turnaround, but how to
+        # protect from these curves be stored and potentially used for publication without traceable reproducaablity?
         oq_config.download_artefacts(gtapi, task_id, query_res, subtasks_folder)
         jobconf = oq_config.config_from_task(task_id, subtasks_folder)
-
+        #
         config_hash = jobconf.compatible_hash_digest()
         latest_engine_image = ecr_repo_stash.active_image_asat(task_created)
         log.debug(latest_engine_image)
-
         log.debug(f"task {task_id} hash: {config_hash}")
+        #
+        ########################################
 
         if with_rlzs:
             hdf5_path = oq_config.process_hdf5(gtapi, task_id, query_res, subtasks_folder, manipulate=True)
