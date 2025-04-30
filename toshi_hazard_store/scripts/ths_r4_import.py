@@ -19,7 +19,6 @@ NSHM specific prerequisites are:
 
 """
 
-import hashlib
 import json
 import logging
 import os
@@ -208,14 +207,14 @@ def extract(
 @click.argument('config_path')
 @click.argument('compatible_calc_id')
 @click.argument('hazard_calc_id')
-@click.argument('ecr_image_uri')
+@click.argument('ecr_digest')
 @click.argument('output')
 def store_hazard(
     hdf5_path,
     config_path,
     compatible_calc_id,
     hazard_calc_id,
-    ecr_image_uri,
+    ecr_digest,
     output,
 ):
     """Extract openquake hazard curves from HDF5_PATH writing to OUTPUT in parquet format.
@@ -228,7 +227,8 @@ def store_hazard(
     CONFIG_PATH: path to the `oq_config.json` file.\n
     HAZARD_CALC_ID: FK of the hazard calculation.\n
     COMPATIBLE_CALC_ID: FK of the compatible calculation.\n
-    ECR_IMAGE_URI: AWS URI of the hazard docker image.\n
+    ECR_DIGEST: AWS ECR SHA256 digest of the hazard docker image.\n
+    e.g sha256:db023d95e7ec6707fe3484c7b3c1f8fd4d1c134d5a6d7ec5e939700b625293d9\n
     OUTPUT: path to the output file OR S3 URI.\n
     """
     if output[:5] == "s3://":
@@ -253,7 +253,8 @@ def store_hazard(
     assert chc_manager.load(compatible_calc_id)
 
     # calculate the producer digest
-    producer_digest = hashlib.shake_256(ecr_image_uri.encode()).hexdigest(6)
+    # producer_digest = hashlib.shake_256(ecr_image_uri.encode()).hexdigest(6)
+    assert ecr_digest[:7] == 'sha256:', f'ECR_DIGEST {ecr_digest} doesnt look valid'
 
     # calculate the openquake job configuration digest
     jobconf = OpenquakeConfig.from_dict(json.load(open(config_path, 'r')))
@@ -263,7 +264,7 @@ def store_hazard(
         hdf5_file=str(hdf5_path),
         calculation_id=hazard_calc_id,
         compatible_calc_id=compatible_calc_id,
-        producer_digest=producer_digest,
+        producer_digest=ecr_digest,
         config_digest=config_digest,
         use_64bit_values=False,
     )

@@ -44,13 +44,13 @@ $ AWS_PROFILE=chrisbc poetry run ths_r4_import producers R2VuZXJhbFRhc2s6NjkzMTg
 #### Either A, with location partitioning
 
 ```bash
-AWS_PROFILE=chrisbc poetry run ths_r4_import rlzs R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS1 -v
+AWS_PROFILE=chrisbc poetry run ths_r4_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS1 -v
 ```
 
 #### OR B, with calculation_id partitioning
 
 ```bash
-AWS_PROFILE=chrisbc poetry run ths_r4_import rlzs R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS2 -v -CID
+AWS_PROFILE=chrisbc poetry run ths_r4_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS2 -v -CID
 ```
 
 ### Step 3. Sanity checks
