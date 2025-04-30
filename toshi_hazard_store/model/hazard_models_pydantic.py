@@ -1,9 +1,10 @@
-"""the hazard metatdata models for (de)serialisation as json."""
+"""The hazard metatdata models for (de)serialisation as json."""
 
-import hashlib
 from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
+
+from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 
 
 class CompatibleHazardCalculation(BaseModel):
@@ -23,22 +24,18 @@ class CompatibleHazardCalculation(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-class ElasticContainerRegistryImage(BaseModel):
-    """A docker image stored to AWS ECR used to produce hazard curves.
+# class ElasticContainerRegistryImage(BaseModel):
+#     """A docker image stored to AWS ECR used to produce hazard curves.
 
-    NSHM docker images contain application build, sometimes with extra code
-    and maybe the hazard convertor.
-    """
+#     NSHM docker images contain application build, sometimes with extra code
+#     and maybe the hazard convertor.
+#     """
 
-    image_uri: str
-    image_digest: str
-    tags: list[str] | None = None
-    pushed_at: datetime
-    last_pulled_at: datetime | None = None
-
-    def image_hash_digest(self):
-        """produce a hash digest from the unique attributes of this instance"""
-        return hashlib.shake_256(self.image_uri.encode()).hexdigest(6)  # should produce a 12 character string
+#     image_uri: str
+#     image_digest: str
+#     tags: list[str] | None = None
+#     pushed_at: datetime
+#     last_pulled_at: datetime | None = None
 
 
 class HazardCurveProducerConfig(BaseModel):
@@ -59,19 +56,10 @@ class HazardCurveProducerConfig(BaseModel):
 
     unique_id: str
     compatible_calc_fk: str  # must map to a valid CompatibleHazardCalculation.unique_id
-
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    ecr_image: ElasticContainerRegistryImage | None = None
+    ecr_image: AwsEcrImage | None = None
     ecr_image_digest: str
-
-    # producer_software: str
-    # producer_version_id: str
-
     config_digest: str
-    # configuration_data: str | None = None
-
-    # imts: list[str] | None = None  # EnumConstrainedUnicodeAttribute(IntensityMeasureTypeEnum))
-    # imt_levels: list[float] | None = None
-    notes: str | None = Field(None)
+    notes: str | None = None

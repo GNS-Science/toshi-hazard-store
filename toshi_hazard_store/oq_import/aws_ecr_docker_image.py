@@ -13,18 +13,31 @@ from datetime import datetime, timezone
 from functools import partial
 from itertools import cycle, groupby
 from operator import itemgetter
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import boto3
 from botocore.config import Config
+from pydantic import BaseModel
 
 OPENQUAKE_ECR_REPO_URI = '461564345538.dkr.ecr.us-east-1.amazonaws.com/nzshm22/runzi-openquake'
-
 REGISTRY_ID = '461564345538.dkr.ecr.us-east-1.amazonaws.com'
 REPONAME = "nzshm22/runzi-openquake"
 
 aws_config = Config(region_name='us-east-1')
-# ecr_client = boto3.client('ecr', config=aws_config)
+
+
+class AwsEcrImage(BaseModel):
+    """Pydantic ECR image as returned by the AWS API."""
+
+    registryId: str
+    repositoryName: str
+    imageDigest: str
+    imageTags: List[str] | None = None
+    imageSizeInBytes: int
+    imagePushedAt: datetime
+    imageManifestMediaType: str
+    artifactMediaType: str
+    lastRecordedPullTime: datetime | None = None
 
 
 def chunks(iterable, size=10):
@@ -43,6 +56,7 @@ def get_repository_images(ecr_client, reponame, batch_size=50):
         if nextToken:
             args['nextToken'] = nextToken
         response = ecr_client.list_images(**args)
+
         nextToken = response.get('nextToken')
         for image_info in response['imageIds']:
             yield image_info
@@ -61,10 +75,11 @@ def get_image_info(ecr_client, reponame, image_ids, since: Optional[datetime] = 
             args['nextToken'] = nextToken
 
         response = ecr_client.describe_images(**args)
+
         nextToken = response.get('nextToken')
         for image_info in response['imageDetails']:
             if image_info['imagePushedAt'] >= since:
-                yield image_info
+                yield AwsEcrImage(**image_info)
         if not nextToken:
             break
 
@@ -89,7 +104,7 @@ class ECRRepoStash:
     def fetch(self):
         self._since_date_mapping = {}
         for repo_image in process_repo_images(self._client, self._reponame, self._oldest_image):
-            self._since_date_mapping[repo_image['imagePushedAt']] = repo_image
+            self._since_date_mapping[repo_image.imagePushedAt] = repo_image
         return self
 
     @property
@@ -117,7 +132,7 @@ if __name__ == "__main__":
     rs.fetch()
     # print(len(list(rs.images)))
     # print()
-    # print(rs.active_image_asat(datetime(2024, 1, 28, tzinfo=timezone.utc)))
+    print(rs.active_image_asat(datetime(2024, 1, 28, tzinfo=timezone.utc)).model_dump_json(indent=2))
 
     # print(rs.active_image_asat(datetime(2024, 1, 1, tzinfo=timezone.utc)))
 

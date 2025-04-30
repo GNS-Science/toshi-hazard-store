@@ -11,9 +11,11 @@ from toshi_hazard_store.model.hazard_models_manager import (
     CompatibleHazardCalculationManager,
     HazardCurveProducerConfigManager,
 )
-from toshi_hazard_store.model.hazard_models_pydantic import ElasticContainerRegistryImage
+
+# from toshi_hazard_store.model.hazard_models_pydantic import ElasticContainerRegistryImage
 from toshi_hazard_store.model.revision_4 import hazard_models  # noqa
 from toshi_hazard_store.model.revision_4 import hazard_aggregate_curve, hazard_realization_curve
+from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 
 
 @pytest.fixture
@@ -31,12 +33,16 @@ def compatible_hazard_calc_data():
 def hazard_curve_producer_config_data(compatible_hazard_calc_data):
     now = datetime.now(timezone.utc)
 
-    ecr_image = ElasticContainerRegistryImage(
-        image_uri='461564345538.....runzi-openquake:runzi-ffc9af8_nz_openquake-3-19-0_patch_v2',
-        image_digest='sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6',
-        tags=['runzi-ffc9af8_nz_openquake-3-19-0_patch_v2'],
-        pushed_at=datetime.fromisoformat("2024-10-24T14:07:02+12:00"),
-        last_pulled_at=datetime.fromisoformat("2024-10-24T14:10:56+12:00"),
+    ecr_image = AwsEcrImage(
+        registryId='ABC',
+        repositoryName='123',
+        imageDigest="sha256:abcdef1234567890",
+        imageTags=["tag1"],
+        imagePushedAt="2023-03-20T09:02:35.314495+00:00",
+        lastRecordedPullTime="2023-03-20T09:02:35.314495+00:00",
+        imageSizeInBytes=123,
+        imageManifestMediaType='json',
+        artifactMediaType='blob',
     )
 
     return {
@@ -45,7 +51,7 @@ def hazard_curve_producer_config_data(compatible_hazard_calc_data):
         "created_at": now,
         "updated_at": now,
         "ecr_image": ecr_image.model_dump(),
-        "ecr_image_digest": ecr_image.image_hash_digest(),
+        "ecr_image_digest": ecr_image.imageDigest,
         "config_digest": "hash_value",
         "notes": "Some additional notes",
     }

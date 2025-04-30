@@ -5,6 +5,7 @@ import pytest
 
 import toshi_hazard_store.model.hazard_models_manager as hazard_models_manager
 from toshi_hazard_store.oq_import import oq_config, toshi_api_subtask
+from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 from toshi_hazard_store.oq_import.toshi_api_subtask import (
     SubtaskRecord,
     build_producers,
@@ -48,12 +49,17 @@ def mock_subtask_info(task_id, general_task_id, hdf5_calc_fixture):
         gt_id=general_task_id,
         hazard_calc_id=task_id,
         config_hash="config_hash_1",
-        image={
-            "imageDigest": "sha256:abcdef1234567890",
-            "imageTags": ["tag1"],
-            "imagePushedAt": "2023-03-20T09:02:35.314495+00:00",
-            "lastRecordedPullTime": "2023-03-20T09:02:35.314495+00:00",
-        },
+        ecr_image=AwsEcrImage(
+            registryId='ABC',
+            repositoryName='123',
+            imageDigest="sha256:abcdef1234567890",
+            imageTags=["tag1"],
+            imagePushedAt="2023-03-20T09:02:35.314495+00:00",
+            lastRecordedPullTime="2023-03-20T09:02:35.314495+00:00",
+            imageSizeInBytes=123,
+            imageManifestMediaType='json',
+            artifactMediaType='blob',
+        ),
         hdf5_path=hdf5_calc_fixture,
         vs30=275,
     )

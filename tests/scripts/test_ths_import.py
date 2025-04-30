@@ -15,7 +15,7 @@ def test_cli_help():
     assert "Usage" in result.output
 
     # print(result.output)
-    # assert 0 
+    # assert 0
 
 
 def test_cli_producers_help():
@@ -36,7 +36,13 @@ def test_cli_rlzs_help(options):
     assert result.exit_code == 0
     assert "Usage" in result.output
 
-@pytest.mark.parametrize("options", [None, ])
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        None,
+    ],
+)
 def test_cli_store_hazard_help(options):
     runner = CliRunner()
     cmdline = ["store-hazard", "--help"]
@@ -45,6 +51,7 @@ def test_cli_store_hazard_help(options):
     result = runner.invoke(ths_import.main, cmdline)
     assert result.exit_code == 0
     assert "Usage" in result.output
+
 
 ### EXAMPLE from TS1170.SDP
 #

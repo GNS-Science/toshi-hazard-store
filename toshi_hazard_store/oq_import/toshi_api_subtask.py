@@ -1,6 +1,5 @@
 import collections
 import datetime as dt
-import hashlib
 import logging
 import os
 import pathlib
@@ -8,12 +7,15 @@ from typing import Iterable, Iterator, Optional
 
 import click
 
-from toshi_hazard_store.config import ECR_REGISTRY_ID, ECR_REPONAME, STORAGE_FOLDER
+from toshi_hazard_store.config import ECR_REPONAME, STORAGE_FOLDER
 from toshi_hazard_store.model.hazard_models_manager import (
     CompatibleHazardCalculationManager,
     HazardCurveProducerConfigManager,
 )
-from toshi_hazard_store.model.hazard_models_pydantic import CompatibleHazardCalculation, HazardCurveProducerConfig  # noqa
+from toshi_hazard_store.model.hazard_models_pydantic import (  # noqa
+    CompatibleHazardCalculation,
+    HazardCurveProducerConfig,
+)
 from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
 
 from . import aws_ecr_docker_image as aws_ecr
@@ -29,29 +31,31 @@ S3_URL = None
 # DEPLOYMENT_STAGE = os.getenv('DEPLOYMENT_STAGE', 'LOCAL').upper()
 REGION = os.getenv('REGION', 'ap-southeast-2')  # SYDNEY
 
-SubtaskRecord = collections.namedtuple('SubtaskRecord', 'gt_id, hazard_calc_id, config_hash, image, hdf5_path, vs30')
-ProducerConfigKey = collections.namedtuple(
-    'ProducerConfigKey', 'producer_software, producer_version_id, configuration_hash'
+SubtaskRecord = collections.namedtuple(
+    'SubtaskRecord', 'gt_id, hazard_calc_id, ecr_image, config_hash, hdf5_path, vs30'
 )
+# ProducerConfigKey = collections.namedtuple(
+#     'ProducerConfigKey', 'producer_software, producer_version_id, configuration_hash'
+# )
 
 chc_manager = CompatibleHazardCalculationManager(pathlib.Path(STORAGE_FOLDER))
 hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc_manager)
 
 
-def get_producer_config_key(subtask_info: SubtaskRecord) -> ProducerConfigKey:
-    """
-    Extracts the producer configuration key from a subtask record.
+# def get_producer_config_key(subtask_info: SubtaskRecord) -> ProducerConfigKey:
+#     """
+#     Extracts the producer configuration key from a subtask record.
 
-    Args:
-        subtask_info (SubtaskRecord): The subtask record to extract the producer config key from.
+#     Args:
+#         subtask_info (SubtaskRecord): The subtask record to extract the producer config key from.
 
-    Returns:
-        ProducerConfigKey: A tuple containing the producer software, version ID, and configuration hash.
-    """
-    producer_software = f"{ECR_REGISTRY_ID}/{ECR_REPONAME}"
-    producer_version_id = subtask_info.image['imageDigest'][7:27]  # first 20 bits of hashdigest
-    configuration_hash = subtask_info.config_hash
-    return ProducerConfigKey(producer_software, producer_version_id, configuration_hash)
+#     Returns:
+#         ProducerConfigKey: A tuple containing the producer software, version ID, and configuration hash.
+#     """
+#     producer_software = f"{ECR_REGISTRY_ID}/{ECR_REPONAME}"
+#     producer_version_id = subtask_info.image['imageDigest'][7:27]  # first 20 bits of hashdigest
+#     configuration_hash = subtask_info.config_hash
+#     return ProducerConfigKey(producer_software, producer_version_id, configuration_hash)
 
 
 def build_producers(
@@ -71,44 +75,34 @@ def build_producers(
     """
     if verbose:
         click.echo(f"{str(subtask_info)[:80]} ...")
-
-    hpc_key = get_producer_config_key(subtask_info)
-    hpc_md5 = hashlib.md5(str(hpc_key).encode())
-
     try:
-        producer_config = hpc_manager.load(hpc_md5.hexdigest())
+        producer_config = hpc_manager.load(subtask_info.ecr_image.imageDigest)
     except FileNotFoundError:
         pass
         producer_config = None
 
     if producer_config:
         if verbose:
-            click.echo(f'found producer_config {str(hpc_key)} ')
+            click.echo(f'found producer_config {subtask_info.ecr_image.imageDigest} ')
         if update:
             producer_config.notes = "notes 2"
             hpc_manager.update(producer_config.unique_id, producer_config.model_dump())
             if verbose:
                 click.echo(f'updated producer_config {producer_config.unique_id,} ')
     else:
-        # TODO: refactor
-        # producer_config = HazardCurveProducerConfig(
-        #     unique_id=hpc_md5.hexdigest(),
-        #     compatible_calc_fk=compatible_calc.unique_id,
-        #     tags=subtask_info.image['imageTags'],
-        #     effective_from=subtask_info.image['imagePushedAt'],
-        #     last_used=subtask_info.image['lastRecordedPullTime'],
-        #     producer_software=hpc_key.producer_software,
-        #     producer_version_id=hpc_key.producer_version_id,
-        #     configuration_hash=hpc_key.configuration_hash,
-        #     # configuration_data=config.config_hash,
-        #     notes="notes",
-        # )
-        # hpc_manager.create(producer_config)
+        producer_config = HazardCurveProducerConfig(
+            unique_id=subtask_info.ecr_image.imageDigest,
+            compatible_calc_fk=compatible_calc.unique_id,
+            ecr_image=subtask_info.ecr_image.model_dump(),
+            ecr_image_digest=subtask_info.ecr_image.imageDigest,
+            config_digest=subtask_info.config_hash,
+        )
+        hpc_manager.create(producer_config)
         if verbose:
             click.echo(
-                # f"{producer_config.unique_id} has foreign key "
-                # f" {producer_config.compatible_calc_fk}"
-                # f" {producer_config.updated_at})"
+                f"{producer_config.unique_id} has foreign key "
+                f" {producer_config.compatible_calc_fk}"
+                f" {producer_config.updated_at})"
             )
 
 
@@ -136,10 +130,10 @@ def build_realisations(
     if verbose:  # pragma: no-cover
         click.echo(f"{str(subtask_info)[:80]} ...")
 
-    ## TODO: REFACTOR
-    hpc_key = get_producer_config_key(subtask_info)
-    hpc_md5 = hashlib.md5(str(hpc_key).encode())
-    producer_config = hpc_manager.load(hpc_md5.hexdigest())
+    # check the producer exists
+    assert hpc_manager.load(
+        subtask_info.ecr_image.imageDigest
+    ), f'hazard producer config {subtask_info.ecr_image.imageDigest} not found'
 
     partitioning = ["calculation_id"] if partition_by_calc_id else ['nloc_0']
 
@@ -147,8 +141,8 @@ def build_realisations(
         hdf5_file=str(subtask_info.hdf5_path),
         calculation_id=subtask_info.hazard_calc_id,
         compatible_calc_id=compatible_calc.unique_id,
-        producer_digest=producer_config.unique_id,
-        config_digest="TODO",
+        producer_digest=subtask_info.ecr_image.imageDigest,
+        config_digest=subtask_info.config_hash,
         use_64bit_values=use_64bit_values,
     )
     pyarrow_dataset.append_models_to_dataset(model_generator, output_folder, partitioning=partitioning)
@@ -218,20 +212,23 @@ def generate_subtasks(
         #
         # Here we rely on nshm model psha-adapter to provide the compatablity hash
         # and we use the ECR repo to find the docker image that was used to produce the task
-        # this last bit works for post-processing, and for any cloud processing, but not for local processing
+        # this last bit works for post-processing, and for any cloud processing
+        #
+        #
+        # TODO: but not for local processing
         # because the user might have a local image that is not ever pushed to ECR.
         #
-        # This last scenario is needed to support faster scientific turnaround, but how to
-        # protect from these curves be stored and potentially used for publication without traceable reproducaablity?
+        # This last scenario maybe needed to support faster scientific turnaround, but how to
+        # protect from these curves be stored and potentially used for publication without traceable reproduceablity?
+
         oq_config.download_artefacts(gtapi, task_id, query_res, subtasks_folder)
         jobconf = oq_config.config_from_task(task_id, subtasks_folder)
         #
         config_hash = jobconf.compatible_hash_digest()
-        latest_engine_image = ecr_repo_stash.active_image_asat(task_created)
-        log.debug(latest_engine_image)
+        active_ecr_image = ecr_repo_stash.active_image_asat(task_created)
+
+        log.debug(active_ecr_image.model_dump_json())
         log.debug(f"task {task_id} hash: {config_hash}")
-        #
-        ########################################
 
         if with_rlzs:
             hdf5_path = oq_config.process_hdf5(gtapi, task_id, query_res, subtasks_folder, manipulate=True)
@@ -241,7 +238,7 @@ def generate_subtasks(
         yield SubtaskRecord(
             gt_id=gt_id,
             hazard_calc_id=query_res['hazard_solution']['id'],
-            image=latest_engine_image,
+            ecr_image=active_ecr_image,
             config_hash=config_hash,
             hdf5_path=hdf5_path,
             vs30=jobconf.config.get('site_params', 'reference_vs30_value'),

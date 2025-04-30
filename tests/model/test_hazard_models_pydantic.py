@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 import pytest
 
 from toshi_hazard_store.model.hazard_models_pydantic import (
+    AwsEcrImage,
     CompatibleHazardCalculation,
-    ElasticContainerRegistryImage,
     HazardCurveProducerConfig,
 )
 
@@ -32,21 +32,24 @@ class TestCompatibleHazardCalculation:
 
 class TestHazardCurveProducerConfig:
     def setup_method(self):
-        ecr_image = ElasticContainerRegistryImage(
-            image_uri='461564345538...runzi-ffc9af8_nz_openquake-3-19-0_patch_v2',
-            image_digest='sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6',
-            tags=['runzi-ffc9af8_nz_openquake-3-19-0_patch_v2'],
-            pushed_at=datetime.fromisoformat("2024-10-24T14:07:02+12:00"),
-            last_pulled_at=datetime.fromisoformat("2024-10-24T14:10:56+12:00"),
+        ecr_image = AwsEcrImage(
+            registryId='ABC',
+            repositoryName='123',
+            imageDigest="sha256:abcdef1234567890",
+            imageTags=["tag1"],
+            imagePushedAt="2023-03-20T09:02:35.314495+00:00",
+            lastRecordedPullTime="2023-03-20T09:02:35.314495+00:00",
+            imageSizeInBytes=123,
+            imageManifestMediaType='json',
+            artifactMediaType='blob',
         )
-
         self.data = {
             "unique_id": "user_defined_unique_id",
             "compatible_calc_fk": "some_compatible_calc_id",
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
             "ecr_image": ecr_image.model_dump(),
-            "ecr_image_digest": ecr_image.image_hash_digest(),
+            "ecr_image_digest": ecr_image.imageDigest,
             "config_digest": "hash_value",
             "notes": "Some additional notes",
         }
