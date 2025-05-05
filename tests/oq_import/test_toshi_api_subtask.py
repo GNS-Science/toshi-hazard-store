@@ -127,7 +127,7 @@ def test_build_realisations(
 
     output_folder = pathlib.Path(tmpdir_factory.mktemp("build_realisations"))
 
-    build_realisations(mock_subtask_info, mock_compatible_calc, output_folder=output_folder, verbose=verbose)
+    build_realisations(mock_subtask_info, mock_compatible_calc.unique_id, output=str(output_folder), verbose=verbose)
 
     partitions = list(output_folder.glob("nloc_0*"))
     assert len(partitions) == 4  # this calc create 4 nloc_0 partitions

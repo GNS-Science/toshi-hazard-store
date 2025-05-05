@@ -25,7 +25,9 @@ import os
 import pathlib
 
 import click
+import s3path
 from nzshm_model.psha_adapter.openquake.hazard_config import OpenquakeConfig
+from pyarrow import fs
 
 from toshi_hazard_store.config import STORAGE_FOLDER
 from toshi_hazard_store.model.hazard_models_manager import (
@@ -123,9 +125,8 @@ def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
 @click.option('-W', '--work_folder', default=lambda: os.getcwd(), help="defaults to current directory")
 @click.option(
     '-O',
-    '--output_folder',
-    type=click.Path(path_type=pathlib.Path, exists=False),
-    help="arrow target folder (only used with `-T ARROW`",
+    '--output',
+    help="local or S3 target",
 )
 @click.option('-v', '--verbose', is_flag=True, default=False)
 @click.option('-d', '--dry-run', is_flag=True, default=False)
@@ -137,7 +138,7 @@ def extract(
     gt_id,
     compatible_calc_id,
     work_folder,
-    output_folder,
+    output,
     verbose,
     dry_run,
     partition_by_calc_id,
@@ -197,7 +198,7 @@ def extract(
             click.echo(f'Compatible calc: {compatible_calc.unique_id}')
 
         build_realisations(
-            subtask_info, compatible_calc, output_folder, verbose, use_64bit, partition_by_calc_id=partition_by_calc_id
+            subtask_info, compatible_calc, output, verbose, use_64bit, partition_by_calc_id=partition_by_calc_id
         )
         count += 1
 
@@ -231,21 +232,19 @@ def store_hazard(
     e.g sha256:db023d95e7ec6707fe3484c7b3c1f8fd4d1c134d5a6d7ec5e939700b625293d9\n
     OUTPUT: path to the output file OR S3 URI.\n
     """
-    if output[:5] == "s3://":
-        # we have an AWS S3 URI
-        pass
+    if output[:3] == "s3:":
+        # we have an AWS S3 ARNURI
+        output = s3path.PureS3Path.from_uri(output)
+        filesystem = fs.S3FileSystem(region=REGION)
     else:
         # we have a local path
         output = pathlib.Path(output).resolve()
+        filesystem = fs.LocalFileSystem()
+        assert output.is_dir() or output.parent.is_dir(), f"output folder {output} or its parent folder must exist."
 
     # Check paths
-    output_folder = pathlib.Path(output)
     config_file_path = pathlib.Path(config_path)
     hdf5_file_path = pathlib.Path(hdf5_path)
-
-    assert (
-        output_folder.is_dir() or output_folder.parent.is_dir()
-    ), f"output folder {output} or its parent folder must exist."
     assert config_file_path.is_file(), f"config file {config_path} is not a file."
     assert hdf5_file_path.is_file(), f"hdf5 {hdf5_path} is not a file."
 
@@ -271,7 +270,9 @@ def store_hazard(
 
     # TODO: SUPPORT S3 URI
     # write dataset (only file system)
-    pyarrow_dataset.append_models_to_dataset(model_generator, output_folder, partitioning=["calculation_id"])
+    pyarrow_dataset.append_models_to_dataset(
+        model_generator, output, partitioning=["calculation_id"], filesystem=filesystem
+    )
 
 
 if __name__ == "__main__":

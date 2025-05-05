@@ -141,7 +141,7 @@ def test_hdf5_realisations_direct_to_parquet_roundtrip(tmp_path):
     output_folder = tmp_path / "ds_direct"
 
     # write the dataset
-    pyarrow_dataset.append_models_to_dataset(model_generator, output_folder)
+    pyarrow_dataset.append_models_to_dataset(model_generator, str(output_folder))
 
     # read and check the dataset
     dataset = ds.dataset(output_folder, format='parquet', partitioning='hive')

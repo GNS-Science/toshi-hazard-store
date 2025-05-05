@@ -61,6 +61,7 @@ pandas = ">2,<3"
 pyarrow = "^19.0.1"
 pydantic = "^2.10.6"
 nzshm-model = "^0.13.6"
+s3path = "^0.6.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.2.0"

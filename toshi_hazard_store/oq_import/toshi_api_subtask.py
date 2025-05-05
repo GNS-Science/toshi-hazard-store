@@ -6,6 +6,8 @@ import pathlib
 from typing import Iterable, Iterator, Optional
 
 import click
+import s3path
+from pyarrow import fs
 
 from toshi_hazard_store.config import ECR_REPONAME, STORAGE_FOLDER
 from toshi_hazard_store.model.hazard_models_manager import (
@@ -103,11 +105,11 @@ def build_producers(
 
 def build_realisations(
     subtask_info: 'SubtaskRecord',
-    compatible_calc,
-    output_folder,
-    verbose,
-    use_64bit_values=False,
-    partition_by_calc_id=False,
+    compatible_calc: str,
+    output: str,
+    verbose: bool,
+    use_64bit_values: bool = False,
+    partition_by_calc_id: bool = False,
 ):
     """
     Build realisations for a given subtask info.
@@ -125,22 +127,40 @@ def build_realisations(
     if verbose:  # pragma: no-cover
         click.echo(f"{str(subtask_info)[:80]} ...")
 
+    if output[:3] == "s3:":
+        # we have an AWS S3 ARNURI
+        output = str(s3path.PureS3Path.from_uri(output))
+        log.info(f'using S3 output with path: `{output}` and region: `{REGION}`')
+
+        # output = "/".join(output.parts[1:])
+        filesystem = fs.S3FileSystem(region=REGION)
+    else:
+        # we have a local path
+        output = str(pathlib.Path(output).resolve())
+        filesystem = fs.LocalFileSystem()
+
     # check the producer exists
-    assert hpc_manager.load(
-        subtask_info.ecr_image.imageDigest
-    ), f'hazard producer config {subtask_info.ecr_image.imageDigest} not found'
+    hpc = HazardCurveProducerConfig(
+        compatible_calc_fk=compatible_calc,
+        ecr_image=subtask_info.ecr_image.model_dump(),
+        ecr_image_digest=subtask_info.ecr_image.imageDigest,
+        config_digest=subtask_info.config_hash,
+    )
+    assert hpc_manager.load(hpc.unique_id), f'hazard producer config {hpc.unique_id} not found'
 
     partitioning = ["calculation_id"] if partition_by_calc_id else ['nloc_0']
 
     model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
         hdf5_file=str(subtask_info.hdf5_path),
         calculation_id=subtask_info.hazard_calc_id,
-        compatible_calc_id=compatible_calc.unique_id,
+        compatible_calc_id=compatible_calc,
         producer_digest=subtask_info.ecr_image.imageDigest,
         config_digest=subtask_info.config_hash,
         use_64bit_values=use_64bit_values,
     )
-    pyarrow_dataset.append_models_to_dataset(model_generator, output_folder, partitioning=partitioning)
+    pyarrow_dataset.append_models_to_dataset(
+        model_generator, base_dir=output, partitioning=partitioning, filesystem=filesystem
+    )
 
 
 def generate_subtasks(
