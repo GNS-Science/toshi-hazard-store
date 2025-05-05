@@ -125,11 +125,13 @@ def test_hazard_curve_producer_config_create_existing_id(storage_path, ch_manage
     manager = HazardCurveProducerConfigManager(storage_path, ch_manager)
 
     # Create a valid HazardCurveProducerConfig first
+
+    fake_ecr_image_str = "sha256:Image0123"
+
     data = {
-        "unique_id": "duplicate_hcp_id",
         "compatible_calc_fk": compatible_hazard_calc_data["unique_id"],
         "configuration_hash": "hash1",
-        "ecr_image_digest": "digest_string",
+        "ecr_image_digest": fake_ecr_image_str,
         "config_digest": "hash_digest",
         "notes": "Some additional notes",
     }
@@ -138,10 +140,9 @@ def test_hazard_curve_producer_config_create_existing_id(storage_path, ch_manage
 
     # Try to create with the same ID
     data2 = {
-        "unique_id": "duplicate_hcp_id",
         "compatible_calc_fk": compatible_hazard_calc_data["unique_id"],
         "configuration_hash": "hash1",
-        "ecr_image_digest": "digest_string",
+        "ecr_image_digest": fake_ecr_image_str,
         "config_digest": "hash_digest",
         "notes": "Some additional notes",
     }
@@ -178,15 +179,15 @@ def test_hazard_curve_producer_config_with_instance(storage_path, ch_manager, co
     manager = HazardCurveProducerConfigManager(storage_path, ch_manager)
 
     model = HazardCurveProducerConfig(
-        unique_id="model_hcp_instance_id",
+        # unique_id="model_hcp_instance_id",
         compatible_calc_fk=compatible_hazard_calc_data["unique_id"],
-        ecr_image_digest="test_software",
+        ecr_image_digest="sha256:Image0123",
         config_digest="test_hash",
     )
     manager.create(model)
 
-    loaded = manager.load("model_hcp_instance_id")
-    assert loaded.unique_id == "model_hcp_instance_id"
+    loaded = manager.load("Image0123")
+    assert loaded.unique_id == "Image0123"
 
 
 def test_hazard_curve_producer_config_referential_integrity_create(storage_path, ch_manager):
@@ -195,10 +196,10 @@ def test_hazard_curve_producer_config_referential_integrity_create(storage_path,
 
     # Try to create with a non-existent compatible_calc_fk
     data = {
-        "unique_id": "ref_integrity_test",
+        # "unique_id": "ref_integrity_test",
         "compatible_calc_fk": "non_existent_chc_id",
         "configuration_hash": "hash1",
-        "ecr_image_digest": "digest_string",
+        "ecr_image_digest": "sha256:Image0123",
         "config_digest": "hash_digest",
         "notes": "Some additional notes",
     }
@@ -214,10 +215,10 @@ def test_hazard_curve_producer_config_referential_integrity_update(
 
     # Create a valid config
     data = {
-        "unique_id": "ref_integrity_update_test",
+        # "unique_id": "ref_integrity_update_test",
         "compatible_calc_fk": compatible_hazard_calc_data["unique_id"],
         "configuration_hash": "hash1",
-        "ecr_image_digest": "digest_string",
+        "ecr_image_digest": "sha256:ref_integrity_update_test",
         "config_digest": "hash_digest",
         "notes": "Some additional notes",
     }
@@ -242,10 +243,3 @@ def test_hazard_curve_producer_config_loading_broken_json(
     # This should raise a JSONDecodeError, which Pydantic will catch and raise its own error
     with pytest.raises(ValidationError):
         manager.load("broken_json_test")
-
-
-def test_fix_referential_integrity_tests():
-    """Replace the skipped tests with working versions."""
-    # Since we've added proper referential integrity tests above, we can
-    # replace the skipped tests in the original file.
-    pass

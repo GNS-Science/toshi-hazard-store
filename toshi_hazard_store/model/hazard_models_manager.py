@@ -17,7 +17,7 @@ Classes:
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Callable, Dict, List, Union
 
 from pydantic import ValidationError
 
@@ -206,7 +206,7 @@ class HazardCurveProducerConfigManager(ManagerBase):
         super().__init__(storage_folder / "hazard_curve_producer_configs")
         self.ch_manager = ch_manager
 
-    def _get_path(self, unique_id: str) -> Path:
+    def _get_path(self, unique_id: Union[Callable, str]) -> Path:
         """Override path generation for hazard curve producer objects."""
         return self.storage_folder / f"{unique_id}.json"
 
@@ -240,7 +240,7 @@ class HazardCurveProducerConfigManager(ManagerBase):
 
         self._save_json(model, path)
 
-    def load(self, unique_id: str) -> HazardCurveProducerConfig:
+    def load(self, unique_id: Union[Callable, str]) -> HazardCurveProducerConfig:
         """Load a hazard curve producer object by ID.
 
         Args:
@@ -264,7 +264,7 @@ class HazardCurveProducerConfigManager(ManagerBase):
             raise ValueError(f"Referenced compatible hazard calculation {model.compatible_calc_fk} does not exist.")
         return model
 
-    def update(self, unique_id: str, data: Dict) -> None:
+    def update(self, unique_id: Union[Callable, str], data: Dict) -> None:
         """Update an existing hazard curve producer object.
 
         Args:

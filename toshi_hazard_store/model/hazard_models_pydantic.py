@@ -24,20 +24,6 @@ class CompatibleHazardCalculation(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-# class ElasticContainerRegistryImage(BaseModel):
-#     """A docker image stored to AWS ECR used to produce hazard curves.
-
-#     NSHM docker images contain application build, sometimes with extra code
-#     and maybe the hazard convertor.
-#     """
-
-#     image_uri: str
-#     image_digest: str
-#     tags: list[str] | None = None
-#     pushed_at: datetime
-#     last_pulled_at: datetime | None = None
-
-
 class HazardCurveProducerConfig(BaseModel):
     """Records characteristics of Hazard Curve producers/engines for compatibility and reproducablity.
 
@@ -51,15 +37,21 @@ class HazardCurveProducerConfig(BaseModel):
          - ecr_image: we can run the same inputs against this docker image to reproduce the outputs AND
 
     POSSIBLE in future:
-     - if necessary we can extend this with a GithubRef / DockerImage alternative to ElasticContainerRegistryImage
+     - if necessary we can extend this with a GithubRef / DockerImage alternative to AwsEcrImage
     """
 
-    unique_id: str
     compatible_calc_fk: str  # must map to a valid CompatibleHazardCalculation.unique_id
+    ecr_image_digest: str
+    config_digest: str
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     ecr_image: AwsEcrImage | None = None
-    ecr_image_digest: str
-    config_digest: str
     notes: str | None = None
+
+    @property
+    def unique_id(self) -> str:
+        """The unique ID should not include any non cross-platform characters (for filename compatablity)."""
+        assert self.ecr_image_digest[:7] == "sha256:"
+        return self.ecr_image_digest[7:]

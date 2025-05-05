@@ -73,37 +73,32 @@ def build_producers(
     Returns:
         None
     """
+    hpc = HazardCurveProducerConfig(
+        compatible_calc_fk=compatible_calc.unique_id,
+        ecr_image=subtask_info.ecr_image.model_dump(),
+        ecr_image_digest=subtask_info.ecr_image.imageDigest,
+        config_digest=subtask_info.config_hash,
+    )
+
     if verbose:
         click.echo(f"{str(subtask_info)[:80]} ...")
     try:
-        producer_config = hpc_manager.load(subtask_info.ecr_image.imageDigest)
+        producer_config = hpc_manager.load(hpc.unique_id)
     except FileNotFoundError:
-        pass
         producer_config = None
 
     if producer_config:
         if verbose:
-            click.echo(f'found producer_config {subtask_info.ecr_image.imageDigest} ')
-        if update:
-            producer_config.notes = "notes 2"
-            hpc_manager.update(producer_config.unique_id, producer_config.model_dump())
-            if verbose:
-                click.echo(f'updated producer_config {producer_config.unique_id,} ')
+            click.echo(f'found producer_config {hpc.unique_id} ')
+        # if update:
+        #     producer_config.notes = "notes 2"
+        #     hpc_manager.update(producer_config.unique_id, producer_config.model_dump())
+        #     if verbose:
+        #         click.echo(f'updated producer_config {producer_config.unique_id,} ')
     else:
-        producer_config = HazardCurveProducerConfig(
-            unique_id=subtask_info.ecr_image.imageDigest,
-            compatible_calc_fk=compatible_calc.unique_id,
-            ecr_image=subtask_info.ecr_image.model_dump(),
-            ecr_image_digest=subtask_info.ecr_image.imageDigest,
-            config_digest=subtask_info.config_hash,
-        )
-        hpc_manager.create(producer_config)
+        hpc_manager.create(hpc)
         if verbose:
-            click.echo(
-                f"{producer_config.unique_id} has foreign key "
-                f" {producer_config.compatible_calc_fk}"
-                f" {producer_config.updated_at})"
-            )
+            click.echo(f"{hpc.unique_id} has foreign key " f" {hpc.compatible_calc_fk}" f" {hpc.updated_at})")
 
 
 def build_realisations(

@@ -36,7 +36,7 @@ def hazard_curve_producer_config_data(compatible_hazard_calc_data):
     ecr_image = AwsEcrImage(
         registryId='ABC',
         repositoryName='123',
-        imageDigest="sha256:abcdef1234567890",
+        imageDigest="sha256:ImageDigest1234567890",
         imageTags=["tag1"],
         imagePushedAt="2023-03-20T09:02:35.314495+00:00",
         lastRecordedPullTime="2023-03-20T09:02:35.314495+00:00",
@@ -46,7 +46,6 @@ def hazard_curve_producer_config_data(compatible_hazard_calc_data):
     )
 
     return {
-        "unique_id": "hcp1",
         "compatible_calc_fk": compatible_hazard_calc_data["unique_id"],
         "created_at": now,
         "updated_at": now,

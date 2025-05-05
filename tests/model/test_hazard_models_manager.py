@@ -72,21 +72,21 @@ def test_compatible_hazard_calculation_delete(ch_manager, compatible_hazard_calc
 
 
 def test_hazard_curve_producer_config_create_load(hcp_manager, hazard_curve_producer_config_data):
-    hcp = hcp_manager.load(hazard_curve_producer_config_data["unique_id"])
+    hcp = hcp_manager.load("ImageDigest1234567890")
     assert isinstance(hcp, HazardCurveProducerConfig)
 
 
 def test_hazard_curve_producer_config_update(hcp_manager, hazard_curve_producer_config_data):
     new_updated_at = datetime.now(timezone.utc)
     data_to_update = {"updated_at": new_updated_at.isoformat()}
-    hcp_manager.update(hazard_curve_producer_config_data["unique_id"], data_to_update)
+    hcp_manager.update("ImageDigest1234567890", data_to_update)
 
-    hcp = hcp_manager.load(hazard_curve_producer_config_data["unique_id"])
+    hcp = hcp_manager.load("ImageDigest1234567890")
     assert hcp.updated_at == new_updated_at
 
 
 def test_hazard_curve_producer_config_delete(hcp_manager, hazard_curve_producer_config_data):
-    unique_id = hazard_curve_producer_config_data["unique_id"]
+    unique_id = "ImageDigest1234567890"
     hcp_manager.delete(unique_id)
     with pytest.raises(FileNotFoundError):
         hcp_manager.load(unique_id)
@@ -95,7 +95,7 @@ def test_hazard_curve_producer_config_delete(hcp_manager, hazard_curve_producer_
 def test_referential_integrity_load_failure(hcp_manager, hazard_curve_producer_config_data, monkeypatch):
     monkeypatch.setattr(hcp_manager.ch_manager, 'get_all_ids', lambda: [])
 
-    hcp_id = hazard_curve_producer_config_data["unique_id"]
+    hcp_id = "ImageDigest1234567890"
     with pytest.raises(ValueError) as exc_info:
         _ = hcp_manager.load(hcp_id)
     assert "Referenced compatible hazard calculation" in str(exc_info.value)
