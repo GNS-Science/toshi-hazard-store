@@ -1,10 +1,14 @@
 # Changelog
 
-## [1.0.0-alpha-0] - 2025-04-02
+
+
+## [1.0.0-alpha-0] - 2025-05
 ### Added
  - local json storage with pydantic models CompatibleHazardCalculation, HazardCurveProducerConfig
  - `ths_compat` cli script to maintain CompatibleHazardCalculation models
  - `ths_ds_check` cli script to compare two parquet dataset
+ - added `ths_r4_import` `store-hazard` job.
+ - support writing parquest directly to S3:// URIs in `ths_r4_import` script.
  
 ### Changed
  - import script `ths_import` uses new json storage classes for meta tables.
@@ -12,7 +16,8 @@
  - improved `ths_r4_sanity` script
  - improved `ths_r4_defrag` script
  - update to `nzshm-model 0.13.6`
- - update `pytest`
+ - update `pytest`.
+ - import handles all known legacy config types.
 
 ### Removed
  - v3 -> v4 migration code
