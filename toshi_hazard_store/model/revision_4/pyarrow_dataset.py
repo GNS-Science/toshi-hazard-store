@@ -2,10 +2,11 @@
 
 import csv
 import logging
+import os
 import pathlib
 import uuid
 from functools import partial
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import pyarrow as pa
 import pyarrow.dataset
@@ -13,12 +14,15 @@ import pyarrow.dataset as ds
 import s3path
 from pyarrow import fs
 
+REGION = os.getenv('REGION', 'ap-southeast-2')  # SYDNEY
+
 log = logging.getLogger(__name__)
 
 
-def write_metadata(
+def _write_metadata(
     is_s3: bool, output_folder: pathlib.Path, visited_file: pyarrow.dataset.WrittenFile
 ) -> None:  # pragma: no cover
+    """Write to _metadata.csv based on the visited_file."""
 
     log.info(f'write_metadata() called with is_s3: {is_s3} {output_folder}, {visited_file.path}')
 
@@ -90,22 +94,34 @@ def append_models_to_dataset(
     dataset_format: str = 'parquet',
     filesystem: Optional[fs.FileSystem] = None,
     partitioning: Optional[List[str]] = None,
-):
+) -> None:
     """
-    append realisation models to dataset using the pyarrow library
+    Appends realisation models to a dataset using the pyarrow library.
 
-    TODO: option to BAIL if realisation exists, assume this is a duplicated operation
-    TODO: schema checks
+    Args:
+    table_or_batchreader: A pyarrow Table or RecordBatchReader.
+    base_dir: The path where the data will be stored.
+    dataset_format (optional): The format of the dataset. Defaults to 'parquet'.
+    filesystem (optional): The file system to use for storage. Defaults to None.
+    partitioning (optional): The partitioning scheme to apply. Defaults to ['nloc_0'].
+
+    Returns: None
+
+    Raises:
+        ValueError: If an invalid format is provided.
     """
+
+    if not isinstance(table_or_batchreader, (pa.Table, pa.RecordBatchReader)):
+        raise TypeError("table_or_batchreader must be a pyarrow Table or RecordBatchReader")
+
     partitioning = partitioning or ['nloc_0']
+    using_s3 = isinstance(filesystem, fs.S3FileSystem)
 
-    # hack for now ....
-    if base_dir[:2] == '//':
-        base_dir = base_dir[2:]
+    # the pyarrow S3 hack
+    if base_dir[0] == '/' and using_s3:
+        base_dir = base_dir[1:]
 
-    is_s3 = isinstance(filesystem, fs.S3FileSystem)
-    write_metadata_fn = partial(write_metadata, is_s3, pathlib.Path(base_dir))
-
+    write_metadata_fn = partial(_write_metadata, using_s3, pathlib.Path(base_dir))
     ds.write_dataset(
         table_or_batchreader,
         base_dir=base_dir,
@@ -117,3 +133,28 @@ def append_models_to_dataset(
         file_visitor=write_metadata_fn,
         filesystem=filesystem,
     )
+
+
+def configure_output(output_target: str) -> Tuple[str, fs.FileSystem]:
+    """
+    Configure the output for a given path.
+
+    Determines whether the output is an S3 URI or a local path and returns the relevant filesystem
+    and output path.
+
+    Args:
+        output_target (str): The output path to configure.
+
+    Returns:
+        tuple: A tuple containing the absolute output path and the corresponding filesystem.
+    """
+    if output_target.startswith('s3://'):
+        # We have an AWS S3 URI
+        output = str(s3path.PureS3Path.from_uri(output_target))
+        log.info(f'using S3 output with path: `{output}` and region: `{REGION}`')
+        filesystem = fs.S3FileSystem(region=REGION)
+    else:
+        # We have a local path
+        output = str(pathlib.Path(output_target).resolve())
+        filesystem = fs.LocalFileSystem()
+    return output, filesystem

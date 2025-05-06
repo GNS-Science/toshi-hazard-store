@@ -6,8 +6,6 @@ import pathlib
 from typing import Iterable, Iterator, Optional
 
 import click
-import s3path
-from pyarrow import fs
 
 from toshi_hazard_store.config import ECR_REPONAME, STORAGE_FOLDER
 from toshi_hazard_store.model.hazard_models_manager import (
@@ -30,34 +28,12 @@ API_URL = os.getenv('NZSHM22_TOSHI_API_URL', "http://127.0.0.1:5000/graphql")
 API_KEY = os.getenv('NZSHM22_TOSHI_API_KEY', "")
 S3_URL = None
 
-# DEPLOYMENT_STAGE = os.getenv('DEPLOYMENT_STAGE', 'LOCAL').upper()
-REGION = os.getenv('REGION', 'ap-southeast-2')  # SYDNEY
-
 SubtaskRecord = collections.namedtuple(
     'SubtaskRecord', 'gt_id, hazard_calc_id, ecr_image, config_hash, hdf5_path, vs30'
 )
-# ProducerConfigKey = collections.namedtuple(
-#     'ProducerConfigKey', 'producer_software, producer_version_id, configuration_hash'
-# )
 
 chc_manager = CompatibleHazardCalculationManager(pathlib.Path(STORAGE_FOLDER))
 hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc_manager)
-
-
-# def get_producer_config_key(subtask_info: SubtaskRecord) -> ProducerConfigKey:
-#     """
-#     Extracts the producer configuration key from a subtask record.
-
-#     Args:
-#         subtask_info (SubtaskRecord): The subtask record to extract the producer config key from.
-
-#     Returns:
-#         ProducerConfigKey: A tuple containing the producer software, version ID, and configuration hash.
-#     """
-#     producer_software = f"{ECR_REGISTRY_ID}/{ECR_REPONAME}"
-#     producer_version_id = subtask_info.image['imageDigest'][7:27]  # first 20 bits of hashdigest
-#     configuration_hash = subtask_info.config_hash
-#     return ProducerConfigKey(producer_software, producer_version_id, configuration_hash)
 
 
 def build_producers(
@@ -127,18 +103,6 @@ def build_realisations(
     if verbose:  # pragma: no-cover
         click.echo(f"{str(subtask_info)[:80]} ...")
 
-    if output[:3] == "s3:":
-        # we have an AWS S3 ARNURI
-        output = str(s3path.PureS3Path.from_uri(output))
-        log.info(f'using S3 output with path: `{output}` and region: `{REGION}`')
-
-        # output = "/".join(output.parts[1:])
-        filesystem = fs.S3FileSystem(region=REGION)
-    else:
-        # we have a local path
-        output = str(pathlib.Path(output).resolve())
-        filesystem = fs.LocalFileSystem()
-
     # check the producer exists
     hpc = HazardCurveProducerConfig(
         compatible_calc_fk=compatible_calc,
@@ -158,8 +122,10 @@ def build_realisations(
         config_digest=subtask_info.config_hash,
         use_64bit_values=use_64bit_values,
     )
+
+    base_dir, filesystem = pyarrow_dataset.configure_output(output)
     pyarrow_dataset.append_models_to_dataset(
-        model_generator, base_dir=output, partitioning=partitioning, filesystem=filesystem
+        model_generator, base_dir=base_dir, partitioning=partitioning, filesystem=filesystem
     )
 
 
@@ -219,9 +185,26 @@ def generate_subtasks(
                 continue
 
         query_res = gtapi.get_oq_hazard_task(task_id)
+        if not query_res.get('hazard_solution'):
+            log.warning(f'No hazard_solution available for task id : {task_id}, skipping.')
+            continue
+
         log.debug(query_res)
         task_created = dt.datetime.fromisoformat(query_res["created"])  # "2023-03-20T09:02:35.314495+00:00",
         log.debug(f"task created: {task_created}")
+
+        #### Handle VS30 = 0 (Hawkes Bay)
+        #
+        # this maybe not necessary as the VS30 value is actually read from the hdf5...
+        #
+        # e.g. T3BlbnF1YWtlSGF6YXJkVGFzazoxMzU4Njk1
+        # vs30, location_list = None, None
+        # for arg_kv in query_res.get('arguments'):
+        #     if arg_kv['k'] == 'vs30':
+        #         vs30 = arg_kv['value']
+        #     if arg_kv['k'] == 'location_list':
+        #         location_list = arg_kv['value']
+        # assert 0
 
         # MOCK / DISCUSS USAGE THIS
         #

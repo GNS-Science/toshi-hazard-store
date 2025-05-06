@@ -25,9 +25,7 @@ import os
 import pathlib
 
 import click
-import s3path
 from nzshm_model.psha_adapter.openquake.hazard_config import OpenquakeConfig
-from pyarrow import fs
 
 from toshi_hazard_store.config import STORAGE_FOLDER
 from toshi_hazard_store.model.hazard_models_manager import (
@@ -50,6 +48,7 @@ logging.getLogger('root').setLevel(logging.INFO)
 
 # for logging API query/reponses:
 # logging.getLogger('toshi_hazard_store.oq_import.toshi_api_client').setLevel(logging.DEBUG)
+# logging.getLogger('toshi_hazard_store.oq_import.toshi_api_subtask').setLevel(logging.DEBUG)
 log = logging.getLogger(__name__)
 
 API_URL = os.getenv('NZSHM22_TOSHI_API_URL', "http://127.0.0.1:5000/graphql")
@@ -198,7 +197,12 @@ def extract(
             click.echo(f'Compatible calc: {compatible_calc.unique_id}')
 
         build_realisations(
-            subtask_info, compatible_calc, output, verbose, use_64bit, partition_by_calc_id=partition_by_calc_id
+            subtask_info,
+            compatible_calc.unique_id,
+            output,
+            verbose,
+            use_64bit,
+            partition_by_calc_id=partition_by_calc_id,
         )
         count += 1
 
@@ -232,15 +236,6 @@ def store_hazard(
     e.g sha256:db023d95e7ec6707fe3484c7b3c1f8fd4d1c134d5a6d7ec5e939700b625293d9\n
     OUTPUT: path to the output file OR S3 URI.\n
     """
-    if output[:3] == "s3:":
-        # we have an AWS S3 ARNURI
-        output = s3path.PureS3Path.from_uri(output)
-        filesystem = fs.S3FileSystem(region=REGION)
-    else:
-        # we have a local path
-        output = pathlib.Path(output).resolve()
-        filesystem = fs.LocalFileSystem()
-        assert output.is_dir() or output.parent.is_dir(), f"output folder {output} or its parent folder must exist."
 
     # Check paths
     config_file_path = pathlib.Path(config_path)
@@ -268,10 +263,9 @@ def store_hazard(
         use_64bit_values=False,
     )
 
-    # TODO: SUPPORT S3 URI
-    # write dataset (only file system)
+    base_dir, filesystem = pyarrow_dataset.configure_output(output)
     pyarrow_dataset.append_models_to_dataset(
-        model_generator, output, partitioning=["calculation_id"], filesystem=filesystem
+        model_generator, base_dir=base_dir, partitioning=["calculation_id"], filesystem=filesystem
     )
 
 

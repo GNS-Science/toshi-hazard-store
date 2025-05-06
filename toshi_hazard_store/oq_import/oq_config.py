@@ -192,7 +192,7 @@ def config_from_task(task_id: str, subtasks_folder: pathlib.Path) -> OpenquakeCo
             )
 
         # both old and new-skool get these args from top-level of task_args
-        config.set_description(SYNTHETIC_INI).set_uniform_site_params(vs30=ta['vs30']).set_iml(
+        config.set_description(SYNTHETIC_INI).set_uniform_site_params(vs30=max(ta['vs30'], 1.0)).set_iml(
             ta['intensity_spec']['measures'], ta['intensity_spec']['levels']
         )
 

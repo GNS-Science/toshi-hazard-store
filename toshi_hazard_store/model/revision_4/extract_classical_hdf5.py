@@ -153,7 +153,7 @@ def rlzs_to_record_batch_reader(
     oqparam = json.loads(extractor.get('oqparam').json)
     assert oqparam['calculation_mode'] == 'classical', "calculation_mode is not 'classical'"
 
-    vs30 = int(oqparam['reference_vs30_value'])
+    vs30 = int(oqparam['reference_vs30_value'])  # this is not set for site_specific
 
     # get the IMT props
     # imtls = oqparam['hazard_imtls']  # dict of imt and the levels used at each imt e.g {'PGA': [0.011. 0.222]}
