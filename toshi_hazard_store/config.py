@@ -25,7 +25,7 @@ SOURCE_REGION = os.getenv('NZSHM22_HAZARD_STORE_MIGRATE_SOURCE_REGION')
 SOURCE_DEPLOYMENT_STAGE = os.getenv('NZSHM22_HAZARD_STORE_SOURCE_STAGE')
 # TARGET_REGION = os.getenv('NZSHM22_HAZARD_STORE_MIGRATE_TARGET_REGION')
 
-RESOURCES_FOLDER = str(PurePath(os.path.realpath(__file__)).parent.parent / "resources")
+RESOURCES_FOLDER = str(PurePath(os.path.realpath(__file__)).parent / "resources")
 STORAGE_FOLDER = str(PurePath(RESOURCES_FOLDER) / "metadata")
 
 
