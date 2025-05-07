@@ -16,5 +16,5 @@ jobs:
     with:
       operating-systems: "['ubuntu-latest', 'macos-latest']"
       python-versions: "['3.10', '3.11']"
-      poetry-version: 1.8.4
+      # poetry-version: 1.8.4
     secrets: inherit
