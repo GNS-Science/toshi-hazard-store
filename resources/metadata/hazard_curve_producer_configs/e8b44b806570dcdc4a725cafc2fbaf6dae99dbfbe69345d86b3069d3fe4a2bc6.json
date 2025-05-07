@@ -1,0 +1,21 @@
+{
+  "compatible_calc_fk": "NZSHM22",
+  "ecr_image_digest": "sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6",
+  "config_digest": "bdc5476361cd",
+  "created_at": "2025-05-05T01:58:34.299587Z",
+  "updated_at": "2025-05-05T01:58:34.299596Z",
+  "ecr_image": {
+    "registryId": "461564345538",
+    "repositoryName": "nzshm22/runzi-openquake",
+    "imageDigest": "sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6",
+    "imageTags": [
+      "runzi-ffc9af8_nz_openquake-3-19-0_patch_v2"
+    ],
+    "imageSizeInBytes": 637584041,
+    "imagePushedAt": "2024-08-30T14:07:02.116000+12:00",
+    "imageManifestMediaType": "application/vnd.docker.distribution.manifest.v2+json",
+    "artifactMediaType": "application/vnd.docker.container.image.v1+json",
+    "lastRecordedPullTime": "2025-04-30T12:19:13.318000+12:00"
+  },
+  "notes": null
+}
