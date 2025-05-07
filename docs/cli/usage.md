@@ -34,7 +34,7 @@ Now we need to find the **General Task (GT)** Identifier from Toshi API, which i
 The General Task ID below is `R2VuZXJhbFRhc2s6NjkzMTg5Mg==` [see in Weka](http://nzshm22-weka-ui-test.s3-website-ap-southeast-2.amazonaws.com/GeneralTask/R2VuZXJhbFRhc2s6NjkzMTg5Mg==).
 
 ```bash
-$ AWS_PROFILE=chrisbc poetry run ths_r4_import producers R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/
+$ AWS_PROFILE=chrisbc poetry run ths_import producers R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/
 ...
 ```
 
@@ -44,13 +44,13 @@ $ AWS_PROFILE=chrisbc poetry run ths_r4_import producers R2VuZXJhbFRhc2s6NjkzMTg
 #### Either A, with location partitioning
 
 ```bash
-AWS_PROFILE=chrisbc poetry run ths_r4_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS1 -v
+AWS_PROFILE=chrisbc poetry run ths_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS1 -v
 ```
 
 #### OR B, with calculation_id partitioning
 
 ```bash
-AWS_PROFILE=chrisbc poetry run ths_r4_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS2 -v -CID
+AWS_PROFILE=chrisbc poetry run ths_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS2 -v -CID
 ```
 
 ### Step 3. Sanity checks
@@ -58,7 +58,7 @@ AWS_PROFILE=chrisbc poetry run ths_r4_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg=
 #### Check count integrity, ensuring that the number of realisations is consistent
 
 ```bash
-poetry run ths_r4_sanity count-rlz -D ./WORKING/ARROW/DS1 -R ALL -x -v
+poetry run ths_ds_sanity count-rlz -D ./WORKING/ARROW/DS1 -R ALL -x -v
 ```
 
 #### Check random realisations vs DynamoDB (for existing calcs only)
@@ -69,13 +69,13 @@ building the random queries.
 ### Step 4. Defrag
 
 ```bash
-poetry run ths_r4_defrag ./WORKING/ARROW/DS1 ./WORKING/ARROW/DS1_DFG -p 'vs30,nloc_0' -v
+poetry run ths_ds_defrag ./WORKING/ARROW/DS1 ./WORKING/ARROW/DS1_DFG -p 'vs30,nloc_0' -v
 ```
 
 #### check count integrity, ensure the number of realisations is consistent
 
 ```bash
-poetry run ths_r4_sanity count-rlz -D ./WORKING/ARROW/DS1_DFG -R ALL -x -v
+poetry run ths_ds_sanity count-rlz -D ./WORKING/ARROW/DS1_DFG -R ALL -x -v
 ```
 
 ### Step 5. Dataset comparison
@@ -96,17 +96,22 @@ poetry run ths_ds_check rlzs ./WORKING/ARROW/DS1_DFG/ ./WORKING/ARROW/DS2_DFG/ -
 
 ### DEMO
 
+## prep the producer
+
+`AWS_PROFILE=chrisbc poetry run ths_import producers R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -v`
+
+
 ## Runzi workflow
-`poetry run ths_r4_import store-hazard ./WORKING/runzi/calc_2.hdf5 ./WORKING/runzi/oq_config.json NZSHM22 calcS_T "sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6"  ./WORKING/ARROW/DSR`
+`poetry run ths_import store-hazard ./WORKING/runzi/calc_2.hdf5 ./WORKING/runzi/oq_config.json NZSHM22 calcS_T "sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6"  ./WORKING/ARROW/DSR`
 
 ## Historic (from ToshiAPI ) workflow
-`AWS_PROFILE=chrisbc poetry run ths_r4_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DST -v`
-`poetry run ths_r4_sanity count-rlz -D ./WORKING/ARROW/DST -R ALL -x -v`
+`AWS_PROFILE=chrisbc poetry run ths_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DST -v`
+`poetry run ths_ds_sanity count-rlz -D ./WORKING/ARROW/DST -R ALL -x -v`
 
 ## Compact / conform workflows
 
-`poetry run ths_r4_defrag ./WORKING/ARROW/DSR ./WORKING/ARROW/DSR_DFG -p 'vs30,nloc_0' -v`
-`poetry run ths_r4_defrag ./WORKING/ARROW/DST ./WORKING/ARROW/DST_DFG -p 'vs30,nloc_0' -v`
+`poetry run ths_ds_defrag ./WORKING/ARROW/DSR ./WORKING/ARROW/DSR_DFG -p 'vs30,nloc_0' -v`
+`poetry run ths_ds_defrag ./WORKING/ARROW/DST ./WORKING/ARROW/DST_DFG -p 'vs30,nloc_0' -v`
 
 
-`poetry run ths_r4_sanity random-rlz-new ./WORKING/ARROW/DS5mg_DFG 10 -v -i 5 -df`
+`poetry run ths_ds_sanity random-rlz-new ./WORKING/ARROW/DS5mg_DFG 10 -v -i 5 -df`

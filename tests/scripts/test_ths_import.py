@@ -1,7 +1,7 @@
 import pytest  # noqa
 from click.testing import CliRunner
 
-from toshi_hazard_store.scripts import ths_r4_import as ths_import  # module reference for patching
+from toshi_hazard_store.scripts import ths_import  # module reference for patching
 
 # from nzssdt_2023.scripts.pipeline_cli import cli
 # from nzssdt_2023.versioning import VersionInfo

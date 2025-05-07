@@ -19,12 +19,11 @@ nav:
       - Hazard Dataset overview: cli/hazard_dataset_overview.md
       - usage: cli/usage.md
       - ths_compat: cli/ths_compat.md
-      - ths_import: cli/ths_r4_import.md
-      - ths_sanity: cli/ths_r4_sanity.md
-      - ths_defrag: cli/ths_r4_defrag.md
+      - ths_import: cli/ths_import.md
+      - ths_sanity: cli/ths_ds_sanity.md
+      - ths_defrag: cli/ths_ds_defrag.md
       - ths_check: cli/ths_ds_check.md
-      - ths_filter: cli/ths_r4_filter_dataset.md
-      - ths_query: cli/ths_r4_query.md
+      - ths_filter: cli/ths_ds_filter.md
   - API:
     - api/index.md
     - oq_import:
