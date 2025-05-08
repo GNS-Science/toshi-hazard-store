@@ -25,17 +25,17 @@ packages = [
 
 [tool.poetry.scripts]
 ths_compat = 'toshi_hazard_store.scripts.ths_compat:main'
-ths_r4_import = 'toshi_hazard_store.scripts.ths_r4_import:main'
+ths_import = 'toshi_hazard_store.scripts.ths_import:main'
 ths_ds_check = 'toshi_hazard_store.scripts.ths_ds_check:main'
-ths_r4_sanity = 'toshi_hazard_store.scripts.ths_r4_sanity:main'
-ths_r4_defrag = 'toshi_hazard_store.scripts.ths_r4_defrag:main'
-ths_r4_filter_dataset = 'toshi_hazard_store.scripts.ths_r4_filter_dataset:main'
+ths_ds_sanity = 'toshi_hazard_store.scripts.ths_ds_sanity:main'
+ths_ds_defrag = 'toshi_hazard_store.scripts.ths_ds_defrag:main'
+ths_ds_filter = 'toshi_hazard_store.scripts.ths_ds_filter:main'
 
-store_hazard_v4 = 'toshi_hazard_store.scripts.store_hazard_v4:main'
-ths_r4_query = 'toshi_hazard_store.scripts.ths_r4_query:main'
-ths_r4_migrate = 'toshi_hazard_store.scripts.ths_r4_migrate:main'
 
 # Legacy stuff
+# ths_r4_query = 'toshi_hazard_store.scripts.ths_r4_query:main'
+# store_hazard_v4 = 'toshi_hazard_store.scripts.store_hazard_v4:main'
+# ths_r4_migrate = 'toshi_hazard_store.scripts.ths_r4_migrate:main'
 # store_hazard_v3 = 'toshi_hazard_store.scripts.store_hazard_v3:main'
 # get_hazard = 'toshi_hazard_store.scripts.get_hazard:main'
 # query_meta = 'toshi_hazard_store.scripts.query_meta:main'
