@@ -72,7 +72,7 @@ def main(
     Arguments:\n
 
     SOURCE: path to the source (folder OR S3 URI).\n
-    TARGET: path to the target (folder OR S3 URI). 
+    TARGET: path to the target (folder OR S3 URI).
     """
 
     source_dir, source_filesystem = pyarrow_dataset.configure_output(source)
