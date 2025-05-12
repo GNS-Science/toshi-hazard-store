@@ -1,17 +1,16 @@
 """
-Console script for compacting THS rev4 parquet datasets
+Console script for compacting THS parquet datasets
 """
 
 import csv
 import logging
 import pathlib
-import uuid
-from functools import partial
 
 import click
 import pyarrow as pa
 import pyarrow.dataset as ds
-from pyarrow import fs
+
+from toshi_hazard_store.model.revision_4 import pyarrow_dataset
 
 DATASET_FORMAT = 'parquet'  # TODO: make this an argument
 MEMORY_WARNING_BYTES = 8e9  # At 8 GB let the user know they might run into trouble!!!
@@ -58,7 +57,7 @@ def write_metadata(base_path, visited_file):
 @click.command()
 @click.argument('source')
 @click.argument('target')
-@click.option("-p", "--parts", help="comma-separated list of partition keys for the target DS", default="")
+@click.option("-p", "--parts", help="comma-separated list of partition keys for the target DS", default="vs30,nloc_0")
 @click.option('-v', '--verbose', is_flag=True, default=False)
 def main(
     source,
@@ -66,45 +65,55 @@ def main(
     parts,
     verbose,
 ):
-    """Compact the dataset
+    """Compact and repartition the dataset.
 
     Can be used on both realisation and aggregate datasets.
+
+    Arguments:\n
+
+    SOURCE: path to the source (folder OR S3 URI).\n
+    TARGET: path to the target (folder OR S3 URI). 
     """
-    source_folder = pathlib.Path(source)
-    target_folder = pathlib.Path(target)
-    target_parent = target_folder.parent
 
-    assert source_folder.exists(), f'source {source_folder} is not found'
-    assert source_folder.is_dir(), f'source {source_folder} is not a directory'
-
-    assert target_parent.exists(), f'folder {target_parent} is not found'
-    assert target_parent.is_dir(), f'folder {target_parent} is not a directory'
+    source_dir, source_filesystem = pyarrow_dataset.configure_output(source)
+    target_dir, target_filesystem = pyarrow_dataset.configure_output(target)
 
     partition_keys = [part.strip() for part in parts.split(",")] if parts else []
 
     if verbose:
         click.echo(f'using pyarrow version {pa.__version__}')
         click.echo(f"partitions: {partition_keys}")
+        click.echo(f"source: `{source_dir}` using fs:{source_filesystem}")
+        click.echo(f"target: `{target_dir}` using fs:{target_filesystem}")
 
-    filesystem = fs.LocalFileSystem()
-    writemeta_fn = partial(write_metadata, target_folder)
-
-    dataset = ds.dataset(source_folder, filesystem=filesystem, format=DATASET_FORMAT, partitioning='hive')
+    dataset = ds.dataset(source_dir, filesystem=source_filesystem, format=DATASET_FORMAT, partitioning='hive')
     arrow_scanner = ds.Scanner.from_dataset(dataset)
 
-    ds.write_dataset(
-        arrow_scanner,
-        base_dir=str(target_folder),
-        basename_template="%s-part-{i}.%s" % (uuid.uuid4(), DATASET_FORMAT),
+    pyarrow_dataset.append_models_to_dataset(
+        arrow_scanner.to_reader(),
+        base_dir=target_dir,
+        filesystem=target_filesystem,
         partitioning=partition_keys,
-        partitioning_flavor="hive",
         existing_data_behavior="delete_matching",
-        format=DATASET_FORMAT,
-        file_visitor=writemeta_fn,
-        max_rows_per_file=200 * 1024,
-        max_rows_per_group=200 * 1024,
-        min_rows_per_group=100 * 1024,
     )
+
+    # OLD SETUP, wes more specific about limits etc,
+    # and we may still need some of this in the above method
+    #
+    # ds.write_dataset(
+    #     arrow_scanner,
+    #     base_dir=str(target_dir),
+    #     basename_template="%s-part-{i}.%s" % (uuid.uuid4(), DATASET_FORMAT),
+    #     partitioning=partition_keys,
+    #     partitioning_flavor="hive",
+    #     existing_data_behavior="delete_matching",
+    #     format=DATASET_FORMAT,
+    #     # file_visitor=writemeta_fn,
+    #     max_rows_per_file=200 * 1024,
+    #     max_rows_per_group=200 * 1024,
+    #     min_rows_per_group=100 * 1024,
+    #     filesystem=target_filesystem
+    # )
 
 
 if __name__ == "__main__":

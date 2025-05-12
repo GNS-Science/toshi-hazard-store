@@ -8,8 +8,9 @@
  - `ths_compat` cli script to maintain CompatibleHazardCalculation models.
  - `ths_ds_check` cli script to compare two parquet dataset.
  - added `ths_r4_import` `store-hazard` job.
- - support writing parquest directly to S3:// URIs in `ths_r4_import` script.
+ - support writing parquet directly to S3:// URIs in `ths_r4_import` script.
  - make `ths_import.store_hazard` usable via import.
+ - `S3://` URI support to `ths_ds_defrag` script.
  
 ### Changed
  - import script `ths_import` uses new json storage classes for meta tables.
