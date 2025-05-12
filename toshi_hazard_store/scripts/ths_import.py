@@ -92,9 +92,9 @@ def store_hazard(
     config_file_path = pathlib.Path(config_path)
     hdf5_file_path = pathlib.Path(hdf5_path)
     if not config_file_path.is_file():
-        raise ValueError(f"config_path: `{config_path}` is not a file.")
+        raise FileNotFoundError(f"config_path: `{config_path}` is not a file.")
     if not hdf5_file_path.is_file():
-        raise ValueError(f"hdf5_path: `{hdf5_path}` is not a file.")
+        raise FileNotFoundError(f"hdf5_path: `{hdf5_path}` is not a file.")
 
     # validate the compatible_calc_id (raises an error if not found)
     chc_manager.load(compatible_calc_id)
