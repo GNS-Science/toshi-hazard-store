@@ -13,7 +13,6 @@ import pyarrow.dataset as ds
 from toshi_hazard_store.model.revision_4 import pyarrow_dataset
 
 DATASET_FORMAT = 'parquet'  # TODO: make this an argument
-MEMORY_WARNING_BYTES = 8e9  # At 8 GB let the user know they might run into trouble!!!
 
 log = logging.getLogger(__name__)
 
