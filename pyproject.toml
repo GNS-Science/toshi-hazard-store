@@ -45,23 +45,23 @@ ths_ds_filter = 'toshi_hazard_store.scripts.ths_ds_filter:main'
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 
-# see https://github.com/orgs/python-poetry/discussions/7937
-# urllib3 = ">2"
-fiona = {version = "^1.9.5", optional = true}
-networkx = {version = "^3.2.1", optional = true}
 python-dotenv = "^1.0.1"
 pynamodb = "^6.0.0"
 pynamodb-attributes = "^0.4.0"
 nzshm-common = "^0.8.4"
-nshm-toshi-client = {version = "^1.0.1", optional = true}
+nshm-toshi-client = {version = "^1.0.1"}
 numpy = ">=1.24,<2"
-numba = {version="<0.61.0", optional = true}
-openquake-engine = {version = "<3.21", optional = true}
 pandas = ">2,<3"
 pyarrow = "^19.0.1"
 pydantic = "^2.10.6"
 nzshm-model = "^0.13.6"
 s3path = "^0.6.1"
+
+# the optional packages needed for `openquake` 
+fiona = {version = "^1.9.5", optional = true}
+networkx = {version = "^3.2.1", optional = true}
+numba = {version="<0.61.0", optional = true}
+openquake-engine = {version = "<3.21", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.2.0"
@@ -95,8 +95,7 @@ pytest-lazy-fixtures = "^1.1.2"
 
 
 [tool.poetry.extras]
-openquake = ["openquake-engine", "fiona", "networkx", "numba", "nzshm-model"]
-scripts = ["nshm-toshi-client"]
+openquake = ["openquake-engine", "fiona", "networkx", "numba"]
 
 [tool.black]
 line-length = 120

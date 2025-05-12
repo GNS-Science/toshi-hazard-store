@@ -1,5 +1,5 @@
 """
-Console script for extracting NSHM hazard curves to parquet format
+Console script for extracting NSHM hazard curves to parquet dataset format
  - either from a given General Task
  - or for a single HDF5 file (as used in AWS batch jobs)
 
@@ -62,6 +62,66 @@ chc_manager = CompatibleHazardCalculationManager(pathlib.Path(STORAGE_FOLDER))
 hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc_manager)
 
 
+def store_hazard(
+    hdf5_path: str,
+    config_path: str,
+    compatible_calc_id: str,
+    hazard_calc_id: str,
+    ecr_digest: str,
+    output: str,
+) -> None:
+    """
+    Extract openquake hazard curves from HDF5_PATH writing to OUTPUT in parquet format.
+
+    This function is provided for direct use (the python API) and is also
+    used by the CLI wrapper function `store_hazad_api`.
+
+    Args:
+    hdf5_path: path to the hazard realization HDF5 file.
+    config_path: path to the `oq_config.json` file.
+    compatible_calc_id: FK of the compatible calculation.
+    hazard_calc_id: FK of the hazard calculation.
+    ecr_digest: AWS ECR SHA256 digest of the hazard docker image.
+        e.g sha256:db023d95e7ec6707fe3484c7b3c1f8fd4d1c134d5a6d7ec5e939700b625293d9
+    output: path to the output file OR S3 URI.
+
+    Returns:
+        None
+    """
+    # Check paths
+    config_file_path = pathlib.Path(config_path)
+    hdf5_file_path = pathlib.Path(hdf5_path)
+    if not config_file_path.is_file():
+        raise FileNotFoundError(f"config_path: `{config_path}` is not a file.")
+    if not hdf5_file_path.is_file():
+        raise FileNotFoundError(f"hdf5_path: `{hdf5_path}` is not a file.")
+
+    # validate the compatible_calc_id (raises an error if not found)
+    chc_manager.load(compatible_calc_id)
+
+    # sanity check the producer digest looks somewhat correct
+    if not ecr_digest[:7] == 'sha256:':
+        raise ValueError(f"ecr_digest: `{ecr_digest}` doesn't look valid.")
+
+    # calculate the openquake job configuration digest
+    jobconf = OpenquakeConfig.from_dict(json.load(open(config_path, 'r')))
+    config_digest = jobconf.compatible_hash_digest()
+
+    model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
+        hdf5_file=str(hdf5_path),
+        calculation_id=hazard_calc_id,
+        compatible_calc_id=compatible_calc_id,
+        producer_digest=ecr_digest,
+        config_digest=config_digest,
+        use_64bit_values=False,
+    )
+
+    base_dir, filesystem = pyarrow_dataset.configure_output(output)
+    pyarrow_dataset.append_models_to_dataset(
+        model_generator, base_dir=base_dir, partitioning=["calculation_id"], filesystem=filesystem
+    )
+
+
 #  _ __ ___   __ _(_)_ __
 # | '_ ` _ \ / _` | | '_ \
 # | | | | | | (_| | | | | |
@@ -69,7 +129,11 @@ hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc
 #
 @click.group()
 def main():
-    """Import NSHM Model hazard curves to new revision 4 models."""
+    """Console script for extracting NSHM hazard curves to parquet dataset format.
+
+    - either for a given General Task, or
+    - a single HDF5 file (as used in runzi AWS batch jobs).
+    """
 
 
 @main.command()
@@ -207,14 +271,14 @@ def extract(
         count += 1
 
 
-@main.command()
+@main.command(name="store-hazard")
 @click.argument('hdf5_path')
 @click.argument('config_path')
 @click.argument('compatible_calc_id')
 @click.argument('hazard_calc_id')
 @click.argument('ecr_digest')
 @click.argument('output')
-def store_hazard(
+def store_hazard_cli(
     hdf5_path,
     config_path,
     compatible_calc_id,
@@ -230,42 +294,19 @@ def store_hazard(
 
     HDF5_PATH: path to the hazard realization HDF5 file.\n
     CONFIG_PATH: path to the `oq_config.json` file.\n
-    HAZARD_CALC_ID: FK of the hazard calculation.\n
     COMPATIBLE_CALC_ID: FK of the compatible calculation.\n
+    HAZARD_CALC_ID: FK of the hazard calculation.\n
     ECR_DIGEST: AWS ECR SHA256 digest of the hazard docker image.\n
     e.g sha256:db023d95e7ec6707fe3484c7b3c1f8fd4d1c134d5a6d7ec5e939700b625293d9\n
     OUTPUT: path to the output file OR S3 URI.\n
     """
-
-    # Check paths
-    config_file_path = pathlib.Path(config_path)
-    hdf5_file_path = pathlib.Path(hdf5_path)
-    assert config_file_path.is_file(), f"config file {config_path} is not a file."
-    assert hdf5_file_path.is_file(), f"hdf5 {hdf5_path} is not a file."
-
-    # validate the compatible_calc_id
-    assert chc_manager.load(compatible_calc_id)
-
-    # calculate the producer digest
-    # producer_digest = hashlib.shake_256(ecr_image_uri.encode()).hexdigest(6)
-    assert ecr_digest[:7] == 'sha256:', f'ECR_DIGEST {ecr_digest} doesnt look valid'
-
-    # calculate the openquake job configuration digest
-    jobconf = OpenquakeConfig.from_dict(json.load(open(config_path, 'r')))
-    config_digest = jobconf.compatible_hash_digest()
-
-    model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
-        hdf5_file=str(hdf5_path),
-        calculation_id=hazard_calc_id,
-        compatible_calc_id=compatible_calc_id,
-        producer_digest=ecr_digest,
-        config_digest=config_digest,
-        use_64bit_values=False,
-    )
-
-    base_dir, filesystem = pyarrow_dataset.configure_output(output)
-    pyarrow_dataset.append_models_to_dataset(
-        model_generator, base_dir=base_dir, partitioning=["calculation_id"], filesystem=filesystem
+    store_hazard(
+        hdf5_path,
+        config_path,
+        compatible_calc_id,
+        hazard_calc_id,
+        ecr_digest,
+        output,
     )
 
 
