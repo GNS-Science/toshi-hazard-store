@@ -91,15 +91,17 @@ def store_hazard(
     # Check paths
     config_file_path = pathlib.Path(config_path)
     hdf5_file_path = pathlib.Path(hdf5_path)
-    assert config_file_path.is_file(), f"config file {config_path} is not a file."
-    assert hdf5_file_path.is_file(), f"hdf5 {hdf5_path} is not a file."
+    if not config_file_path.is_file():
+        raise ValueError(f"config_path: `{config_path}` is not a file.")
+    if not hdf5_file_path.is_file():
+        raise ValueError(f"hdf5_path: `{hdf5_path}` is not a file.")
 
-    # validate the compatible_calc_id
-    assert chc_manager.load(compatible_calc_id)
+    # validate the compatible_calc_id (raises an error if not found)
+    chc_manager.load(compatible_calc_id)
 
-    # calculate the producer digest
-    # producer_digest = hashlib.shake_256(ecr_image_uri.encode()).hexdigest(6)
-    assert ecr_digest[:7] == 'sha256:', f'ECR_DIGEST {ecr_digest} doesnt look valid'
+    # sanity check the producer digest looks somewhat correct
+    if not ecr_digest[:7] == 'sha256:':
+        raise ValueError(f"ecr_digest: `{ecr_digest}` doesn't look valid.")
 
     # calculate the openquake job configuration digest
     jobconf = OpenquakeConfig.from_dict(json.load(open(config_path, 'r')))
