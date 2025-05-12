@@ -32,9 +32,21 @@ from toshi_hazard_store.model.hazard_models_manager import (
     CompatibleHazardCalculationManager,
     HazardCurveProducerConfigManager,
 )
-from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
+
+try:
+    import openquake  # noqa
+
+    HAVE_OQ = True
+except ImportError:
+    HAVE_OQ = False
+
+if HAVE_OQ:
+    from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
+    from toshi_hazard_store.oq_import.toshi_api_subtask import build_realisations
+    from toshi_hazard_store.oq_import.toshi_api_subtask import build_producers, generate_subtasks
+
+from toshi_hazard_store.model.revision_4 import pyarrow_dataset
 from toshi_hazard_store.oq_import import toshi_api_client  # noqa: E402
-from toshi_hazard_store.oq_import.toshi_api_subtask import build_producers, build_realisations, generate_subtasks
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pynamodb').setLevel(logging.INFO)
@@ -60,6 +72,14 @@ REGION = os.getenv('REGION', 'ap-southeast-2')  # SYDNEY
 
 chc_manager = CompatibleHazardCalculationManager(pathlib.Path(STORAGE_FOLDER))
 hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc_manager)
+
+
+def raise_if_no_openquake():
+    """Raises an error if openquake is not installed."""
+    if not HAVE_OQ:
+        raise RuntimeError(
+            "openquake dependency is not installed, please use `toshi-hazard-store['openquake'] installer option`. "
+        )
 
 
 def store_hazard(
@@ -88,6 +108,8 @@ def store_hazard(
     Returns:
         None
     """
+    raise_if_no_openquake()
+
     # Check paths
     config_file_path = pathlib.Path(config_path)
     hdf5_file_path = pathlib.Path(hdf5_path)
@@ -222,6 +244,7 @@ def extract(
     - pull the configs and check we have a compatible producer config\n
     - optionally, create any new producer configs
     """
+    raise_if_no_openquake()
 
     headers = {"x-api-key": API_KEY}
     gtapi = toshi_api_client.ApiClient(API_URL, None, with_schema_validation=False, headers=headers)

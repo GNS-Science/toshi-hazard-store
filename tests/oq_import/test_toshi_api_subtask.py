@@ -163,7 +163,7 @@ def test_generate_subtasks(
         generate_subtasks(general_task_id, mock_gtapi, [task_id], work_folder, with_rlzs=with_rlzs, verbose=verbose)
     )
 
-    assert mock_ecr.return_value.active_image_asat.called_once
+    mock_ecr.return_value.active_image_asat.assert_called_once
     assert len(subtasks) == 1
     assert isinstance(subtasks[0], SubtaskRecord)
     assert subtasks[0].vs30 == '760'
