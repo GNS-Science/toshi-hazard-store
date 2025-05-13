@@ -94,6 +94,7 @@ def append_models_to_dataset(
     dataset_format: str = 'parquet',
     filesystem: Optional[fs.FileSystem] = None,
     partitioning: Optional[List[str]] = None,
+    existing_data_behavior: str = "overwrite_or_ignore",
 ) -> None:
     """
     Appends realisation models to a dataset using the pyarrow library.
@@ -104,6 +105,7 @@ def append_models_to_dataset(
     dataset_format (optional): The format of the dataset. Defaults to 'parquet'.
     filesystem (optional): The file system to use for storage. Defaults to None.
     partitioning (optional): The partitioning scheme to apply. Defaults to ['nloc_0'].
+    existing_data_behavior: how to treat existing data (see pyarrow docs).
 
     Returns: None
 
@@ -117,10 +119,6 @@ def append_models_to_dataset(
     partitioning = partitioning or ['nloc_0']
     using_s3 = isinstance(filesystem, fs.S3FileSystem)
 
-    # the pyarrow S3 hack
-    if base_dir[0] == '/' and using_s3:
-        base_dir = base_dir[1:]
-
     write_metadata_fn = partial(_write_metadata, using_s3, pathlib.Path(base_dir))
     ds.write_dataset(
         table_or_batchreader,
@@ -128,7 +126,7 @@ def append_models_to_dataset(
         basename_template="%s-part-{i}.%s" % (uuid.uuid4(), dataset_format),
         partitioning=partitioning,
         partitioning_flavor="hive",
-        existing_data_behavior="overwrite_or_ignore",
+        existing_data_behavior=existing_data_behavior,
         format=dataset_format,
         file_visitor=write_metadata_fn,
         filesystem=filesystem,
@@ -153,6 +151,7 @@ def configure_output(output_target: str) -> Tuple[str, fs.FileSystem]:
         output = str(s3path.PureS3Path.from_uri(output_target))
         log.info(f'using S3 output with path: `{output}` and region: `{REGION}`')
         filesystem = fs.S3FileSystem(region=REGION)
+        output = output[1:]  # we expect this to work for pyarrow datasets, which need '/' prefix stripped
     else:
         # We have a local path
         output = str(pathlib.Path(output_target).resolve())
