@@ -32,6 +32,7 @@ import toshi_hazard_store.config
 import toshi_hazard_store.model.openquake_models
 import toshi_hazard_store.model.revision_4.hazard_models  # noqa: E402
 import toshi_hazard_store.query.hazard_query
+from toshi_hazard_store.model.revision_4 import pyarrow_dataset
 from toshi_hazard_store.oq_import.oq_manipulate_hdf5 import migrate_nshm_uncertainty_string
 from toshi_hazard_store.scripts.core import echo_settings  # noqa
 
@@ -201,12 +202,11 @@ def report_v3_count_loc_rlzs(location, verbose):
 # report_row = namedtuple("ReportRow", "task-id, uniq_locs, uniq_imts, uniq_gmms, uniq_srcs, uniq_vs30s, consistent)")
 
 
-def report_rlzs_grouped_by_calc(ds_name, verbose, bail_on_error=True):
+def report_rlzs_grouped_by_calc(source: str, verbose, bail_on_error=True) -> int:
     """report on dataset realisations"""
-    dataset_folder = ds_name
 
-    click.echo(f"querying arrow/parquet dataset {ds_name}")
-    dataset = ds.dataset(dataset_folder, format='parquet', partitioning='hive')
+    source_dir, source_filesystem = pyarrow_dataset.configure_output(source)
+    dataset = ds.dataset(source_dir, filesystem=source_filesystem, format='parquet', partitioning='hive')
 
     flt = pc.field("imt") == pc.scalar("PGA")
     df = dataset.to_table(filter=flt).to_pandas()
@@ -230,14 +230,11 @@ def report_rlzs_grouped_by_calc(ds_name, verbose, bail_on_error=True):
         count_all += df0.shape[0]
 
         if bail_on_error and not consistent:
-            return
+            raise click.UsageError("The last realistation was not consistent, aborting.")
 
     click.echo()
-    click.echo(f"Grand total: {count_all}")
-
-    # if verbose:
-    #     click.echo()
-    #     click.echo(df0)
+    click.echo(f"Realisations counted: {count_all}")
+    return count_all
 
 
 def report_v3_grouped_by_calc(verbose, bail_on_error=True):
@@ -316,52 +313,39 @@ def main(context):
 
 
 @main.command()
-@click.option(
-    '--source',
-    '-S',
-    type=click.Choice(['AWS', 'ARROW'], case_sensitive=False),
-    default='ARROW',
-    help="set the source store. defaults to ARROW, AWS means AWS (v3), ARROW means local arrow (v4)",
-)
-@click.option(
-    '--ds-name',
-    '-D',
-    type=str,
-    default='pq-CDC',
-    help="if dataset is used, then arrow/parquet is queried rather than sqliteas the source store",
-)
-@click.option(
-    '--report',
-    '-R',
-    type=click.Choice(['LOC', 'ALL'], case_sensitive=False),
-    default='LOC',
-)
+@click.argument('source', type=str)
 @click.option('-x', '--strict', is_flag=True, default=False, help="abort if consistency checks fail")
+@click.option('-ER', '--expected-rlzs', default=0, type=int)
 @click.option('-v', '--verbose', is_flag=True, default=False)
 @click.option('-d', '--dry-run', is_flag=True, default=False)
 @click.pass_context
-def count_rlz(context, source, ds_name, report, strict, verbose, dry_run):
+def count_rlz(context, source, strict, expected_rlzs, verbose, dry_run):
     """Count the realisations from SOURCE by calculation id"""
     if verbose:
         click.echo(f"NZ 0.1grid has {len(nz1_grid)} locations")
         click.echo(f"All (0.1 grid + SRWG + NZ) has {len(all_locs)} locations")
         click.echo(f"All (0.1 grid + SRWG) has {len(nz1_grid + srwg_locs)} locations")
 
-    # location = CodedLocation(lat=-39, lon=175.93, resolution=0.001)
-    location = CodedLocation(lat=-41, lon=175, resolution=0.001)
+    rlz_count = report_rlzs_grouped_by_calc(source, verbose, bail_on_error=strict)
+    if expected_rlzs and not rlz_count == expected_rlzs:
+        raise click.UsageError(
+            f"The count of realisations: {rlz_count} doesn't match specified expected_rlzs: {expected_rlzs}"
+        )
 
-    if (source == 'ARROW') and ds_name:
-        if report == 'LOC':
-            report_arrow_count_loc_rlzs(ds_name, location, verbose)
-        elif report == 'ALL':
-            report_rlzs_grouped_by_calc(ds_name, verbose, bail_on_error=strict)
-        return
+    # TODO: the  following may still be useful for a little while, but should be moved into
+    # a separate sub-command
+    # # location = CodedLocation(lat=-39, lon=175.93, resolution=0.001)
+    # location = CodedLocation(lat=-41, lon=175, resolution=0.001)
 
-    if source == 'AWS':
-        if report == 'LOC':
-            report_v3_count_loc_rlzs(location, verbose)
-        elif report == 'ALL':
-            report_v3_grouped_by_calc(verbose, bail_on_error=strict)
+    # if (source_type == 'ARROW') and source:
+    #     if report == 'LOC':
+    #         report_arrow_count_loc_rlzs(source, location, verbose)
+    #
+    # if source == 'AWS':
+    #     if report == 'LOC':
+    #         report_v3_count_loc_rlzs(location, verbose)
+    #     elif report == 'ALL':
+    #         report_v3_grouped_by_calc(verbose, bail_on_error=strict)
 
 
 @main.command()
