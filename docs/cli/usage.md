@@ -58,7 +58,7 @@ AWS_PROFILE=chrisbc poetry run ths_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== N
 #### Check count integrity, ensuring that the number of realisations is consistent
 
 ```bash
-poetry run ths_ds_sanity count-rlz -D ./WORKING/ARROW/DS1 -R ALL -x -v
+ poetry run ths_ds_sanity count-rlz ./WORKING/ARROW/DS1 -x
 ```
 
 #### Check random realisations vs DynamoDB (for existing calcs only)
@@ -75,7 +75,7 @@ poetry run ths_ds_defrag ./WORKING/ARROW/DS1 ./WORKING/ARROW/DS1_DFG -p 'vs30,nl
 #### check count integrity, ensure the number of realisations is consistent
 
 ```bash
-poetry run ths_ds_sanity count-rlz -D ./WORKING/ARROW/DS1_DFG -R ALL -x -v
+poetry run ths_ds_sanity count-rlz ./WORKING/ARROW/DS1_DFG -x -v
 ```
 
 ### Step 5. Dataset comparison
@@ -94,18 +94,30 @@ Or for just one calculation ...
 poetry run ths_ds_check rlzs ./WORKING/ARROW/DS1_DFG/ ./WORKING/ARROW/DS2_DFG/ -l2 -x -v -n 5 -cid T3BlbnF1YWtlSGF6YXJkU29sdXRpb246NjkzMTg5NA==
 ```
 
-### DEMO
+### DEMO (with both local and S3 filesystems)
 
-## prep the producer
+Note that local file paths `./WORKING/ARROW/DSR-DEMO` below may be replaced with a valid S3 bucket/prefix e.g `s3://ths-poc-arrow-test/DSR-DEMO`.
+
+In both cases that part of the path is the folder, which for targets, will be created if it doesn't exist.
+
+## Prep the producer
 
 `AWS_PROFILE=chrisbc poetry run ths_import producers R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -v`
 
+## A Runzi workflow example
 
-## Runzi workflow
+This is what happens automated in hazard task logic.
+
 `poetry run ths_import store-hazard ./WORKING/runzi/calc_2.hdf5 ./WORKING/runzi/oq_config.json NZSHM22 calcS_T "sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6"  ./WORKING/ARROW/DSR`
 
-## Historic (from ToshiAPI ) workflow
+The DSR dataset produced will by partioned by the Toshi ID for the Hazard task, ensuring no dataset collisions
+
+## Historic (ToshiAPI ) workflow
+
+Here we're processing existing hazard task outputs from the given GeneralTask (GT) to build our parquet dataset.
+
 `AWS_PROFILE=chrisbc poetry run ths_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DST -v`
+
 `poetry run ths_ds_sanity count-rlz -D ./WORKING/ARROW/DST -R ALL -x -v`
 
 ## Compact / conform workflows
@@ -114,4 +126,20 @@ poetry run ths_ds_check rlzs ./WORKING/ARROW/DS1_DFG/ ./WORKING/ARROW/DS2_DFG/ -
 `poetry run ths_ds_defrag ./WORKING/ARROW/DST ./WORKING/ARROW/DST_DFG -p 'vs30,nloc_0' -v`
 
 
-`poetry run ths_ds_sanity random-rlz-new ./WORKING/ARROW/DS5mg_DFG 10 -v -i 5 -df`
+### NOW a full size GT
+
+
+1) check/update the producers ....
+`poetry run ths_import producers R2VuZXJhbFRhc2s6MTMyODQxNA== NZSHM22 -v -W ./WORKING`
+
+2) extract rlz ...
+`poetry run ths_import extract R2VuZXJhbFRhc2s6MTMyODQxNA== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==`
+
+3) Defrag ...
+`poetry run ths_ds_defrag ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA== ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==_DFG`
+
+4) Check total realizations ...
+`poetry run ths_ds_sanity count-rlz ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==_DFG -x -v`
+
+5) Random rlz curve comparisons to Dynamodb store ...
+`poetry run ths_ds_sanity random-rlz-new ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==_DFG -v -df`
