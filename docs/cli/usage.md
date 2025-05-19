@@ -98,7 +98,7 @@ poetry run ths_ds_check rlzs ./WORKING/ARROW/DS1_DFG/ ./WORKING/ARROW/DS2_DFG/ -
 
 Note that local file paths `./WORKING/ARROW/DSR-DEMO` below may be replaced with a valid S3 bucket/prefix e.g `s3://ths-poc-arrow-test/DSR-DEMO`.
 
-In both cases that part of the path is the folder, which for targets, will be created if it doesn't exist.
+For target paths, the folder/prefix will be created if it doesn't already exist.
 
 ## Prep the producer
 
