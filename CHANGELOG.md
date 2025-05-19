@@ -10,7 +10,7 @@
  - added `ths_import` `store-hazard` job.
  - support writing parquet directly to S3:// URIs in `ths_import` script.
  - make `ths_import.store_hazard` usable via import.
- - `S3://` URI support to `ths_ds_defrag` script.
+ - `S3://` URI support to `ths_ds_defrag` and `ths_ds_sanity` scripts.
  
 ### Changed
  - import script `ths_import` uses new json storage classes for meta tables.
