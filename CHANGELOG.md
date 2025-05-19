@@ -1,8 +1,12 @@
 # Changelog
 
+## [1.0.0] 2025-05-20
 
+The `1.0.0` release incorporating pyarrow dataset features from pre-release branch.
 
-## [1.0.0-alpha-0] - 2025-05
+Note that this release still incorporates Dynamodb support, which will be removed in`v2.0.0`.
+
+## [1.0.0-alpha-0]
 ### Added
  - local json storage with pydantic models CompatibleHazardCalculation, HazardCurveProducerConfig.
  - `ths_compat` cli script to maintain CompatibleHazardCalculation models.
