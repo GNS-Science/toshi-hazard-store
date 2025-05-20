@@ -68,9 +68,9 @@ class PynamoTestDisaggAggregationQuery(unittest.TestCase):
 
         for idx in range(len(bins)):
             print(idx, type(bins[idx]))
-            if type(bins[idx]) == list:
+            if isinstance(bins[idx], list):
                 assert res.bins[idx] == bins[idx]
-            elif type(bins[idx]) == np.ndarray:
+            elif isinstance(bins[idx], np.ndarray):
                 assert res.bins[idx].all() == bins[idx].all()
             else:
                 assert res.bins[idx] == bins[idx]

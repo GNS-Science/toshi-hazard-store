@@ -1,8 +1,44 @@
 # Changelog
 
+## [1.0.0] 2025-05-20
+
+The `1.0.0` release incorporating pyarrow dataset features from pre-release branch.
+
+Note that this release still incorporates Dynamodb support, which will be removed in`v2.0.0`.
+
+## [1.0.0-alpha-0]
+### Added
+ - local json storage with pydantic models CompatibleHazardCalculation, HazardCurveProducerConfig.
+ - `ths_compat` cli script to maintain CompatibleHazardCalculation models.
+ - `ths_ds_check` cli script to compare two parquet dataset.
+ - added `ths_import` `store-hazard` job.
+ - support writing parquet directly to S3:// URIs in `ths_import` script.
+ - make `ths_import.store_hazard` usable via import.
+ - `S3://` URI support to `ths_ds_defrag` and `ths_ds_sanity` scripts.
+ 
+### Changed
+ - import script `ths_import` uses new json storage classes for meta tables.
+ - improved `ths_ds_check` script.
+ - improved `ths_ds_sanity` script.
+ - improved `ths_ds_defrag` script.
+ - update to `nzshm-model 0.13.6`.
+ - update `pytest`.
+ - import handles all known legacy config types.
+
+### Removed
+ - v3 -> v4 migration code.
+ - use of DynamoDB for V4+ models.
+ - ths_r4_migrate script.
+ - store_hazard_v4 script.
+ - migrate_v3_to_v4 module (dynamodb specific).
+ - sanity_csv_vs_hdf5.py module.
+ - export_rlzs_v3() method and tests.
+ - saving any model to DynamoDB.
+ - removed `scripts` installer option.
+
 ## [1.0.0-alpha]
 ### Removed
- - support fo local storage (sqlite)
+ - support for local storage (sqlite)
  - support for local cache
  - db_adapter
 

@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "toshi-hazard-store"
-version = "1.0.0-alpha"
+version = "1.0.0"
 
 homepage = "https://github.com/GNS-Science/toshi-hazard-store"
 description = "Library for saving and retrieving NZHSM openquake hazard results with convenience (uses AWS Dynamodb)."
@@ -20,51 +20,52 @@ classifiers=[
 ]
 packages = [
     { include = "toshi_hazard_store" },
-    { include = "scripts" },
     { include = "tests", format = "sdist" },
 ]
 
 [tool.poetry.scripts]
-ths_r4_import = 'scripts.ths_r4_import:main'
-ths_ds_check = 'scripts.ths_ds_check:main'
-ths_r4_sanity = 'scripts.ths_r4_sanity:main'
-ths_r4_defrag = 'scripts.ths_r4_defrag:main'
-ths_r4_filter_dataset = 'scripts.ths_r4_filter_dataset:main'
+ths_compat = 'toshi_hazard_store.scripts.ths_compat:main'
+ths_import = 'toshi_hazard_store.scripts.ths_import:main'
+ths_ds_check = 'toshi_hazard_store.scripts.ths_ds_check:main'
+ths_ds_sanity = 'toshi_hazard_store.scripts.ths_ds_sanity:main'
+ths_ds_defrag = 'toshi_hazard_store.scripts.ths_ds_defrag:main'
+ths_ds_filter = 'toshi_hazard_store.scripts.ths_ds_filter:main'
 
-store_hazard_v4 = 'scripts.store_hazard_v4:main'
-ths_r4_query = 'scripts.ths_r4_query:main'
-ths_r4_migrate = 'scripts.ths_r4_migrate:main'
 
 # Legacy stuff
-# store_hazard_v3 = 'scripts.store_hazard_v3:main'
-# get_hazard = 'scripts.get_hazard:main'
-# query_meta = 'scripts.query_meta:main'
-# ths_cache = 'scripts.ths_cache:cli'
-# ths_testing = 'scripts.ths_testing:cli'
+# ths_r4_query = 'toshi_hazard_store.scripts.ths_r4_query:main'
+# store_hazard_v4 = 'toshi_hazard_store.scripts.store_hazard_v4:main'
+# ths_r4_migrate = 'toshi_hazard_store.scripts.ths_r4_migrate:main'
+# store_hazard_v3 = 'toshi_hazard_store.scripts.store_hazard_v3:main'
+# get_hazard = 'toshi_hazard_store.scripts.get_hazard:main'
+# query_meta = 'toshi_hazard_store.scripts.query_meta:main'
+# ths_cache = 'toshi_hazard_store.scripts.ths_cache:cli'
+# ths_testing = 'toshi_hazard_store.scripts.ths_testing:cli'
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 
-# see https://github.com/orgs/python-poetry/discussions/7937
-# urllib3 = ">2"
-fiona = {version = "^1.9.5", optional = true}
-networkx = {version = "^3.2.1", optional = true}
 python-dotenv = "^1.0.1"
 pynamodb = "^6.0.0"
 pynamodb-attributes = "^0.4.0"
 nzshm-common = "^0.8.4"
-nzshm-model = "^0.13.5"
-nshm-toshi-client = {version = "^1.0.1", optional = true}
+nshm-toshi-client = {version = "^1.0.1"}
 numpy = ">=1.24,<2"
-numba = {version="<0.61.0", optional = true}
-openquake-engine = {version = "<3.21", optional = true}
 pandas = ">2,<3"
 pyarrow = "^19.0.1"
+pydantic = "^2.10.6"
+nzshm-model = "^0.13.6"
+s3path = "^0.6.1"
+
+# the optional packages needed for `openquake` 
+fiona = {version = "^1.9.5", optional = true}
+networkx = {version = "^3.2.1", optional = true}
+numba = {version="<0.61.0", optional = true}
+openquake-engine = {version = "<3.21", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.2.0"
 bump2version = {version = "^1.0.1"}
-flake8  = { version = "^3.9.2"}
 flake8-docstrings = { version = "^1.6.0", optional = true }
 ipython = "^8.4.0"
 isort  = { version = "^5.8.0"}
@@ -78,9 +79,6 @@ moto = "^3.1.10"
 mypy = "^1.5.0"
 pre-commit = "^3.0.4"
 # pymdown-extensions = {version = "^9.4"}
-pytest = { version = "^6.2.4"}
-pytest-cov  = { version = "^2.12.0"}
-pytest-lazy-fixture = "^0.6.3"
 toml = {version = "^0.10.2", optional = true}
 tox = "^4.4.5"
 types-python-dateutil = "^2.8.16"
@@ -90,11 +88,14 @@ types-pytz = "^2024.1.0.20240203"
 types-requests = "^2.31.0.20240406"
 semver = "^3.0.4"
 mkdocstrings = {extras = ["python"], version = "^0.29.0"}
+pytest-cov = "^6.0.0"
+pytest = ">=8"
+pytest-lazy-fixtures = "^1.1.2"
+flake8 = "^7.2.0"
 
 
 [tool.poetry.extras]
-openquake = ["openquake-engine", "fiona", "networkx", "numba", "nzshm-model"]
-scripts = ["nshm-toshi-client"]
+openquake = ["openquake-engine", "fiona", "networkx", "numba"]
 
 [tool.black]
 line-length = 120

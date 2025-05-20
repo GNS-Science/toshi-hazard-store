@@ -20,8 +20,18 @@ GsimRow = collections.namedtuple("GsimRow", "region, key, uncertainty, weight")
 
 
 def migrate_nshm_uncertainty_string(uncertainty: str) -> str:
+    """
+    Migrates the uncertainty string for a given NSHM 2022 GSIM.
+
+    Args:
+        uncertainty (str): The original uncertainty string.
+
+    Returns:
+        str: The updated uncertainty string with any necessary modifications.
+    """
+
     # handle GMM modifications ...
-    if "[Atkinson2022" in uncertainty:
+    if ("[Atkinson2022" in uncertainty) & ("modified_sigma=" not in uncertainty):
         uncertainty += '\nmodified_sigma = "true"'
     elif "[AbrahamsonGulerce2020S" in uncertainty:
         uncertainty = uncertainty.replace("AbrahamsonGulerce2020S", "NZNSHM2022_AbrahamsonGulerce2020S")
@@ -35,6 +45,15 @@ def migrate_nshm_uncertainty_string(uncertainty: str) -> str:
 
 
 def migrate_gsim_row(row: GsimRow) -> GsimRow:
+    """
+    Migrates a row of GSIM data by updating the uncertainty string.
+
+    Args:
+        row (GsimRow): A namedtuple containing the region, key, uncertainty, and weight for a row of GSIM data.
+
+    Returns:
+        GsimRow: A new namedtuple with the updated uncertainty string.
+    """
     log.debug(f"Manipulating row {row}")
     new_row = GsimRow(
         region=row.region,
@@ -42,7 +61,7 @@ def migrate_gsim_row(row: GsimRow) -> GsimRow:
         uncertainty=migrate_nshm_uncertainty_string(row.uncertainty.decode()).encode(),
         weight=row.weight,
     )
-    log.debug(f"New value: {row}")
+    log.debug(f"New value: {new_row}")
     return new_row
 
 
@@ -64,6 +83,14 @@ def rewrite_calc_gsims(hdf5_path: pathlib.Path):
     dataset = hdf5_file['full_lt']['gsim_lt']
 
     for idx, row in enumerate(dataset):
+        log.debug(f'{idx}, {row}')
+        log.debug(f'pre: {dataset[idx]}')
         dataset[idx] = migrate_gsim_row(GsimRow(*row))
+        log.debug(f'post: {dataset[idx]}')
 
     hdf5_file.close()
+
+
+if __name__ == "__main__":
+    fpath = pathlib.Path('./tests/fixtures/oq_import/calc_9.hdf5')
+    rewrite_calc_gsims(fpath)

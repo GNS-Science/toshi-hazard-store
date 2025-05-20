@@ -1,0 +1,21 @@
+{
+  "compatible_calc_fk": "NZSHM22",
+  "ecr_image_digest": "sha256:7ba0a25c8c11a5406c93736dc971e32a86859cc736309e8cba21cfcb153fa1dd",
+  "config_digest": "bdc5476361cd",
+  "created_at": "2025-05-05T23:42:45.893401Z",
+  "updated_at": "2025-05-05T23:42:45.893405Z",
+  "ecr_image": {
+    "registryId": "461564345538",
+    "repositoryName": "nzshm22/runzi-openquake",
+    "imageDigest": "sha256:7ba0a25c8c11a5406c93736dc971e32a86859cc736309e8cba21cfcb153fa1dd",
+    "imageTags": [
+      "runzi-28c061c_nz_openquake-nightly_20230331"
+    ],
+    "imageSizeInBytes": 1188176205,
+    "imagePushedAt": "2023-03-31T23:25:15+13:00",
+    "imageManifestMediaType": "application/vnd.docker.distribution.manifest.v2+json",
+    "artifactMediaType": "application/vnd.docker.container.image.v1+json",
+    "lastRecordedPullTime": "2023-04-03T14:44:45.019000+12:00"
+  },
+  "notes": null
+}
