@@ -10,7 +10,7 @@ import click
 import pyarrow as pa
 import pyarrow.dataset as ds
 
-from toshi_hazard_store.model.revision_4 import pyarrow_dataset
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 
 DATASET_FORMAT = 'parquet'  # TODO: make this an argument
 

@@ -193,7 +193,7 @@ def rlzs_to_record_batch_reader(
 
 # if __name__ == '__main__':
 
-#     from toshi_hazard_store.model.revision_4 import pyarrow_dataset
+#     from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 
 #     WORKING = Path('/GNSDATA/LIB/toshi-hazard-store/WORKING')
 #     GT_FOLDER = WORKING / "R2VuZXJhbFRhc2s6MTMyODQxNA=="

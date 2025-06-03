@@ -16,7 +16,8 @@ from toshi_hazard_store.model.hazard_models_pydantic import (  # noqa
     CompatibleHazardCalculation,
     HazardCurveProducerConfig,
 )
-from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
+from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
 
 from . import aws_ecr_docker_image as aws_ecr
 from . import toshi_api_client  # noqa: E402

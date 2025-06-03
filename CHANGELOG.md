@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.0] 2025-06
+
+### Changed
+ - `ths_ds_sanity count-rlz` command uses partitioning scheme for grouping.
+
 ## [1.0.0] 2025-05-20
 
 The `1.0.0` release incorporating pyarrow dataset features from pre-release branch.
