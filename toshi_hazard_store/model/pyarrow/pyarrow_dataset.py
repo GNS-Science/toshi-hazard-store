@@ -6,13 +6,15 @@ import os
 import pathlib
 import uuid
 from functools import partial
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Iterable, Optional, Tuple, Union
 
 import pyarrow as pa
 import pyarrow.dataset
 import pyarrow.dataset as ds
 import s3path
 from pyarrow import fs
+
+from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_realisation_schema
 
 REGION = os.getenv('REGION', 'ap-southeast-2')  # SYDNEY
 
@@ -93,8 +95,9 @@ def append_models_to_dataset(
     base_dir: str,
     dataset_format: str = 'parquet',
     filesystem: Optional[fs.FileSystem] = None,
-    partitioning: Optional[List[str]] = None,
+    partitioning: Optional[Iterable[str]] = None,
     existing_data_behavior: str = "overwrite_or_ignore",
+    schema: Optional[pa.schema] = None,
 ) -> None:
     """
     Appends realisation models to a dataset using the pyarrow library.
@@ -115,6 +118,9 @@ def append_models_to_dataset(
 
     if not isinstance(table_or_batchreader, (pa.Table, pa.RecordBatchReader)):
         raise TypeError("table_or_batchreader must be a pyarrow Table or RecordBatchReader")
+
+    # set default schema
+    schema = schema or get_hazard_realisation_schema()
 
     partitioning = partitioning or ['nloc_0']
     using_s3 = isinstance(filesystem, fs.S3FileSystem)

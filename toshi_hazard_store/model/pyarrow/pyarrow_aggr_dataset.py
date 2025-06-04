@@ -1,82 +1,43 @@
 """pyarrow helper function"""
 
-import csv
 import logging
-import pathlib
-import uuid
-from functools import partial
-from typing import TYPE_CHECKING, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Iterable, Optional
 
 import pandas as pd
 import pyarrow as pa
-import pyarrow.dataset
-import pyarrow.dataset as ds
 from pyarrow import fs
+
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
+from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
 
 log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from .hazard_aggregation import HazardAggregation
-    from .hazard_realization_curve import HazardRealizationCurve
-
-
-def write_metadata(output_folder: pathlib.Path, visited_file: pyarrow.dataset.WrittenFile) -> None:
-    meta = [
-        pathlib.Path(visited_file.path).relative_to(output_folder),
-        visited_file.size,
-    ]
-    header_row = ["path", "size"]
-
-    # NB metadata property does not exist for arrow format
-    if visited_file.metadata:
-        meta += [
-            visited_file.metadata.format_version,
-            visited_file.metadata.num_columns,
-            visited_file.metadata.num_row_groups,
-            visited_file.metadata.num_rows,
-        ]
-        header_row += ["format_version", "num_columns", "num_row_groups", "num_rows"]
-
-    meta_path = pathlib.Path(visited_file.path).parent / "_metadata.csv"  # note prefix, otherwise parquet read fails
-    write_header = False
-    if not meta_path.exists():
-        write_header = True
-    with open(meta_path, 'a') as outfile:
-        writer = csv.writer(outfile)
-        if write_header:
-            writer.writerow(header_row)
-        writer.writerow(meta)
-    log.debug(f"saved metadata to {meta_path}")
+    from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 
 
 def append_models_to_dataset(
-    models: Iterable[Union['HazardRealizationCurve', 'HazardAggregation']],
+    models: Iterable['HazardAggregateCurve'],
     base_dir: str,
     dataset_format: str = 'parquet',
     filesystem: Optional[fs.FileSystem] = None,
-) -> int:
+    partitioning: Optional[Iterable[str]] = None,
+    existing_data_behavior: str = "overwrite_or_ignore",
+) -> None:
     """
-    append realisation models to dataset using the pyarrow library
-
-    TODO: option to BAIL if realisation exists, assume this is a duplicated operation
-    TODO: schema checks
+    Write HazardAggregateCurve models to dataset.
     """
 
-    df = pd.DataFrame([model.as_pandas_model() for model in models])
+    item_dicts = [hag.model_dump() for hag in models]
+    df = pd.DataFrame(item_dicts)
     table = pa.Table.from_pandas(df)
 
-    write_metadata_fn = partial(write_metadata, pathlib.Path(base_dir))
-
-    ds.write_dataset(
-        table,
+    pyarrow_dataset.append_models_to_dataset(
+        table_or_batchreader=table,
         base_dir=base_dir,
-        basename_template="%s-part-{i}.%s" % (uuid.uuid4(), dataset_format),
-        partitioning=['nloc_0'],
-        partitioning_flavor="hive",
-        existing_data_behavior="overwrite_or_ignore",
-        format=dataset_format,
-        file_visitor=write_metadata_fn,
         filesystem=filesystem,
+        partitioning=partitioning,
+        dataset_format=dataset_format,
+        existing_data_behavior=existing_data_behavior,
+        schema=get_hazard_aggregate_schema(),
     )
-
-    return df.shape[0]
