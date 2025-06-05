@@ -1,4 +1,4 @@
-"""pyarrow helper function"""
+"""pyarrow helper functions"""
 
 import csv
 import logging
@@ -13,8 +13,6 @@ import pyarrow.dataset
 import pyarrow.dataset as ds
 import s3path
 from pyarrow import fs
-
-from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_realisation_schema
 
 REGION = os.getenv('REGION', 'ap-southeast-2')  # SYDNEY
 
@@ -100,7 +98,7 @@ def append_models_to_dataset(
     schema: Optional[pa.schema] = None,
 ) -> None:
     """
-    Appends realisation models to a dataset using the pyarrow library.
+    Appends realisations to a dataset using the pyarrow library.
 
     Args:
     table_or_batchreader: A pyarrow Table or RecordBatchReader.
@@ -119,9 +117,6 @@ def append_models_to_dataset(
     if not isinstance(table_or_batchreader, (pa.Table, pa.RecordBatchReader)):
         raise TypeError("table_or_batchreader must be a pyarrow Table or RecordBatchReader")
 
-    # set default schema
-    schema = schema or get_hazard_realisation_schema()
-
     partitioning = partitioning or ['nloc_0']
     using_s3 = isinstance(filesystem, fs.S3FileSystem)
 
@@ -136,6 +131,7 @@ def append_models_to_dataset(
         format=dataset_format,
         file_visitor=write_metadata_fn,
         filesystem=filesystem,
+        # No schema for Batchreader
     )
 
 

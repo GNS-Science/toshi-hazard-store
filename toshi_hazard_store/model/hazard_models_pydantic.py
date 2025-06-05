@@ -7,6 +7,9 @@ from pydantic import BaseModel, Field, field_validator
 
 from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 
+# Float32 = Annotated[float, {"pyarrow_type": pyarrow.float32()}]
+# Int32 = Annotated[int, {"pyarrow_type": pyarrow.int32()}]
+
 
 class CompatibleHazardCalculation(BaseModel):
     """

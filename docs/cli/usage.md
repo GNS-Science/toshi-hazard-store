@@ -118,7 +118,7 @@ Here we're processing existing hazard task outputs from the given GeneralTask (G
 
 `AWS_PROFILE=chrisbc poetry run ths_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DST -v`
 
-`poetry run ths_ds_sanity count-rlz -D ./WORKING/ARROW/DST -R ALL -x -v`
+`poetry run ths_ds_sanity count-rlz ./WORKING/ARROW/DST -x -v`
 
 ## Compact / conform workflows
 
@@ -127,7 +127,6 @@ Here we're processing existing hazard task outputs from the given GeneralTask (G
 
 
 ### NOW a full size GT
-
 
 1) check/update the producers ....
 `poetry run ths_import producers R2VuZXJhbFRhc2s6MTMyODQxNA== NZSHM22 -v -W ./WORKING`

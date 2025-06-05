@@ -10,7 +10,8 @@
 ### Changed
  - `ths_ds_sanity count-rlz` command uses partitioning scheme for grouping.
  - `model.pyarrow.pyarrow_aggr_dataset` migrated from dynamodb to pydantic model.
-
+ - dataset schema changes for aggregate and realisations.
+ 
 ## [1.0.0] 2025-05-20
 
 The `1.0.0` release incorporating pyarrow dataset features from pre-release branch.
