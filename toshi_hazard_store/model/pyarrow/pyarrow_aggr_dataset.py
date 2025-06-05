@@ -31,6 +31,16 @@ def append_models_to_dataset(
 ) -> None:
     """
     Write HazardAggregateCurve models to dataset.
+
+    Args:
+    models: A pyarrow Table or RecordBatchReader.
+    base_dir: The path where the data will be stored.
+    dataset_format (optional): The format of the dataset. Defaults to 'parquet'.
+    filesystem (optional): The file system to use for storage. Defaults to None.
+    partitioning (optional): The partitioning scheme to apply. Defaults to ['nloc_0'].
+    existing_data_behavior: how to treat existing data (see pyarrow docs).
+
+    Returns: None
     """
     item_dicts = [hag.model_dump() for hag in models]
     df = pd.DataFrame(item_dicts)

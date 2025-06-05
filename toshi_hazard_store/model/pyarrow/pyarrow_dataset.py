@@ -95,7 +95,6 @@ def append_models_to_dataset(
     filesystem: Optional[fs.FileSystem] = None,
     partitioning: Optional[Iterable[str]] = None,
     existing_data_behavior: str = "overwrite_or_ignore",
-    schema: Optional[pa.schema] = None,
 ) -> None:
     """
     Appends realisations to a dataset using the pyarrow library.
@@ -111,9 +110,8 @@ def append_models_to_dataset(
     Returns: None
 
     Raises:
-        ValueError: If an invalid format is provided.
+        TypeError: If an invalid data source is provided.
     """
-
     if not isinstance(table_or_batchreader, (pa.Table, pa.RecordBatchReader)):
         raise TypeError("table_or_batchreader must be a pyarrow Table or RecordBatchReader")
 
@@ -131,7 +129,6 @@ def append_models_to_dataset(
         format=dataset_format,
         file_visitor=write_metadata_fn,
         filesystem=filesystem,
-        # No schema for Batchreader
     )
 
 
