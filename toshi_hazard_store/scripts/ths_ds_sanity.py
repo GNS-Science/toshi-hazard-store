@@ -5,6 +5,7 @@ Console script for querying tables before and after import/migration to ensure t
 TODO this script needs a little housekeeping.
 """
 import ast
+import itertools
 import json
 import logging
 import pathlib
@@ -12,6 +13,7 @@ import random
 
 import click
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -199,38 +201,51 @@ def report_v3_count_loc_rlzs(location, verbose):
     return
 
 
-# report_row = namedtuple("ReportRow", "task-id, uniq_locs, uniq_imts, uniq_gmms, uniq_srcs, uniq_vs30s, consistent)")
-
-
-def report_rlzs_grouped_by_calc(source: str, verbose, bail_on_error=True) -> int:
-    """report on dataset realisations"""
+def report_rlzs_grouped_by_partition(source: str, verbose, bail_on_error=True) -> int:
+    """Report on dataset realisations by hive partion."""
 
     source_dir, source_filesystem = pyarrow_dataset.configure_output(source)
+
     dataset = ds.dataset(source_dir, filesystem=source_filesystem, format='parquet', partitioning='hive')
 
-    flt = pc.field("imt") == pc.scalar("PGA")
-    df = dataset.to_table(filter=flt).to_pandas()
+    def gen_filter(dataset):
+        """Build filters from the dataset partioning."""
 
-    hazard_calc_ids = list(df.calculation_id.unique())
+        def gen_filter_expr(dataset, partition_values):
+            """build filter expression for each partition_layer"""
+            for idx, fld in enumerate(dataset.partitioning.schema):
+                yield pc.field(fld.name) == pc.scalar(partition_values[idx].as_py())
+
+        for part_values in itertools.product(*dataset.partitioning.dictionaries):
+            filters = gen_filter_expr(dataset, part_values)
+            filter = None  # next(filters)
+            for expr in filters:  # remaining
+                filter = expr if filter is None else (filter & expr)
+            yield filter
+
+    def unique_permutations_series(series1, series2):
+        return series1.combine(series2, lambda a, b: f"{a}:{b}")
+
+    click.echo("filter, uniq_rlzs, uniq_locs, uniq_imts, uniq_src_gmms, uniq_vs30, consistent")
+    click.echo("=============================================================================")
+
     count_all = 0
-    click.echo("calculation_id, uniq_rlzs, uniq_locs, uniq_imts, uniq_gmms, uniq_srcs, uniq_vs30, consistent")
-    click.echo("============================================================================================")
-    for calc_id in sorted(hazard_calc_ids):
-        flt = pc.field('calculation_id') == pc.scalar(calc_id)
-        df0 = dataset.to_table(filter=flt).to_pandas()
+    for filter in gen_filter(dataset):
+
+        df0 = dataset.to_table(filter=filter).to_pandas()
+        unique_srcs_gmms = unique_permutations_series(df0.gmms_digest, df0.sources_digest)
+
         uniq_locs = len(list(df0.nloc_001.unique()))
         uniq_imts = len(list(df0.imt.unique()))
-        uniq_gmms = len(list(df0.gmms_digest.unique()))
-        uniq_srcs = len(list(df0.sources_digest.unique()))
+        uniq_srcs_gmms = len(list(unique_srcs_gmms.unique()))
         uniq_vs30 = len(list(df0.vs30.unique()))
-        consistent = (uniq_locs * uniq_imts * uniq_gmms * uniq_srcs * uniq_vs30) == df0.shape[0]
-        click.echo(
-            f"{calc_id}, {df0.shape[0]}, {uniq_locs}, {uniq_imts}, {uniq_gmms}, {uniq_srcs}, {uniq_vs30}, {consistent}"
-        )
+
+        consistent = (uniq_locs * uniq_imts * uniq_srcs_gmms * uniq_vs30) == df0.shape[0]
+        click.echo(f"{filter}, {df0.shape[0]}, {uniq_locs}, {uniq_imts}, {uniq_srcs_gmms}, {uniq_vs30}, {consistent}")
         count_all += df0.shape[0]
 
         if bail_on_error and not consistent:
-            raise click.UsageError("The last realistation was not consistent, aborting.")
+            raise click.UsageError("The last filter realisation count was not consistent, aborting.")
 
     click.echo()
     click.echo(f"Realisations counted: {count_all}")
@@ -325,8 +340,9 @@ def count_rlz(context, source, strict, expected_rlzs, verbose, dry_run):
         click.echo(f"NZ 0.1grid has {len(nz1_grid)} locations")
         click.echo(f"All (0.1 grid + SRWG + NZ) has {len(all_locs)} locations")
         click.echo(f"All (0.1 grid + SRWG) has {len(nz1_grid + srwg_locs)} locations")
+        click.echo()
 
-    rlz_count = report_rlzs_grouped_by_calc(source, verbose, bail_on_error=strict)
+    rlz_count = report_rlzs_grouped_by_partition(source, verbose, bail_on_error=strict)
     if expected_rlzs and not rlz_count == expected_rlzs:
         raise click.UsageError(
             f"The count of realisations: {rlz_count} doesn't match specified expected_rlzs: {expected_rlzs}"
