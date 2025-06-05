@@ -45,7 +45,7 @@ if HAVE_OQ:
     from toshi_hazard_store.oq_import.toshi_api_subtask import build_realisations
     from toshi_hazard_store.oq_import.toshi_api_subtask import build_producers, generate_subtasks
 
-from toshi_hazard_store.model.revision_4 import pyarrow_dataset
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.oq_import import toshi_api_client  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)

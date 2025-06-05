@@ -1,4 +1,4 @@
-"""pyarrow helper function"""
+"""pyarrow helper functions"""
 
 import csv
 import logging
@@ -6,7 +6,7 @@ import os
 import pathlib
 import uuid
 from functools import partial
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Iterable, Optional, Tuple, Union
 
 import pyarrow as pa
 import pyarrow.dataset
@@ -93,11 +93,11 @@ def append_models_to_dataset(
     base_dir: str,
     dataset_format: str = 'parquet',
     filesystem: Optional[fs.FileSystem] = None,
-    partitioning: Optional[List[str]] = None,
+    partitioning: Optional[Iterable[str]] = None,
     existing_data_behavior: str = "overwrite_or_ignore",
 ) -> None:
     """
-    Appends realisation models to a dataset using the pyarrow library.
+    Appends realisations to a dataset using the pyarrow library.
 
     Args:
     table_or_batchreader: A pyarrow Table or RecordBatchReader.
@@ -110,9 +110,8 @@ def append_models_to_dataset(
     Returns: None
 
     Raises:
-        ValueError: If an invalid format is provided.
+        TypeError: If an invalid data source is provided.
     """
-
     if not isinstance(table_or_batchreader, (pa.Table, pa.RecordBatchReader)):
         raise TypeError("table_or_batchreader must be a pyarrow Table or RecordBatchReader")
 

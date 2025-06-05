@@ -15,7 +15,8 @@ except ImportError:
 if HAVE_OQ:
     from openquake.calculators.extract import Extractor
 
-from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, pyarrow_dataset
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
+from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
 from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_gmm_map, build_rlz_source_map
 from toshi_hazard_store.oq_import.transform import parse_logic_tree_branches
 

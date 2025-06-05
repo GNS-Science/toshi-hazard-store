@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0] 2025-06
+
+### Added
+ - pydantic model `HazardAggregateCurve` for use in client libs
+ - new package `toshi_hazard_store.model.pyarrow`.
+ - dataset schemas moved into module in `toshi_hazard_store.model.pyarrow.dataset_schema`
+
+### Changed
+ - `ths_ds_sanity count-rlz` command uses partitioning scheme for grouping.
+ - `model.pyarrow.pyarrow_aggr_dataset` migrated from dynamodb to pydantic model.
+ - dataset schema changes for aggregate and realisations.
+ 
 ## [1.0.0] 2025-05-20
 
 The `1.0.0` release incorporating pyarrow dataset features from pre-release branch.

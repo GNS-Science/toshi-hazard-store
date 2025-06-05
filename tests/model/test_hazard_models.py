@@ -10,7 +10,8 @@ from moto import mock_dynamodb
 from pyarrow import fs
 
 from toshi_hazard_store.model import drop_r4, migrate_r4
-from toshi_hazard_store.model.revision_4 import hazard_aggregate_curve, pyarrow_dataset
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
+from toshi_hazard_store.model.revision_4 import hazard_aggregate_curve
 
 
 @pytest.fixture(scope='function')

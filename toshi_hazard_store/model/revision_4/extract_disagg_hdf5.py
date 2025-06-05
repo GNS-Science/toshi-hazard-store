@@ -23,7 +23,7 @@ if HAVE_OQ:
 
 from nzshm_common.location import coded_location, location
 
-from toshi_hazard_store.model.revision_4 import pyarrow_dataset
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.model.revision_4.extract_classical_hdf5 import build_nloc0_series, build_nloc_0_mapping
 from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_mapper
 

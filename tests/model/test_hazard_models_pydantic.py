@@ -5,6 +5,7 @@ import pytest
 from toshi_hazard_store.model.hazard_models_pydantic import (
     AwsEcrImage,
     CompatibleHazardCalculation,
+    HazardAggregateCurve,
     HazardCurveProducerConfig,
 )
 
@@ -67,3 +68,30 @@ class TestHazardCurveProducerConfig:
         with pytest.raises(ValueError, match=r"Field required"):
             del self.data["config_digest"]
             HazardCurveProducerConfig(**self.data)
+
+
+class TestHazardAggregateCurve:
+    def setup_method(self):
+        self.data = dict(
+            compatible_calc_id="NZSHM22",
+            hazard_model_id="MyNewModel",
+            nloc_001="-100.100~45.045",
+            nloc_0="-100.0~45.0",
+            imt="PGA",
+            vs30=1000,
+            aggr="mean",
+            values=[(x / 1000) for x in range(44)],
+        )
+
+    def test_model_dump(self):
+        model = HazardAggregateCurve(**self.data)
+        assert model.model_dump() == self.data
+
+    def test_wrong_value_raises(self):
+        invalid_data = dict(**self.data)
+        print(invalid_data)
+
+        invalid_data["values"] = invalid_data["values"][:-1]
+        with pytest.raises(ValueError, match=r"expected 44 values but") as exc:
+            HazardAggregateCurve(**invalid_data)
+        print(exc)

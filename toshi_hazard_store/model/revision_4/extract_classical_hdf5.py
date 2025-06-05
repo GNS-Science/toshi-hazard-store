@@ -5,6 +5,8 @@ from typing import Dict, Iterable, List
 import numpy as np
 import pyarrow as pa
 
+from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_realisation_schema
+
 try:  # pragma: no cover
     import openquake  # noqa
 
@@ -160,29 +162,8 @@ def rlzs_to_record_batch_reader(
     oq = extractor.dstore['oqparam']  # old skool way
     imtl_keys = sorted(list(oq.imtls.keys()))
 
-    # create a schema...
-    vtype = pa.float64() if use_64bit_values else pa.float32()
-    values_type = pa.list_(vtype)
-    vs30_type = pa.int32()
-    dict_type = pa.dictionary(pa.int32(), pa.string(), True)
-    schema = pa.schema(
-        [
-            ("compatible_calc_id", dict_type),  # for hazard-calc equivalence, for PSHA engines interoperability
-            ("producer_digest", dict_type),  # digest for the producer look up
-            ("config_digest", dict_type),  # digest for the job configutation
-            ("calculation_id", dict_type),  # a reference to the original calculation that produced this item
-            ("nloc_001", dict_type),  # the location string to three places e.g. "-38.330~17.550"
-            ("nloc_0", dict_type),  # the location string to zero places e.g.  "-38.0~17.0" (used for partioning)
-            ('imt', dict_type),  # the imt label e.g. 'PGA', 'SA(5.0)''
-            ('vs30', vs30_type),  # the VS30 integer
-            ('rlz', dict_type),  # the rlz id from the the original calculation
-            ('sources_digest', dict_type),  # a unique hash id for the NSHM LTB source branch
-            ('gmms_digest', dict_type),  # a unique hash id for the NSHM LTB gsim branch
-            ("values", values_type),  # a list of the 44 IMTL values
-        ]
-    )
+    schema = get_hazard_realisation_schema(use_64bit_values)
 
-    # print('schema', schema)
     batches = generate_rlz_record_batches(
         extractor, vs30, imtl_keys, calculation_id, compatible_calc_id, producer_digest, config_digest
     )
@@ -193,7 +174,7 @@ def rlzs_to_record_batch_reader(
 
 # if __name__ == '__main__':
 
-#     from toshi_hazard_store.model.revision_4 import pyarrow_dataset
+#     from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 
 #     WORKING = Path('/GNSDATA/LIB/toshi-hazard-store/WORKING')
 #     GT_FOLDER = WORKING / "R2VuZXJhbFRhc2s6MTMyODQxNA=="
