@@ -33,7 +33,7 @@ def append_models_to_dataset(
     Write HazardAggregateCurve models to dataset.
 
     Args:
-    models: A pyarrow Table or RecordBatchReader.
+    models: An iterable of model data objects.
     base_dir: The path where the data will be stored.
     dataset_format (optional): The format of the dataset. Defaults to 'parquet'.
     filesystem (optional): The file system to use for storage. Defaults to None.
