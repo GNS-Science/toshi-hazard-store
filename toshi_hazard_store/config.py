@@ -31,3 +31,6 @@ STORAGE_FOLDER = str(PurePath(RESOURCES_FOLDER) / "metadata")
 
 ECR_REGISTRY_ID = '461564345538.dkr.ecr.us-east-1.amazonaws.com'
 ECR_REPONAME = "nzshm22/runzi-openquake"
+
+DATASET_AGGR_ENABLED = bool(os.getenv('THS_DATASET_AGGR_ENABLED', '').upper() in ["1", "Y", "YES", "TRUE"])
+DATASET_AGGR_URI = os.getenv('THS_DATASET_AGGR_URI', '')
