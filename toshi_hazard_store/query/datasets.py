@@ -115,7 +115,7 @@ class AggregatedHazard:
         return self
 
 
-@lru_cache(maxsize=None)
+@lru_cache()
 def get_dataset() -> ds.Dataset:
     """
     Cache the dataset.
@@ -134,10 +134,10 @@ def get_dataset() -> ds.Dataset:
     return dataset
 
 
-@lru_cache(maxsize=None)
+@lru_cache()
 def get_vs30_dataset(vs30) -> ds.Dataset:
     """
-    Cache the dataset.
+    Cache the dataset for a given vs30.
 
     Returns:
       A pyarrow.dataset.Dataset object.
@@ -175,6 +175,8 @@ def get_hazard_curves_0(location_codes, vs30s, hazard_model, imts, aggs):
     t0 = dt.datetime.now()
 
     dataset = get_dataset()
+    df0 = dataset.to_table().to_pandas()
+    print(df0['nloc_001'], df0['vs30'])
 
     filter = (
         (pc.field('aggr').isin(aggs))
@@ -228,14 +230,13 @@ def get_hazard_curves_1(location_codes, vs30s, hazard_model, imts, aggs):
     t0 = dt.datetime.now()
 
     for vs30 in vs30s:
-        # dataset = get_dataset()
+
         dataset = get_vs30_dataset(vs30)
 
         filter = (
             (pc.field('aggr').isin(aggs))
             & (pc.field("nloc_001").isin(location_codes))
             & (pc.field("imt").isin(imts))
-            # & (pc.field("vs30").isin(vs30s))
             & (pc.field('hazard_model_id') == hazard_model)
         )
 

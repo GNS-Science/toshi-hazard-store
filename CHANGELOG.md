@@ -6,6 +6,7 @@
  - pydantic model `HazardAggregateCurve` for use in client libs
  - new package `toshi_hazard_store.model.pyarrow`.
  - dataset schemas moved into module in `toshi_hazard_store.model.pyarrow.dataset_schema`
+ - new `toshi_hazard_store.query.datasets` module 
 
 ### Changed
  - `ths_ds_sanity count-rlz` command uses partitioning scheme for grouping.
