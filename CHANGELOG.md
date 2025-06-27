@@ -1,12 +1,16 @@
 # Changelog
 
-## [1.1.0] 2025-06
+## [1.1.1] 2025-06-27
+### Added
+ - new `toshi_hazard_store.query.datasets` module 
+ - new dataset query types for AWS lambda usage.
+
+## [1.1.0] 2025-06-06
 
 ### Added
  - pydantic model `HazardAggregateCurve` for use in client libs
  - new package `toshi_hazard_store.model.pyarrow`.
  - dataset schemas moved into module in `toshi_hazard_store.model.pyarrow.dataset_schema`
- - new `toshi_hazard_store.query.datasets` module 
 
 ### Changed
  - `ths_ds_sanity count-rlz` command uses partitioning scheme for grouping.
