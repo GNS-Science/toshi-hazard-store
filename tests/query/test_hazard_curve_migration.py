@@ -40,7 +40,9 @@ def hazagg_fixture_fn(json_hazard):
     yield fn
 
 
-@pytest.mark.parametrize('query_fn', [datasets.get_hazard_curves_0, datasets.get_hazard_curves_1])
+@pytest.mark.parametrize(
+    'query_fn', [datasets.get_hazard_curves_0, datasets.get_hazard_curves_1, datasets.get_hazard_curves_2]
+)
 @pytest.mark.parametrize("locn", ["-41.300~174.800", "-36.900~174.800"])
 @pytest.mark.parametrize("vs30", [400, 1500])
 @pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])

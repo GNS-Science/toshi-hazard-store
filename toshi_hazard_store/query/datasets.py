@@ -1,6 +1,7 @@
 """query interfaces for pyarrow datasets"""
 
 import datetime as dt
+import itertools
 import logging
 from dataclasses import dataclass
 from functools import lru_cache
@@ -11,6 +12,7 @@ import pyarrow.dataset as ds
 
 from toshi_hazard_store.config import DATASET_AGGR_URI
 from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
+from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
 
 log = logging.getLogger(__name__)
 
@@ -152,6 +154,24 @@ def get_vs30_dataset(vs30) -> ds.Dataset:
     return dataset
 
 
+@lru_cache()
+def get_vs30_nloc0_dataset(vs30, nloc) -> ds.Dataset:
+    """
+    Cache the dataset for a given vs30 and nloc_0.
+
+    Returns:
+      A pyarrow.dataset.Dataset object.
+    """
+    start_time = dt.datetime.now()
+    try:
+        dspath = f"{DATASET_AGGR_URI}/vs30={vs30}/nloc_0={downsample_code(nloc, 1.0)}"
+        dataset = ds.dataset(dspath, partitioning='hive', format='parquet', schema=get_hazard_aggregate_schema())
+        log.info(f"Opened dataset `{dspath}` in {dt.datetime.now() - start_time}.")
+    except Exception as e:
+        raise RuntimeError(f"Failed to open dataset {dspath}: {e}")
+    return dataset
+
+
 def get_hazard_curves_0(location_codes, vs30s, hazard_model, imts, aggs):
     """
     Retrieves aggregated hazard curves from the dataset.
@@ -258,3 +278,64 @@ def get_hazard_curves_1(location_codes, vs30s, hazard_model, imts, aggs):
 
         t1 = dt.datetime.now()
         log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
+
+
+def get_hazard_curves_2(location_codes, vs30s, hazard_model, imts, aggs):
+    """
+    Retrieves aggregated hazard curves from the dataset.
+
+    subdivides the dataset using partitioning to reduce IO and memory demand.
+
+    Args:
+      location_codes (list): List of location codes.
+      vs30s (list): List of VS30 values.
+      hazard_model (list): List of hazard model IDs.
+      imts (list): List of intensity measure types (e.g. 'PGA', 'SA(5.0)').
+      aggs (list): List of aggregation types.
+
+    Yields:
+      AggregatedHazard: An object containing the aggregated hazard curve data.
+
+    Note:
+      This method uses caching to improve performance.
+
+      https://arrow.apache.org/docs/python/parquet.html#reading-and-writing-the-apache-parquet-format
+    """
+    log.debug('> get_hazard_curves()')
+    t0 = dt.datetime.now()
+
+    for hash_location_code in get_hashes(location_codes):
+
+        log.debug('hash_key %s' % hash_location_code)
+        hash_locs = list(filter(lambda loc: downsample_code(loc, 0.1) == hash_location_code, location_codes))
+
+        for hloc, vs30 in itertools.product(hash_locs, vs30s):
+
+            dataset = get_vs30_nloc0_dataset(vs30, hloc)
+            t1 = dt.datetime.now()
+            flt = (
+                (pc.field('aggr').isin(aggs))
+                & (pc.field("nloc_001").isin(hash_locs))
+                & (pc.field("imt").isin(imts))
+                & (pc.field('hazard_model_id') == hazard_model)
+            )
+
+            table = dataset.to_table(filter=flt)
+            t2 = dt.datetime.now()
+            log.debug(f"to_table for filter took {(t2 - t1).total_seconds()} seconds.")
+            log.debug(f"schema {table.schema}")
+
+            count = 0
+            for batch in table.to_batches():
+                for row in zip(*batch.columns):
+                    count += 1
+                    item = (x.as_py() for x in row)
+                    obj = AggregatedHazard(*item).to_imt_values()
+                    obj.vs30 = vs30
+                    obj.nloc_0 = hloc
+                    if obj.imt not in imts:
+                        raise RuntimeError(f"imt {obj.imt} not in {imts}. Is schema correct?")
+                    yield obj
+
+        t3 = dt.datetime.now()
+        log.info(f"Executed dataset query for {count} curves in {(t3 - t0).total_seconds()} seconds.")
