@@ -195,18 +195,16 @@ def get_hazard_curves_0(location_codes, vs30s, hazard_model, imts, aggs):
     t0 = dt.datetime.now()
 
     dataset = get_dataset()
-    df0 = dataset.to_table().to_pandas()
-    print(df0['nloc_001'], df0['vs30'])
-
-    filter = (
+    flt = (
         (pc.field('aggr').isin(aggs))
+        & (pc.field("nloc_0").isin(get_hashes(location_codes, resolution=1)))
         & (pc.field("nloc_001").isin(location_codes))
         & (pc.field("imt").isin(imts))
         & (pc.field("vs30").isin(vs30s))
         & (pc.field('hazard_model_id') == hazard_model)
     )
+    table = dataset.to_table(filter=flt)
 
-    table = dataset.to_table(filter=filter)
     t1 = dt.datetime.now()
     log.debug(f"to_table for filter took {(t1 - t0).total_seconds()} seconds.")
     log.debug(f"schema {table.schema}")
@@ -229,7 +227,7 @@ def get_hazard_curves_1(location_codes, vs30s, hazard_model, imts, aggs):
     """
     Retrieves aggregated hazard curves from the dataset.
 
-    subdivides the dataset usign partitioning to reduce IO and memory demand.
+    subdivides the dataset using partitioning to reduce IO and memory demand.
 
     Args:
       location_codes (list): List of location codes.
@@ -253,14 +251,17 @@ def get_hazard_curves_1(location_codes, vs30s, hazard_model, imts, aggs):
 
         dataset = get_vs30_dataset(vs30)
 
-        filter = (
+        flt = (
             (pc.field('aggr').isin(aggs))
+            & (pc.field("nloc_0").isin(get_hashes(location_codes, resolution=1)))
             & (pc.field("nloc_001").isin(location_codes))
             & (pc.field("imt").isin(imts))
             & (pc.field('hazard_model_id') == hazard_model)
         )
 
-        table = dataset.to_table(filter=filter)
+        print(flt)
+
+        table = dataset.to_table(filter=flt)
         t1 = dt.datetime.now()
         log.debug(f"to_table for filter took {(t1 - t0).total_seconds()} seconds.")
         log.debug(f"schema {table.schema}")
@@ -304,10 +305,10 @@ def get_hazard_curves_2(location_codes, vs30s, hazard_model, imts, aggs):
     log.debug('> get_hazard_curves()')
     t0 = dt.datetime.now()
 
-    for hash_location_code in get_hashes(location_codes):
+    for hash_location_code in get_hashes(location_codes, 1):
 
         log.debug('hash_key %s' % hash_location_code)
-        hash_locs = list(filter(lambda loc: downsample_code(loc, 0.1) == hash_location_code, location_codes))
+        hash_locs = list(filter(lambda loc: downsample_code(loc, 1) == hash_location_code, location_codes))
 
         for hloc, vs30 in itertools.product(hash_locs, vs30s):
 

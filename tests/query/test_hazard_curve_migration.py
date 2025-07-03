@@ -56,7 +56,7 @@ def test_get_hazard_curves_0_dataset(monkeypatch, hazagg_fixture_fn, query_fn, l
     model = "NSHM_v1.0.4"
     expected = hazagg_fixture_fn(model, imt, locn, aggr, vs30)
     # assert expected
-    # print(expected)
+    print(expected)
 
     result = query_fn(location_codes=[locn], vs30s=[vs30], hazard_model=model, imts=[imt], aggs=[aggr])
 

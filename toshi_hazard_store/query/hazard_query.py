@@ -148,12 +148,12 @@ def downsample_code(loc_code, res):
     return CodedLocation(lat=float(lt[0]), lon=float(lt[1]), resolution=res).code
 
 
-def get_hashes(locs: Iterable[str]):
+def get_hashes(locs: Iterable[str], resolution: float = 0.1):
     hashes = set()
     for loc in locs:
         lt = loc.split('~')
         assert len(lt) == 2
-        hashes.add(downsample_code(loc, 0.1))
+        hashes.add(downsample_code(loc, resolution))
     return sorted(list(hashes))
 
 
