@@ -113,8 +113,6 @@ TABLE_NAME = 'AGGR'
 ```
 time poetry run python toshi_hazard_store/scripts/ths_iceberg.py
 Opened pyarrow table in 24.090168
-s3tablescatalog (<class 'pyiceberg.catalog.rest.RestCatalog'>)
-['__abstractmethods__', '__annotations__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__slots__', '__str__', '__subclasshook__', '__weakref__', '_abc_impl', '_check_valid_namespace_identifier', '_config_headers', '_convert_schema_if_needed', '_create_session', '_create_table', '_delete_old_metadata', '_extract_optional_oauth_params', '_fetch_access_token', '_fetch_config', '_handle_non_200_response', '_identifier_to_validated_tuple', '_init_sigv4', '_load_file_io', '_refresh_token', '_remove_catalog_name_from_table_request_identifier', '_response_to_staged_table', '_response_to_table', '_session', '_split_identifier_for_json', '_split_identifier_for_path', '_warn_oauth_tokens_deprecation', 'auth_url', 'commit_table', 'create_namespace', 'create_namespace_if_not_exists', 'create_table', 'create_table_if_not_exists', 'create_table_transaction', 'drop_namespace', 'drop_table', 'drop_view', 'identifier_to_database', 'identifier_to_database_and_table', 'identifier_to_tuple', 'list_namespaces', 'list_tables', 'list_views', 'load_namespace_properties', 'load_table', 'name', 'namespace_exists', 'namespace_from', 'namespace_to_string', 'properties', 'purge_table', 'register_table', 'rename_table', 'table_exists', 'table_name_from', 'update_namespace_properties', 'uri', 'url', 'view_exists']
 created iceberg table in 1.939119
 Saved 2020140 rows to iceberg table in 42.426441
        compatible_calc_id hazard_model_id  aggr                                             values      imt         nloc_001  vs30       nloc_0
@@ -159,3 +157,39 @@ poetry run python toshi_hazard_store/scripts/ths_iceberg.py  2.03s user 3.88s sy
 ```
 
 The pyarrow version is now way faster, because it's using partitioning. note that the slower setup (opening dataset/table) will be cached.
+
+
+With th4e three THS options
+
+```
+THS_DATASET_AGGR_URI=s3://ths-dataset-prod/NZSHM22_AGG poetry run python toshi_hazard_store/scripts/ths_iceberg.py
+opened dateset in 0.771697
+opened table in 0.888011
+(80, 8)
+>>>>>
+Queried pyarrow table in 0.007486 secs
+Total 1.667194 secs
+>>>>>
+
+opened catalog in 0.726231
+opened table in 1.431485
+(80, 4)
+>>>>>
+Queried iceberg table in 12.177356 secs
+Total 14.335072 secs
+>>>>>
+
+>>>>>
+Total for Function get_hazard_curves_naive 1.904679 secs
+>>>>>
+
+>>>>>
+Total for Function get_hazard_curves_by_vs30 1.062653 secs
+>>>>>
+
+>>>>>
+Total for Function get_hazard_curves_by_vs30_nloc0 1.032392 secs
+>>>>>
+
+THS_DATASET_AGGR_URI=s3://ths-dataset-prod/NZSHM22_AGG poetry run python   2.41s user 3.98s system 29% cpu 21.331 total
+```
