@@ -1,11 +1,14 @@
 # Changelog
 
-## [1.1.2] 2025-07-04
+## [1.1.2] 2025-07-07
 
 ### Changed
  - testing dataset query options
  - add missing nloc_0 arg to dataset queries 
- 
+
+### Added
+ - testing script and docs for `pyiceberg\S3` Table support
+
 ## [1.1.1] 2025-06-27
 ### Added
  - new `toshi_hazard_store.query.datasets` module 
