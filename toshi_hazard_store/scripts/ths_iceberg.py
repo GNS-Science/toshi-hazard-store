@@ -1,10 +1,9 @@
 '''
-A script to explore the performance and use of AWS S3 tables / pyiceberg as a possible 
-alternative to AWS S# general purpose buckets.
+A script to explore the performance and use of AWS S3 tables / pyiceberg as a possible
+alternative to AWS S3 General Purpose buckets.
 
-See docs for results of initial tests.
+See docs for results of initial tests. And there are also some real world tests in `nshm-hazard-graphql-api` project.
 
-And also there are real world tests in 
 Brief summary of findings:
 
  - theres quite a bit of additional one-time setup to get AWS tables configured for pyiceberg.
@@ -14,9 +13,9 @@ Brief summary of findings:
    need for this is not high in our use cases
 
  '''
+
 import datetime as dt
 
-import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 from pyiceberg.catalog import load_catalog
@@ -24,7 +23,7 @@ from pyiceberg.expressions import EqualTo, In
 
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.query import datasets
-from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
+from toshi_hazard_store.query.hazard_query import downsample_code
 
 DATASET_FORMAT = 'parquet'
 
@@ -84,7 +83,7 @@ def import_to_iceberg():
     dt0 = dataset0.to_table(filter=fltr)
 
     t1 = dt.datetime.now()
-    print(f"Opened pyarrow table in {(t1-t0).total_seconds()}")
+    print(f"Opened pyarrow table in {(t1 - t0).total_seconds()}")
 
     rest_catalog = load_catalog(CATALOG, **rest_args)
     t1 = dt.datetime.now()
@@ -94,14 +93,14 @@ def import_to_iceberg():
     icetable = rest_catalog.create_table(identifier=f"{DATABASE}.{TABLE_NAME}", schema=dt0.schema)
 
     t2 = dt.datetime.now()
-    print(f"created iceberg table in {(t2-t1).total_seconds()}")
+    print(f"created iceberg table in {(t2 - t1).total_seconds()}")
 
     icetable.append(dt0)
     rows = len(icetable.scan().to_arrow())
     # print(f"imported {rows} rows to table")
 
     t3 = dt.datetime.now()
-    print(f"Saved {rows} rows to iceberg table in {(t3-t2).total_seconds()}")
+    print(f"Saved {rows} rows to iceberg table in {(t3 - t2).total_seconds()}")
 
     print(icetable.scan(row_filter=EqualTo("vs30", 400) & EqualTo('aggr', 'mean')).to_pandas())
 
@@ -124,20 +123,20 @@ def query_arrow():
     dataset0 = ds.dataset(source_dir, filesystem=source_filesystem, format=DATASET_FORMAT, partitioning='hive')
 
     t1 = dt.datetime.now()
-    print(f"opened dateset in {(t1-t0).total_seconds()}")
+    print(f"opened dateset in {(t1 - t0).total_seconds()}")
 
     dt0 = dataset0.to_table(filter=fltr)
 
     t2 = dt.datetime.now()
-    print(f"opened table in {(t2-t1).total_seconds()}")
+    print(f"opened table in {(t2 - t1).total_seconds()}")
 
     df0 = dt0.to_pandas()
     print(df0.shape)
     t3 = dt.datetime.now()
 
     print('>>>>>')
-    print(f"Queried pyarrow table in {(t3-t2).total_seconds()} secs")
-    print(f"Total {(t3-t0).total_seconds()} secs")
+    print(f"Queried pyarrow table in {(t3 - t2).total_seconds()} secs")
+    print(f"Total {(t3 - t0).total_seconds()} secs")
     print('>>>>>')
 
 
@@ -145,13 +144,13 @@ def query_ice():
     t0 = dt.datetime.now()
     rest_catalog = load_catalog(CATALOG, **rest_args)
     t1 = dt.datetime.now()
-    print(f"opened catalog in {(t1-t0).total_seconds()}")
+    print(f"opened catalog in {(t1 - t0).total_seconds()}")
 
     icetable = rest_catalog.load_table(
         identifier=f"{DATABASE}.{TABLE_NAME}",
     )
     t2 = dt.datetime.now()
-    print(f"opened table in {(t2-t1).total_seconds()}")
+    print(f"opened table in {(t2 - t1).total_seconds()}")
 
     filter = (
         In('aggr', aggs)
@@ -167,8 +166,8 @@ def query_ice():
     print(res.shape)
     t3 = dt.datetime.now()
     print('>>>>>')
-    print(f"Queried iceberg table in {(t3-t2).total_seconds()} secs")
-    print(f"Total {(t3-t0).total_seconds()} secs")
+    print(f"Queried iceberg table in {(t3 - t2).total_seconds()} secs")
+    print(f"Total {(t3 - t0).total_seconds()} secs")
     print('>>>>>')
 
 
@@ -180,7 +179,7 @@ def query_datasets(query_fn):
     print('>>>>>')
     t3 = dt.datetime.now()
 
-    print(f"Total for Function {query_fn.__name__} {(t3-t0).total_seconds()} secs")
+    print(f"Total for Function {query_fn.__name__} {(t3 - t0).total_seconds()} secs")
     print('>>>>>')
 
 
@@ -190,6 +189,10 @@ if __name__ == "__main__":
     print()
     query_ice()
     print()
-    for fn in [datasets.get_hazard_curves_naive, datasets.get_hazard_curves_by_vs30, datasets.get_hazard_curves_by_vs30_nloc0]:
+    for fn in [
+        datasets.get_hazard_curves_naive,
+        datasets.get_hazard_curves_by_vs30,
+        datasets.get_hazard_curves_by_vs30_nloc0,
+    ]:
         query_datasets(fn)
         print()
