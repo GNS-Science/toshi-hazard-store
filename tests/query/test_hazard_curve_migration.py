@@ -41,7 +41,8 @@ def hazagg_fixture_fn(json_hazard):
 
 
 @pytest.mark.parametrize(
-    'query_fn', [datasets.get_hazard_curves_0, datasets.get_hazard_curves_1, datasets.get_hazard_curves_2]
+    'query_fn',
+    [datasets.get_hazard_curves_naive, datasets.get_hazard_curves_by_vs30, datasets.get_hazard_curves_by_vs30_nloc0],
 )
 @pytest.mark.parametrize("locn", ["-41.300~174.800", "-36.900~174.800"])
 @pytest.mark.parametrize("vs30", [400, 1500])

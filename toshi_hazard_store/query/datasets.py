@@ -1,4 +1,10 @@
-"""query interfaces for pyarrow datasets"""
+"""query interfaces for pyarrow datasets
+
+Datasets objects are cached to reduce overhead in future queries.
+
+https://arrow.apache.org/docs/python/parquet.html#reading-and-writing-the-apache-parquet-format
+
+"""
 
 import datetime as dt
 import itertools
@@ -172,7 +178,7 @@ def get_vs30_nloc0_dataset(vs30, nloc) -> ds.Dataset:
     return dataset
 
 
-def get_hazard_curves_0(location_codes, vs30s, hazard_model, imts, aggs):
+def get_hazard_curves_naive(location_codes, vs30s, hazard_model, imts, aggs):
     """
     Retrieves aggregated hazard curves from the dataset.
 
@@ -185,11 +191,6 @@ def get_hazard_curves_0(location_codes, vs30s, hazard_model, imts, aggs):
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
-
-    Note:
-      This method uses caching to improve performance.
-
-      https://arrow.apache.org/docs/python/parquet.html#reading-and-writing-the-apache-parquet-format
     """
     log.debug('> get_hazard_curves()')
     t0 = dt.datetime.now()
@@ -223,11 +224,11 @@ def get_hazard_curves_0(location_codes, vs30s, hazard_model, imts, aggs):
     log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
 
 
-def get_hazard_curves_1(location_codes, vs30s, hazard_model, imts, aggs):
+def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
     """
     Retrieves aggregated hazard curves from the dataset.
 
-    subdivides the dataset using partitioning to reduce IO and memory demand.
+    Subdivides the dataset using partitioning to reduce IO and memory demand.
 
     Args:
       location_codes (list): List of location codes.
@@ -238,11 +239,6 @@ def get_hazard_curves_1(location_codes, vs30s, hazard_model, imts, aggs):
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
-
-    Note:
-      This method uses caching to improve performance.
-
-      https://arrow.apache.org/docs/python/parquet.html#reading-and-writing-the-apache-parquet-format
     """
     log.debug('> get_hazard_curves()')
     t0 = dt.datetime.now()
@@ -258,8 +254,6 @@ def get_hazard_curves_1(location_codes, vs30s, hazard_model, imts, aggs):
             & (pc.field("imt").isin(imts))
             & (pc.field('hazard_model_id') == hazard_model)
         )
-
-        print(flt)
 
         table = dataset.to_table(filter=flt)
         t1 = dt.datetime.now()
@@ -281,11 +275,11 @@ def get_hazard_curves_1(location_codes, vs30s, hazard_model, imts, aggs):
         log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
 
 
-def get_hazard_curves_2(location_codes, vs30s, hazard_model, imts, aggs):
+def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, aggs):
     """
     Retrieves aggregated hazard curves from the dataset.
 
-    subdivides the dataset using partitioning to reduce IO and memory demand.
+    Subdivides the dataset using partitioning to reduce IO and memory demand.
 
     Args:
       location_codes (list): List of location codes.
@@ -296,11 +290,6 @@ def get_hazard_curves_2(location_codes, vs30s, hazard_model, imts, aggs):
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
-
-    Note:
-      This method uses caching to improve performance.
-
-      https://arrow.apache.org/docs/python/parquet.html#reading-and-writing-the-apache-parquet-format
     """
     log.debug('> get_hazard_curves()')
     t0 = dt.datetime.now()
