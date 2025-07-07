@@ -26,6 +26,8 @@ nav:
       - ths_filter: cli/ths_ds_filter.md
   - API:
     - api/index.md
+    - query: 
+      - datasets: api/query/datasets.md
     - oq_import:
       - oq config: api/oq_import/oq_config.md
   - Legacy Migrations:
