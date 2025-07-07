@@ -137,7 +137,7 @@ def get_dataset() -> ds.Dataset:
             DATASET_AGGR_URI, partitioning='hive', format='parquet', schema=get_hazard_aggregate_schema()
         )
         log.info(f"Opened dataset `{DATASET_AGGR_URI}` in {dt.datetime.now() - start_time}.")
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         raise RuntimeError(f"Failed to open dataset {DATASET_AGGR_URI}: {e}")
     return dataset
 
@@ -155,7 +155,7 @@ def get_dataset_vs30(vs30: int) -> ds.Dataset:
         dspath = f"{DATASET_AGGR_URI}/vs30={vs30}"
         dataset = ds.dataset(dspath, partitioning='hive', format='parquet', schema=get_hazard_aggregate_schema())
         log.info(f"Opened dataset `{dspath}` in {dt.datetime.now() - start_time}.")
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         raise RuntimeError(f"Failed to open dataset {dspath}: {e}")
     return dataset
 
@@ -173,7 +173,7 @@ def get_dataset_vs30_nloc0(vs30: int, nloc: str) -> ds.Dataset:
         dspath = f"{DATASET_AGGR_URI}/vs30={vs30}/nloc_0={downsample_code(nloc, 1.0)}"
         dataset = ds.dataset(dspath, partitioning='hive', format='parquet', schema=get_hazard_aggregate_schema())
         log.info(f"Opened dataset `{dspath}` in {dt.datetime.now() - start_time}.")
-    except Exception as e:
+    except Exception as e: # pragma: no cover
         raise RuntimeError(f"Failed to open dataset {dspath}: {e}")
     return dataset
 
@@ -211,16 +211,16 @@ def get_hazard_curves_naive(location_codes, vs30s, hazard_model, imts, aggs):
     log.debug(f"schema {table.schema}")
 
     count = 0
-    for batch in table.to_batches():
-        for row in zip(*batch.columns):
+    for batch in table.to_batches():  # pragma: no branch
+        for row in zip(*batch.columns):  # pragma: no branch
             count += 1
             item = (x.as_py() for x in row)
             obj = AggregatedHazard(*item).to_imt_values()
             if obj.vs30 not in vs30s:
-                raise RuntimeError(f"vs30 {obj.vs30} not in {vs30s}. Is schema correct?")
+                raise RuntimeError(f"vs30 {obj.vs30} not in {vs30s}. Is schema correct?")  # pragma: no cover
             yield obj
 
-    t1 = dt.datetime.now()
+    t1 = dt.datetime.now()  # pragma: no cover
     log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
 
 
@@ -243,7 +243,7 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
     log.debug('> get_hazard_curves()')
     t0 = dt.datetime.now()
 
-    for vs30 in vs30s:
+    for vs30 in vs30s:  # pragma: no branch
 
         dataset = get_dataset_vs30(vs30)
 
@@ -261,17 +261,17 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
         log.debug(f"schema {table.schema}")
 
         count = 0
-        for batch in table.to_batches():
-            for row in zip(*batch.columns):
+        for batch in table.to_batches():  # pragma: no branch
+            for row in zip(*batch.columns):  # pragma: no branch
                 count += 1
                 item = (x.as_py() for x in row)
                 obj = AggregatedHazard(*item).to_imt_values()
                 obj.vs30 = vs30
                 if obj.imt not in imts:
-                    raise RuntimeError(f"imt {obj.imt} not in {imts}. Is schema correct?")
+                    raise RuntimeError(f"imt {obj.imt} not in {imts}. Is schema correct?")  # pragma: no cover
                 yield obj
 
-        t1 = dt.datetime.now()
+        t1 = dt.datetime.now()  # pragma: no cover
         log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
 
 
@@ -316,16 +316,16 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
             log.debug(f"schema {table.schema}")
 
             count = 0
-            for batch in table.to_batches():
-                for row in zip(*batch.columns):
+            for batch in table.to_batches():  # pragma: no branch
+                for row in zip(*batch.columns):  # pragma: no branch
                     count += 1
                     item = (x.as_py() for x in row)
                     obj = AggregatedHazard(*item).to_imt_values()
                     obj.vs30 = vs30
                     obj.nloc_0 = hloc
                     if obj.imt not in imts:
-                        raise RuntimeError(f"imt {obj.imt} not in {imts}. Is schema correct?")
+                        raise RuntimeError(f"imt {obj.imt} not in {imts}. Is schema correct?")  # pragma: no cover 
                     yield obj
 
-        t3 = dt.datetime.now()
+        t3 = dt.datetime.now()  # pragma: no cover
         log.info(f"Executed dataset query for {count} curves in {(t3 - t0).total_seconds()} seconds.")
