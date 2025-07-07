@@ -143,7 +143,7 @@ def get_dataset() -> ds.Dataset:
 
 
 @lru_cache()
-def get_vs30_dataset(vs30) -> ds.Dataset:
+def get_dataset_vs30(vs30: int) -> ds.Dataset:
     """
     Cache the dataset for a given vs30.
 
@@ -161,7 +161,7 @@ def get_vs30_dataset(vs30) -> ds.Dataset:
 
 
 @lru_cache()
-def get_vs30_nloc0_dataset(vs30, nloc) -> ds.Dataset:
+def get_dataset_vs30_nloc0(vs30: int, nloc: str) -> ds.Dataset:
     """
     Cache the dataset for a given vs30 and nloc_0.
 
@@ -245,7 +245,7 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
 
     for vs30 in vs30s:
 
-        dataset = get_vs30_dataset(vs30)
+        dataset = get_dataset_vs30(vs30)
 
         flt = (
             (pc.field('aggr').isin(aggs))
@@ -301,7 +301,7 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
 
         for hloc, vs30 in itertools.product(hash_locs, vs30s):
 
-            dataset = get_vs30_nloc0_dataset(vs30, hloc)
+            dataset = get_dataset_vs30_nloc0(vs30, hloc)
             t1 = dt.datetime.now()
             flt = (
                 (pc.field('aggr').isin(aggs))

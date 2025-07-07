@@ -1,4 +1,4 @@
-"""Helpers for querying Hazard Realizations and related models.
+"""Helpers for querying Hazard Realizations and related dynamodb models.
 
 Provides efficient queries for the models: **HazardAggregation, OpenquakeRealization & ToshiOpenquakeMeta*.*
 
