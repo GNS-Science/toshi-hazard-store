@@ -15,8 +15,8 @@ The first demo
  - `demo_mmap.py` splits  source data 
  - `demo_mmap_reader.py` reads from the mmap file.
 
-This offers little benfit in our situation as our table sise are small (ie the fit in memory)
-testing showed this to be slightly sloweer than regular files with our small tables.
+This offers little benefit in our situation as our table sizes are small (ie they fit in memory).
+Testing showed this to be slightly slower than regular files with our small tables.
 
 ## Other table formats, optimisations.
 
