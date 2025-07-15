@@ -239,6 +239,9 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
+
+    Raises:
+      RuntimeWarning: describing any dataset partitions that could not be opened.
     """
     log.debug('> get_hazard_curves()')
     t0 = dt.datetime.now()
@@ -301,7 +304,7 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
       AggregatedHazard: An object containing the aggregated hazard curve data.
 
     Raises:
-      RuntimeWarning: desribing any datasets that could not be opened. (i.e. its not available)
+      RuntimeWarning: describing any dataset partitions that could not be opened.
     """
     log.debug(f'> get_hazard_curves({location_codes}, {vs30s},...)')
     t0 = dt.datetime.now()
