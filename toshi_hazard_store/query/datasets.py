@@ -250,6 +250,7 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
 
     for vs30 in vs30s:  # pragma: no branch
 
+        count = 0
         try:
             dataset = get_dataset_vs30(vs30)
         except Exception:
@@ -269,7 +270,6 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
         log.debug(f"to_table for filter took {(t1 - t0).total_seconds()} seconds.")
         log.debug(f"schema {table.schema}")
 
-        count = 0
         for batch in table.to_batches():  # pragma: no branch
             for row in zip(*batch.columns):  # pragma: no branch
                 count += 1
@@ -312,9 +312,10 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
     dataset_exceptions = []
 
     for hash_location_code in get_hashes(location_codes, 1):
-
         log.debug('hash_key %s' % hash_location_code)
         hash_locs = list(filter(lambda loc: downsample_code(loc, 1) == hash_location_code, location_codes))
+
+        count = 0
 
         for hloc, vs30 in itertools.product(hash_locs, vs30s):
 
@@ -337,7 +338,6 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
             log.debug(f"to_table for filter took {(t2 - t1).total_seconds()} seconds.")
             log.debug(f"schema {table.schema}")
 
-            count = 0
             for batch in table.to_batches():  # pragma: no branch
                 for row in zip(*batch.columns):  # pragma: no branch
                     count += 1
