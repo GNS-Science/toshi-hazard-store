@@ -243,9 +243,15 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
     log.debug('> get_hazard_curves()')
     t0 = dt.datetime.now()
 
+    dataset_exceptions = []
+
     for vs30 in vs30s:  # pragma: no branch
 
-        dataset = get_dataset_vs30(vs30)
+        try:
+            dataset = get_dataset_vs30(vs30)
+        except Exception:
+            dataset_exceptions.append(f"Failed to open dataset for vs30={vs30}")
+            continue
 
         flt = (
             (pc.field('aggr').isin(aggs))
@@ -273,6 +279,9 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
 
         t1 = dt.datetime.now()  # pragma: no cover
         log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
+
+    if dataset_exceptions:
+        raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")
 
 
 def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, aggs):
