@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.3] 2025-07
+
+## Changed
+
+ - missed dataset exceptions are now deferred [`#120](https://github.com/GNS-Science/toshi-hazard-store/issues/120)
+
 ## [1.1.2] 2025-07-07
 
 ### Changed
