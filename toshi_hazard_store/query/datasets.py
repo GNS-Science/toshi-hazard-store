@@ -283,7 +283,7 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
         t1 = dt.datetime.now()  # pragma: no cover
         log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
 
-    if dataset_exceptions:
+    if dataset_exceptions:  # pragma: no branch
         raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")
 
 
@@ -352,5 +352,5 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
         t3 = dt.datetime.now()  # pragma: no cover
         log.info(f"Executed dataset query for {count} curves in {(t3 - t0).total_seconds()} seconds.")
 
-    if dataset_exceptions:
+    if dataset_exceptions:  # pragma: no branch
         raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")
