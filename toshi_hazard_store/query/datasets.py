@@ -173,7 +173,7 @@ def get_dataset_vs30_nloc0(vs30: int, nloc: str) -> ds.Dataset:
         dspath = f"{DATASET_AGGR_URI}/vs30={vs30}/nloc_0={downsample_code(nloc, 1.0)}"
         dataset = ds.dataset(dspath, partitioning='hive', format='parquet', schema=get_hazard_aggregate_schema())
         log.info(f"Opened dataset `{dspath}` in {dt.datetime.now() - start_time}.")
-    except Exception as e: # pragma: no cover
+    except Exception as e:  # pragma: no cover
         raise RuntimeError(f"Failed to open dataset {dspath}: {e}")
     return dataset
 
@@ -239,13 +239,23 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
+
+    Raises:
+      RuntimeWarning: describing any dataset partitions that could not be opened.
     """
     log.debug('> get_hazard_curves()')
     t0 = dt.datetime.now()
 
+    dataset_exceptions = []
+
     for vs30 in vs30s:  # pragma: no branch
 
-        dataset = get_dataset_vs30(vs30)
+        count = 0
+        try:
+            dataset = get_dataset_vs30(vs30)
+        except Exception:
+            dataset_exceptions.append(f"Failed to open dataset for vs30={vs30}")
+            continue
 
         flt = (
             (pc.field('aggr').isin(aggs))
@@ -260,7 +270,6 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
         log.debug(f"to_table for filter took {(t1 - t0).total_seconds()} seconds.")
         log.debug(f"schema {table.schema}")
 
-        count = 0
         for batch in table.to_batches():  # pragma: no branch
             for row in zip(*batch.columns):  # pragma: no branch
                 count += 1
@@ -273,6 +282,9 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
 
         t1 = dt.datetime.now()  # pragma: no cover
         log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
+
+    if dataset_exceptions:  # pragma: no branch
+        raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")
 
 
 def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, aggs):
@@ -290,18 +302,29 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
+
+    Raises:
+      RuntimeWarning: describing any dataset partitions that could not be opened.
     """
-    log.debug('> get_hazard_curves()')
+    log.debug(f'> get_hazard_curves({location_codes}, {vs30s},...)')
     t0 = dt.datetime.now()
 
-    for hash_location_code in get_hashes(location_codes, 1):
+    dataset_exceptions = []
 
+    for hash_location_code in get_hashes(location_codes, 1):
         log.debug('hash_key %s' % hash_location_code)
         hash_locs = list(filter(lambda loc: downsample_code(loc, 1) == hash_location_code, location_codes))
 
+        count = 0
+
         for hloc, vs30 in itertools.product(hash_locs, vs30s):
 
-            dataset = get_dataset_vs30_nloc0(vs30, hloc)
+            try:
+                dataset = get_dataset_vs30_nloc0(vs30, hloc)
+            except Exception:
+                dataset_exceptions.append(f"Failed to open dataset for vs30={vs30}, loc={hloc}")
+                continue
+
             t1 = dt.datetime.now()
             flt = (
                 (pc.field('aggr').isin(aggs))
@@ -315,7 +338,6 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
             log.debug(f"to_table for filter took {(t2 - t1).total_seconds()} seconds.")
             log.debug(f"schema {table.schema}")
 
-            count = 0
             for batch in table.to_batches():  # pragma: no branch
                 for row in zip(*batch.columns):  # pragma: no branch
                     count += 1
@@ -324,8 +346,11 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
                     obj.vs30 = vs30
                     obj.nloc_0 = hloc
                     if obj.imt not in imts:
-                        raise RuntimeError(f"imt {obj.imt} not in {imts}. Is schema correct?")  # pragma: no cover 
+                        raise RuntimeError(f"imt {obj.imt} not in {imts}. Is schema correct?")  # pragma: no cover
                     yield obj
 
         t3 = dt.datetime.now()  # pragma: no cover
         log.info(f"Executed dataset query for {count} curves in {(t3 - t0).total_seconds()} seconds.")
+
+    if dataset_exceptions:  # pragma: no branch
+        raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")

@@ -48,7 +48,8 @@ def hazagg_fixture_fn(json_hazard):
 @pytest.mark.parametrize("vs30", [400, 1500])
 @pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])
 @pytest.mark.parametrize("aggr", ["0.005", "mean"])
-def test_get_hazard_curves_0_dataset(monkeypatch, hazagg_fixture_fn, query_fn, locn, vs30, imt, aggr):
+def test_get_hazard_curves_from_dataset(monkeypatch, hazagg_fixture_fn, query_fn, locn, vs30, imt, aggr):
+    """Happy case tests covers all 3 query strategies"""
     dspath = fixture_path / 'HAZAGG_SMALL'
     assert dspath.exists()
 
@@ -82,3 +83,83 @@ def test_get_hazard_curves_0_dataset(monkeypatch, hazagg_fixture_fn, query_fn, l
         )
         assert value.val == pytest.approx(exp_value, abs=7e5 - 8)
         assert value.lvl == exp_level
+
+
+@pytest.mark.parametrize("bad_locn", ["-48.000~180.000"])
+@pytest.mark.parametrize("vs30", [400, 1500])
+@pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])
+@pytest.mark.parametrize("aggr", ["0.005", "mean"])
+def test_hazard_curve_query_data_missing_for_one_location(monkeypatch, hazagg_fixture_fn, bad_locn, vs30, imt, aggr):
+    """Out of bounds location tests covers just `get_hazard_curves_by_vs30_nloc0` query strategy"""
+    dspath = fixture_path / 'HAZAGG_SMALL'
+    assert dspath.exists()
+
+    monkeypatch.setattr(datasets, 'DATASET_AGGR_URI', str(dspath))
+
+    model = "NSHM_v1.0.4"
+    good_locn = "-41.300~174.800"
+
+    locations = [good_locn] + [bad_locn]
+
+    expected = hazagg_fixture_fn(model, imt, good_locn, aggr, vs30)
+
+    result = datasets.get_hazard_curves_by_vs30_nloc0(
+        location_codes=locations, vs30s=[vs30], hazard_model=model, imts=[imt], aggs=[aggr]
+    )
+
+    res = next(result)  # one curve is returned
+
+    # the second curve was not ....
+    with pytest.raises(RuntimeWarning, match=r".*Failed to open dataset for .* loc=.*"):
+        next(result)  # second curve raises an exception
+
+    with pytest.raises(StopIteration):
+        next(result)  # no more data
+
+    # Check the returned data is correct
+    assert res.hazard_model_id == expected.hazard_model_id
+    assert res.imt == expected.imt
+    assert res.vs30 == expected.vs30
+    assert res.agg == expected.agg
+    assert res.nloc_001 == expected.nloc_001
+
+
+@pytest.mark.parametrize(
+    'query_fn',
+    [datasets.get_hazard_curves_by_vs30, datasets.get_hazard_curves_by_vs30_nloc0],
+)
+@pytest.mark.parametrize("bad_vs30", [401, 155])
+@pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])
+@pytest.mark.parametrize("aggr", ["0.005", "mean"])
+def test_hazard_curve_query_data_missing_for_vs30(monkeypatch, hazagg_fixture_fn, query_fn, bad_vs30, imt, aggr):
+    """Out of bounds (vs30) covers queries using vs30 partioning"""
+    dspath = fixture_path / 'HAZAGG_SMALL'
+    assert dspath.exists()
+
+    monkeypatch.setattr(datasets, 'DATASET_AGGR_URI', str(dspath))
+
+    model = "NSHM_v1.0.4"
+    good_locn = "-41.300~174.800"
+    good_vs30 = 1500
+    vs30 = [good_vs30] + [bad_vs30]
+    locations = [good_locn]
+
+    expected = hazagg_fixture_fn(model, imt, good_locn, aggr, good_vs30)
+
+    result = query_fn(location_codes=locations, vs30s=vs30, hazard_model=model, imts=[imt], aggs=[aggr])
+
+    res = next(result)  # one curve is returned
+
+    # the second curve was not ....
+    with pytest.raises(RuntimeWarning, match=r".*Failed to open dataset for vs30=.*"):
+        next(result)  # second curve raises an exception
+
+    with pytest.raises(StopIteration):
+        next(result)  # no more data
+
+    # Check the returned data is correct
+    assert res.hazard_model_id == expected.hazard_model_id
+    assert res.imt == expected.imt
+    assert res.vs30 == expected.vs30
+    assert res.agg == expected.agg
+    assert res.nloc_001 == expected.nloc_001
