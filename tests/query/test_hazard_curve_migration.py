@@ -8,8 +8,6 @@ import pytest
 
 from toshi_hazard_store.query import datasets, hazard_query
 
-# import toshi_hazard_store.query.datasets
-
 fixture_path = pathlib.Path(__file__).parent.parent / 'fixtures' / 'query'
 
 

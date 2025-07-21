@@ -373,12 +373,21 @@ def get_hazard_curves(
     """
     Retrieves aggregated hazard curves from the dataset.
 
+    The optional `strategy` argument can be used to control how the query behaves:
+     - 'naive' (the default) lets pyarrow do its normal thing.
+     - 'd1' assumes the dataset is partitioned on `vs30`, generating multiple pyarrow queries from the user args.
+     - 'd2' assumes the dataset is partitioned on `vs30, nloc_0` and acts accordingly.
+
+    These overriding  strategies alow the user to tune the query to suit the size of the datasets and the
+    compute resources available. e.g. for the full NSHM, with an AWS lambda function, the `d2` option is optimal.
+
     Args:
       location_codes (list): List of location codes.
       vs30s (list): List of VS30 values.
       hazard_model: the hazard model id.
       aggs (list): List of aggregation types.
-      strategy: which query strategy to use.
+      strategy: which query strategy to use (options are `d1`, `d2`, `naive`).
+          Other values will use the `naive` strategy.
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
@@ -390,9 +399,9 @@ def get_hazard_curves(
 
     count = 0
 
-    if strategy == "d2":  # pragma: no cover
+    if strategy == "d2":
         qfn = get_hazard_curves_by_vs30_nloc0
-    elif strategy == "d1":  # pragma: no cover
+    elif strategy == "d1":
         qfn = get_hazard_curves_by_vs30
     else:
         qfn = get_hazard_curves_naive
