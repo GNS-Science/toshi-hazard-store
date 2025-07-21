@@ -1,5 +1,12 @@
 # Changelog
 
+
+## [1.2.0] 2025-07-22
+
+### Added
+ - new function `toshi_hazard_store.query.datasets.get_hazard_curves` 
+   for compatibility with legacy dynamodb queries. [`#121](https://github.com/GNS-Science/toshi-hazard-store/issues/121)
+
 ## [1.1.3] 2025-07
 
 ## Changed
