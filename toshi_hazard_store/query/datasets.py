@@ -11,7 +11,7 @@ import itertools
 import logging
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Union
+from typing import Iterator, Union
 
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -178,14 +178,16 @@ def get_dataset_vs30_nloc0(vs30: int, nloc: str) -> ds.Dataset:
     return dataset
 
 
-def get_hazard_curves_naive(location_codes, vs30s, hazard_model, imts, aggs):
+def get_hazard_curves_naive(
+    location_codes: list[str], vs30s: list[int], hazard_model: str, imts: list[str], aggs: list[str]
+) -> Iterator[AggregatedHazard]:
     """
     Retrieves aggregated hazard curves from the dataset.
 
     Args:
       location_codes (list): List of location codes.
       vs30s (list): List of VS30 values.
-      hazard_model (list): List of hazard model IDs.
+      hazard_model: the hazard model id.
       imts (list): List of intensity measure types (e.g. 'PGA', 'SA(5.0)').
       aggs (list): List of aggregation types.
 
@@ -221,10 +223,12 @@ def get_hazard_curves_naive(location_codes, vs30s, hazard_model, imts, aggs):
             yield obj
 
     t1 = dt.datetime.now()  # pragma: no cover
-    log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
+    log.debug(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
 
 
-def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
+def get_hazard_curves_by_vs30(
+    location_codes: list[str], vs30s: list[int], hazard_model: str, imts: list[str], aggs: list[str]
+) -> Iterator[AggregatedHazard]:
     """
     Retrieves aggregated hazard curves from the dataset.
 
@@ -233,7 +237,7 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
     Args:
       location_codes (list): List of location codes.
       vs30s (list): List of VS30 values.
-      hazard_model (list): List of hazard model IDs.
+      hazard_model: the hazard model id.
       imts (list): List of intensity measure types (e.g. 'PGA', 'SA(5.0)').
       aggs (list): List of aggregation types.
 
@@ -281,13 +285,15 @@ def get_hazard_curves_by_vs30(location_codes, vs30s, hazard_model, imts, aggs):
                 yield obj
 
         t1 = dt.datetime.now()  # pragma: no cover
-        log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
+        log.debug(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
 
     if dataset_exceptions:  # pragma: no branch
         raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")
 
 
-def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, aggs):
+def get_hazard_curves_by_vs30_nloc0(
+    location_codes: list[str], vs30s: list[int], hazard_model: str, imts: list[str], aggs: list[str]
+) -> Iterator[AggregatedHazard]:
     """
     Retrieves aggregated hazard curves from the dataset.
 
@@ -296,7 +302,7 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
     Args:
       location_codes (list): List of location codes.
       vs30s (list): List of VS30 values.
-      hazard_model (list): List of hazard model IDs.
+      hazard_model: the hazard model id.
       imts (list): List of intensity measure types (e.g. 'PGA', 'SA(5.0)').
       aggs (list): List of aggregation types.
 
@@ -350,7 +356,60 @@ def get_hazard_curves_by_vs30_nloc0(location_codes, vs30s, hazard_model, imts, a
                     yield obj
 
         t3 = dt.datetime.now()  # pragma: no cover
-        log.info(f"Executed dataset query for {count} curves in {(t3 - t0).total_seconds()} seconds.")
+        log.debug(f"Executed dataset query for {count} curves in {(t3 - t0).total_seconds()} seconds.")
 
     if dataset_exceptions:  # pragma: no branch
         raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")
+
+
+def get_hazard_curves(
+    location_codes: list[str],
+    vs30s: list[int],
+    hazard_model: str,
+    imts: list[str],
+    aggs: list[str],
+    strategy: str = 'naive',
+) -> Iterator[AggregatedHazard]:
+    """
+    Retrieves aggregated hazard curves from the dataset.
+
+    Args:
+      location_codes (list): List of location codes.
+      vs30s (list): List of VS30 values.
+      hazard_model: the hazard model id.
+      aggs (list): List of aggregation types.
+      strategy: which query strategy to use.
+
+    Yields:
+      AggregatedHazard: An object containing the aggregated hazard curve data.
+    Raises:
+      RuntimeWarning: describing any dataset partitions that could not be opened.
+    """
+    log.debug('> get_hazard_curves()')
+    t0 = dt.datetime.now()
+
+    count = 0
+
+    if strategy == "d2":  # pragma: no cover
+        qfn = get_hazard_curves_by_vs30_nloc0
+    elif strategy == "d1":  # pragma: no cover
+        qfn = get_hazard_curves_by_vs30
+    else:
+        qfn = get_hazard_curves_naive
+
+    deferred_warning = None
+    try:
+        for obj in qfn(location_codes, vs30s, hazard_model, imts, aggs):  # pragma: no branch
+            count += 1
+            yield obj
+    except RuntimeWarning as err:
+        if "Failed to open dataset" in str(err):
+            deferred_warning = err
+        else:
+            raise err  # pragma: no cover
+
+    t1 = dt.datetime.now()
+    log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
+
+    if deferred_warning:  # pragma: no cover
+        raise deferred_warning

@@ -2,10 +2,13 @@
 
 import json
 import pathlib
+from unittest import mock
 
 import pytest
 
 from toshi_hazard_store.query import datasets, hazard_query
+
+# import toshi_hazard_store.query.datasets
 
 fixture_path = pathlib.Path(__file__).parent.parent / 'fixtures' / 'query'
 
@@ -42,14 +45,19 @@ def hazagg_fixture_fn(json_hazard):
 
 @pytest.mark.parametrize(
     'query_fn',
-    [datasets.get_hazard_curves_naive, datasets.get_hazard_curves_by_vs30, datasets.get_hazard_curves_by_vs30_nloc0],
+    [
+        datasets.get_hazard_curves_naive,
+        datasets.get_hazard_curves_by_vs30,
+        datasets.get_hazard_curves_by_vs30_nloc0,
+        datasets.get_hazard_curves,
+    ],
 )
 @pytest.mark.parametrize("locn", ["-41.300~174.800", "-36.900~174.800"])
 @pytest.mark.parametrize("vs30", [400, 1500])
 @pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])
 @pytest.mark.parametrize("aggr", ["0.005", "mean"])
 def test_get_hazard_curves_from_dataset(monkeypatch, hazagg_fixture_fn, query_fn, locn, vs30, imt, aggr):
-    """Happy case tests covers all 3 query strategies"""
+    """Happy case tests covers all 3 query strategies and the wrapper"""
     dspath = fixture_path / 'HAZAGG_SMALL'
     assert dspath.exists()
 
@@ -163,3 +171,102 @@ def test_hazard_curve_query_data_missing_for_vs30(monkeypatch, hazagg_fixture_fn
     assert res.vs30 == expected.vs30
     assert res.agg == expected.agg
     assert res.nloc_001 == expected.nloc_001
+
+
+def test_hazard_curve_query_default_strategy_is_naive(monkeypatch):
+
+    mocked_qry_fn = mock.Mock(return_value=[])
+    monkeypatch.setattr(datasets, "get_hazard_curves_naive", mocked_qry_fn)
+
+    model = "NSHM_v1.0.4"
+    good_locn = "-41.300~174.800"
+    locations = [good_locn]
+    imt = "PGA"
+    aggr = "mean"
+    vs30 = 400
+
+    result = datasets.get_hazard_curves(
+        location_codes=locations, vs30s=[vs30], hazard_model=model, imts=[imt], aggs=[aggr]
+    )
+
+    with pytest.raises(StopIteration):
+        next(result)  # no data
+
+    assert mocked_qry_fn.call_count == 1
+    mocked_qry_fn.assert_called_with(
+        [good_locn],
+        [vs30],
+        model,
+        [imt],
+        [aggr],
+    )
+
+
+@pytest.mark.parametrize(
+    "strategy_fn_name",
+    [
+        ("d1", "get_hazard_curves_by_vs30"),
+        ("d2", "get_hazard_curves_by_vs30_nloc0"),
+        ("naive", "get_hazard_curves_naive"),
+        ("", "get_hazard_curves_naive"),
+    ],
+)
+def test_hazard_curve_query_strategy_calls_correct_query_fn(monkeypatch, strategy_fn_name):
+
+    mocked_qry_fn = mock.Mock(return_value=[])
+    monkeypatch.setattr(datasets, strategy_fn_name[1], mocked_qry_fn)
+
+    model = "NSHM_v1.0.4"
+    good_locn = "-41.300~174.800"
+    locations = [good_locn]
+    imt = "PGA"
+    aggr = "mean"
+    vs30 = 400
+
+    result = datasets.get_hazard_curves(
+        location_codes=locations,
+        vs30s=[vs30],
+        hazard_model=model,
+        imts=[imt],
+        aggs=[aggr],
+        strategy=strategy_fn_name[0],
+    )
+
+    with pytest.raises(StopIteration):
+        next(result)  # no data
+
+    assert mocked_qry_fn.call_count == 1
+    mocked_qry_fn.assert_called_with(
+        [good_locn],
+        [vs30],
+        model,
+        [imt],
+        [aggr],
+    )
+
+
+@pytest.mark.parametrize("strategy", ["d1", "d2"])
+def test_hazard_curve_query_strategy_unmocked(monkeypatch, strategy):
+
+    dspath = fixture_path / 'HAZAGG_SMALL'
+    assert dspath.exists()
+
+    monkeypatch.setattr(datasets, 'DATASET_AGGR_URI', str(dspath))
+
+    model = "NSHM_v1.0.4"
+    good_locn = "-41.300~174.800"
+    locations = [good_locn]
+    imt = "PGA"
+    aggr = "mean"
+    vs30 = 401
+
+    result = datasets.get_hazard_curves(
+        location_codes=locations, vs30s=[vs30], hazard_model=model, imts=[imt], aggs=[aggr], strategy=strategy
+    )
+
+    # the second curve was not ....
+    with pytest.raises(RuntimeWarning, match=r".*Failed to open dataset for vs30=.*"):
+        next(result)  # second curve raises an exception
+
+    with pytest.raises(StopIteration):
+        next(result)  # no data
