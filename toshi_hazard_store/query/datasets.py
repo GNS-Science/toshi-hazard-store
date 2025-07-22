@@ -216,7 +216,7 @@ def get_hazard_curves_naive(
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
     """
-    log.debug('> def get_hazard_curves_naive()')
+    log.debug('> get_hazard_curves_naive()')
     t0 = dt.datetime.now()
 
     dataset = get_dataset()
