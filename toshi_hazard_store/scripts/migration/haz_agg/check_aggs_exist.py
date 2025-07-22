@@ -34,9 +34,11 @@ srwg_locs = [
     CodedLocation(lat=key.lat, lon=key.lon, resolution=0.001).code for key in location.get_location_list(["SRWG214"])
 ]
 
-vs30s = [400, 1000, 1500]
-vs30s += [150, 175, 200, 225, 250, 275, 300, 350, 375, 450, 500, 525, 600, 750, 900]
+# vs30s = [400, 1000, 1500]
+vs30s = [ 375, 450, 500, 525, 600, 750, 900]
+# vs30s = [1500, 1000]
 
+# GOOD: 150, 175, 200, 225, 250, 275, 300, 350,
 
 def check(get_locations_fn, test_label="NZ cities"):
     """Check that the correct number of curves are returned"""
@@ -75,15 +77,15 @@ def check(get_locations_fn, test_label="NZ cities"):
 if __name__ == "__main__":
 
     logging.basicConfig(level=logging.WARNING)
-    # main_cites_test
-    check(lambda: random.sample(city_locs, 10))
+    # # main_cites_test
+    # check(lambda: random.sample(city_locs, 10))
 
-    # # # SRWG test
-    # check(lambda: random.sample(srwg_locs, 10), test_label="10 of SRWG214")
+    # # SRWG test
+    check(lambda: random.sample(srwg_locs, 10), test_label="10 of SRWG214")
 
     # # GRID test
-    # def random_grid(n=10):
-    #     # at res = 1 everython misses ??
-    #     return [CodedLocation(lat=loc[0], lon=loc[1], resolution=0.001).code for loc in random.sample(nz1_grid, 10)]
+    def random_grid(n=10):
+        # at res = 1 everython misses ??
+        return [CodedLocation(lat=loc[0], lon=loc[1], resolution=0.1).code for loc in random.sample(nz1_grid, 10)]
 
-    # check(random_grid, test_label="1O of NZ grid")
+    check(random_grid, test_label="1O of NZ grid")

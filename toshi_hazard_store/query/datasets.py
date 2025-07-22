@@ -220,10 +220,11 @@ def get_hazard_curves_naive(
     t0 = dt.datetime.now()
 
     dataset = get_dataset()
+    nloc_001_locs = [downsample_code(loc, 0.001) for loc in location_codes]
     flt = (
         (pc.field('aggr').isin(aggs))
         & (pc.field("nloc_0").isin(get_hashes(location_codes, resolution=1)))
-        & (pc.field("nloc_001").isin(location_codes))
+        & (pc.field("nloc_001").isin(nloc_001_locs))
         & (pc.field("imt").isin(imts))
         & (pc.field("vs30").isin(vs30s))
         & (pc.field('hazard_model_id') == hazard_model)
@@ -275,6 +276,7 @@ def get_hazard_curves_by_vs30(
 
     dataset_exceptions = []
 
+    nloc_001_locs = [downsample_code(loc, 0.001) for loc in location_codes]
     for vs30 in vs30s:  # pragma: no branch
 
         count = 0
@@ -287,7 +289,7 @@ def get_hazard_curves_by_vs30(
         flt = (
             (pc.field('aggr').isin(aggs))
             & (pc.field("nloc_0").isin(get_hashes(location_codes, resolution=1)))
-            & (pc.field("nloc_001").isin(location_codes))
+            & (pc.field("nloc_001").isin(nloc_001_locs))
             & (pc.field("imt").isin(imts))
             & (pc.field('hazard_model_id') == hazard_model)
         )
@@ -343,6 +345,7 @@ def get_hazard_curves_by_vs30_nloc0(
     for hash_location_code in get_hashes(location_codes, 1):
         log.debug('hash_key %s' % hash_location_code)
         hash_locs = list(filter(lambda loc: downsample_code(loc, 1) == hash_location_code, location_codes))
+        nloc_001_locs = [downsample_code(loc, 0.001) for loc in hash_locs]
 
         count = 0
 
@@ -357,7 +360,7 @@ def get_hazard_curves_by_vs30_nloc0(
             t1 = dt.datetime.now()
             flt = (
                 (pc.field('aggr').isin(aggs))
-                & (pc.field("nloc_001").isin(hash_locs))
+                & (pc.field("nloc_001").isin(nloc_001_locs))
                 & (pc.field("imt").isin(imts))
                 & (pc.field('hazard_model_id') == hazard_model)
             )
