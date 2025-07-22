@@ -17,6 +17,7 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 
 from toshi_hazard_store.config import DATASET_AGGR_URI
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
 from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
 
@@ -133,12 +134,17 @@ def get_dataset() -> ds.Dataset:
     """
     start_time = dt.datetime.now()
     try:
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_AGGR_URI)
         dataset = ds.dataset(
-            DATASET_AGGR_URI, partitioning='hive', format='parquet', schema=get_hazard_aggregate_schema()
+            source_dir,
+            filesystem=source_filesystem,
+            partitioning='hive',
+            format='parquet',
+            schema=get_hazard_aggregate_schema(),
         )
-        log.info(f"Opened dataset `{DATASET_AGGR_URI}` in {dt.datetime.now() - start_time}.")
+        log.info(f"Opened dataset `{dataset}` in {dt.datetime.now() - start_time}.")
     except Exception as e:  # pragma: no cover
-        raise RuntimeError(f"Failed to open dataset {DATASET_AGGR_URI}: {e}")
+        raise RuntimeError(f"Failed to open dataset: {e}")
     return dataset
 
 
@@ -152,11 +158,18 @@ def get_dataset_vs30(vs30: int) -> ds.Dataset:
     """
     start_time = dt.datetime.now()
     try:
-        dspath = f"{DATASET_AGGR_URI}/vs30={vs30}"
-        dataset = ds.dataset(dspath, partitioning='hive', format='parquet', schema=get_hazard_aggregate_schema())
-        log.info(f"Opened dataset `{dspath}` in {dt.datetime.now() - start_time}.")
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_AGGR_URI)
+        dspath = f"{source_dir}/vs30={vs30}"
+        dataset = ds.dataset(
+            dspath,
+            filesystem=source_filesystem,
+            partitioning='hive',
+            format='parquet',
+            schema=get_hazard_aggregate_schema(),
+        )
+        log.info(f"Opened dataset `{dataset}` in {dt.datetime.now() - start_time}.")
     except Exception as e:  # pragma: no cover
-        raise RuntimeError(f"Failed to open dataset {dspath}: {e}")
+        raise RuntimeError(f"Failed to open dataset: {e}")
     return dataset
 
 
@@ -170,11 +183,20 @@ def get_dataset_vs30_nloc0(vs30: int, nloc: str) -> ds.Dataset:
     """
     start_time = dt.datetime.now()
     try:
-        dspath = f"{DATASET_AGGR_URI}/vs30={vs30}/nloc_0={downsample_code(nloc, 1.0)}"
-        dataset = ds.dataset(dspath, partitioning='hive', format='parquet', schema=get_hazard_aggregate_schema())
-        log.info(f"Opened dataset `{dspath}` in {dt.datetime.now() - start_time}.")
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_AGGR_URI)
+        log.debug(f"source_dir:`{source_dir}`, filesystem: `{source_filesystem}`")
+        dspath = f"{source_dir}/vs30={vs30}/nloc_0={downsample_code(nloc, 1.0)}"
+        log.debug(f"Opening dspath :`{dspath}`")
+        dataset = ds.dataset(
+            dspath,
+            filesystem=source_filesystem,
+            partitioning='hive',
+            format='parquet',
+            schema=get_hazard_aggregate_schema(),
+        )
+        log.info(f"Opened dataset `{dataset}` in {dt.datetime.now() - start_time}.")
     except Exception as e:  # pragma: no cover
-        raise RuntimeError(f"Failed to open dataset {dspath}: {e}")
+        raise RuntimeError(f"Failed to open dataset: {e}")
     return dataset
 
 
@@ -194,7 +216,7 @@ def get_hazard_curves_naive(
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
     """
-    log.debug('> get_hazard_curves()')
+    log.debug('> def get_hazard_curves_naive()')
     t0 = dt.datetime.now()
 
     dataset = get_dataset()
@@ -206,6 +228,7 @@ def get_hazard_curves_naive(
         & (pc.field("vs30").isin(vs30s))
         & (pc.field('hazard_model_id') == hazard_model)
     )
+    log.debug(f"filter: {flt}")
     table = dataset.to_table(filter=flt)
 
     t1 = dt.datetime.now()
@@ -247,7 +270,7 @@ def get_hazard_curves_by_vs30(
     Raises:
       RuntimeWarning: describing any dataset partitions that could not be opened.
     """
-    log.debug('> get_hazard_curves()')
+    log.debug(f'> get_hazard_curves_by_vs30({location_codes}, {vs30s},...)')
     t0 = dt.datetime.now()
 
     dataset_exceptions = []
@@ -268,7 +291,7 @@ def get_hazard_curves_by_vs30(
             & (pc.field("imt").isin(imts))
             & (pc.field('hazard_model_id') == hazard_model)
         )
-
+        log.debug(f"filter: {flt}")
         table = dataset.to_table(filter=flt)
         t1 = dt.datetime.now()
         log.debug(f"to_table for filter took {(t1 - t0).total_seconds()} seconds.")
@@ -312,7 +335,7 @@ def get_hazard_curves_by_vs30_nloc0(
     Raises:
       RuntimeWarning: describing any dataset partitions that could not be opened.
     """
-    log.debug(f'> get_hazard_curves({location_codes}, {vs30s},...)')
+    log.debug(f'> get_hazard_curves_by_vs30_nloc0({location_codes}, {vs30s},...)')
     t0 = dt.datetime.now()
 
     dataset_exceptions = []
@@ -327,8 +350,8 @@ def get_hazard_curves_by_vs30_nloc0(
 
             try:
                 dataset = get_dataset_vs30_nloc0(vs30, hloc)
-            except Exception:
-                dataset_exceptions.append(f"Failed to open dataset for vs30={vs30}, loc={hloc}")
+            except Exception as exc:
+                dataset_exceptions.append(str(exc))
                 continue
 
             t1 = dt.datetime.now()
@@ -338,7 +361,7 @@ def get_hazard_curves_by_vs30_nloc0(
                 & (pc.field("imt").isin(imts))
                 & (pc.field('hazard_model_id') == hazard_model)
             )
-
+            log.debug(f"filter: {flt}")
             table = dataset.to_table(filter=flt)
             t2 = dt.datetime.now()
             log.debug(f"to_table for filter took {(t2 - t1).total_seconds()} seconds.")
