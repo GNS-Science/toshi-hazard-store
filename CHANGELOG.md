@@ -1,6 +1,16 @@
 # Changelog
 
 
+## [1.2.1] 2025-07-22
+
+## Changed
+ - use pyarrow module to get correct filesystem type;
+ - retain og error info for deferred errors
+ - improve debug logging
+
+### Added
+ - new script for checking aggregate datasets `check_aggs_exist.py`
+
 ## [1.2.0] 2025-07-22
 
 ### Added
