@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.1] 2025-07-22
+
+## Changed
+ - use pyarrow module to get correct filesystem type
+ - retain og error info for deferred errors
+ - improve debug logging
+ - fix dataset query failure when location resolution is not `nloc_001`
+
+### Added
+ - new script for checking aggregate datasets `check_aggs_exist.py`
 
 ## [1.2.0] 2025-07-22
 

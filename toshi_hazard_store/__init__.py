@@ -2,7 +2,7 @@
 
 __author__ = """GNS Science"""
 __email__ = 'chrisbc@artisan.co.nz'
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 
 import toshi_hazard_store.model as model

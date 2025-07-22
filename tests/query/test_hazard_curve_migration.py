@@ -116,7 +116,7 @@ def test_hazard_curve_query_data_missing_for_one_location(monkeypatch, hazagg_fi
     res = next(result)  # one curve is returned
 
     # the second curve was not ....
-    with pytest.raises(RuntimeWarning, match=r".*Failed to open dataset for .* loc=.*"):
+    with pytest.raises(RuntimeWarning, match=r".*Failed to open dataset.*"):
         next(result)  # second curve raises an exception
 
     with pytest.raises(StopIteration):
@@ -157,7 +157,7 @@ def test_hazard_curve_query_data_missing_for_vs30(monkeypatch, hazagg_fixture_fn
     res = next(result)  # one curve is returned
 
     # the second curve was not ....
-    with pytest.raises(RuntimeWarning, match=r".*Failed to open dataset for vs30=.*"):
+    with pytest.raises(RuntimeWarning, match=r".*Failed to open dataset.*"):
         next(result)  # second curve raises an exception
 
     with pytest.raises(StopIteration):
@@ -263,7 +263,7 @@ def test_hazard_curve_query_strategy_unmocked(monkeypatch, strategy):
     )
 
     # the second curve was not ....
-    with pytest.raises(RuntimeWarning, match=r".*Failed to open dataset for vs30=.*"):
+    with pytest.raises(RuntimeWarning, match=r".*Failed to open dataset.*"):
         next(result)  # second curve raises an exception
 
     with pytest.raises(StopIteration):
