@@ -2,8 +2,13 @@
 
 # Define constants
 readonly WORKDIR="./WORKDIR"
-readonly TARGET="s3://ths-poc-arrow-test/NZSHM22_RLZ"
-readonly LOG_DIR="./LOG"
+readonly TARGET="s3://ths-poc-arrow-test/NZSHM22_HB_RLZ"
+readonly LOG_DIR="./WORKDIR/LOG"
+
+# make time alias
+#readonly time="/usr/bin/time" # ubuntu/debian 
+readonly time="/opt/homebrew/bin/gtime" # macosx `brew install gnu-time` 
+
 
 # Check if the input file was provided as an argument
 if [ $# -ne 1 ]; then
@@ -19,7 +24,7 @@ if [ ! -f "$input_file" ] || [ ! -r "$input_file" ]; then
     exit 1
 fi
 
-# Loop through each line in the input file, which represents an id
+# Loop through each line in the input file, which contains a General Task ID
 while IFS= read -r id; do
 
     encoded_id="${id//\=/\%3D}"
@@ -30,7 +35,7 @@ while IFS= read -r id; do
     echo "============================" >> "$LOG_DIR/producers.log"
     {
         start_time=$(date +%s)  # Record the start time
-        /usr/bin/time -f "Time taken for ths_import %E" ths_import producers "$id" NZSHM22 -W "$WORKDIR" --verbose >> "$LOG_DIR/producers.log" 2>&1 | grep 'Time taken for' &
+        $time -f "Time taken for ths_import %E" ths_import producers "$id" NZSHM22 -W "$WORKDIR" --verbose >> "$LOG_DIR/producers.log" 2>&1 | grep 'Time taken for' &
         pid=$!
         wait $pid # Wait until the command is done.
         end_time=$(date +%s)  # Record the end time
@@ -52,7 +57,7 @@ while IFS= read -r id; do
     echo "============================" >> "$LOG_DIR/extract.log"
     {
         start_time=$(date +%s)  # Record the start time
-        /usr/bin/time -f "Time taken for ths_import %E" ths_import extract "$id" NZSHM22 -W "$WORKDIR" -O "$TARGET/$id" -CID --verbose >> "$LOG_DIR/extract.log" 2>&1 | grep 'Time taken for' &
+        $time -f "Time taken for ths_import %E" ths_import extract "$id" NZSHM22 -W "$WORKDIR" -O "$TARGET/$id" -CID --verbose >> "$LOG_DIR/extract.log" 2>&1 | grep 'Time taken for' &
         pid=$!
         wait $pid # Wait until the command is done.
         end_time=$(date +%s)  # Record the end time
@@ -75,7 +80,7 @@ while IFS= read -r id; do
     echo "============================" >> "$LOG_DIR/sanity.log"
     {
         start_time=$(date +%s)  # Record the start time
-        /usr/bin/time -f "Time taken for ths_ds_sanity %E" ths_ds_sanity count-rlz "$TARGET/$id" -x --expected-rlzs 98274384 >> "$LOG_DIR/sanity.log" 2>&1 | grep 'Time taken for' &
+        $time -f "Time taken for ths_ds_sanity %E" ths_ds_sanity count-rlz "$TARGET/$id" -x --expected-rlzs 98274384 >> "$LOG_DIR/sanity.log" 2>&1 | grep 'Time taken for' &
         pid=$!
         wait $pid # Wait until the command is done.
         end_time=$(date +%s)  # Record the end time
