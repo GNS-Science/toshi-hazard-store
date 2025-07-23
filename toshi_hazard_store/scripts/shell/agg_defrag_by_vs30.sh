@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Define constants
+readonly SOURCE="s3://ths-dataset-prod/NZSHM22_AGG_RAW"
+#readonly TARGET="s3://ths-dataset-prod/NZSHM22_AGG"
+readonly TARGET="/home/ubuntu/GNS/NZSHM22_AGG_DFG"
+readonly LOG_DIR="/home/ubuntu/GNS/LOG"
+
+# Check if the input file was provided as an argument
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <input_file>"
+    exit 1
+fi
+
+input_file="$1"
+
+# Check if the input file exists and is readable
+if [ ! -f "$input_file" ] || [ ! -r "$input_file" ]; then
+    echo "Error: Input file '$input_file' does not exist or is not readable."
+    exit 1
+fi
+
+# Loop through each line in the input file, which represents a vs30 partition e.g. `vs30=150`
+while IFS= read -r id; do
+
+    # Call the defrag program with the current id as an argument and measure time taken
+    echo "Running ths_ds_defrag $id"
+    echo "Running ths_ds_defrag $id" >> "$LOG_DIR/agg_defrag.log"
+    echo "============================" >> "$LOG_DIR/agg_defrag.log"
+    {
+        start_time=$(date +%s)  # Record the start time
+        /usr/bin/time -f "Time taken for ths_ds_defrag %E" ths_ds_defrag "$SOURCE/$id" "$TARGET/$id" -p "nloc_0" --verbose >> "$LOG_DIR/agg_defrag.log" 2>&1 | grep 'Time taken for' &
+        pid=$!
+        wait $pid # Wait until the command is done.
+        end_time=$(date +%s)  # Record the end time
+    } &> /dev/null
+
+    elapsed=$((end_time - start_time))  # Calculate elapsed time in seconds
+    echo "Elapsed time: $elapsed seconds"
+
+    if [ $? -ne 0 ]; then
+        echo "Error: ths_ds_defrag failed with id '$id'. Exiting loop."
+        break
+    fi
+    echo "Completed ths_ds_defrag $id" >> "$LOG_DIR/agg_defrag.log"
+    echo "==============================" >> "$LOG_DIR/agg_defrag.log"
+
+    echo "Processing completed for $id"
+
+done < "$input_file"
+
+echo "All ids processed."
