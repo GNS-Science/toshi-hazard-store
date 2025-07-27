@@ -48,9 +48,7 @@ def source_folder_iterator(source_folder, levels):
     Raises:
         NotImplementedError: If more than two levels are specified.
     """
-    if levels == 0:
-        yield source_folder
-    elif levels == 1:
+    if levels == 1:
         for partition_folder in source_folder.iterdir():
             yield partition_folder.name
     elif levels == 2:
@@ -58,13 +56,13 @@ def source_folder_iterator(source_folder, levels):
             for partition_folder in folder.iterdir():
                 yield f"{folder.name}/{partition_folder.name}"
     else:
-        raise NotImplementedError("max of two levels is supported.")
+        raise NotImplementedError("Either one or two levels is supported.")
 
 
 @main.command()
 @click.argument('dataset0', type=str)
 @click.argument('dataset1', type=str)
-@click.option('-l', '--levels', help="how many partition (folder) levels to subdivide the source folder by", default=0)
+@click.option('-l', '--levels', help="how many partition (folder) levels to subdivide the source folder by", default=1)
 @click.option('-cid', '--calc-id', default=None)
 @click.option('--count', '-n', type=int, default=10)
 @click.option('-v', '--verbose', is_flag=True, default=False)
@@ -131,6 +129,7 @@ def rlzs(context, dataset0, dataset1, levels, calc_id, count, verbose, exit_on_e
             df1 = ds1.to_table(filter=flt).to_pandas().set_index('rlz').sort_index()
 
             for idx in range(df0.shape[0]):
+                # Check values agree
                 l0 = df0.iloc[idx]['values']
                 l1 = df1.iloc[idx]['values']
                 if not (l0 == l1).all():
@@ -142,6 +141,12 @@ def rlzs(context, dataset0, dataset1, levels, calc_id, count, verbose, exit_on_e
                     click.echo()
                     click.echo(f'\tl1: {df1.iloc[idx]}')
 
+                    if exit_on_error:
+                        raise ValueError()
+
+                # check vs30 agree
+                if not df0.iloc[idx].vs30 == df1.iloc[idx].vs30:
+                    click.echo(f"\tvs30 d differ... {df0.iloc[idx].vs30} vs. {df1.iloc[idx].vs30} ")
                     if exit_on_error:
                         raise ValueError()
 
