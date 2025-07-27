@@ -240,7 +240,7 @@ def report_rlzs_grouped_by_partition(source: str, verbose, bail_on_error=True) -
         uniq_srcs_gmms = len(list(unique_srcs_gmms.unique()))
         uniq_vs30 = len(list(df0.vs30.unique()))
 
-        consistent = (uniq_locs * uniq_imts * uniq_srcs_gmms * uniq_vs30) == df0.shape[0]
+        consistent = (uniq_locs * uniq_imts * uniq_srcs_gmms) == df0.shape[0]
         click.echo(f"{filter}, {df0.shape[0]}, {uniq_locs}, {uniq_imts}, {uniq_srcs_gmms}, {uniq_vs30}, {consistent}")
         count_all += df0.shape[0]
 
