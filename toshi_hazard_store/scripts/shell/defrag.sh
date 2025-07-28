@@ -1,9 +1,17 @@
 #!/bin/bash
 
 # Define constants
-readonly SOURCE="s3://ths-poc-arrow-test/NZSHM22_RLZ"
-readonly TARGET="s3://ths-dataset-prod/NZSHM22_RLZ"
-readonly LOG_DIR="./LOG"
+readonly SOURCE="./WORKDIR/ARROW"
+# "s3://ths-poc-arrow-test/NZSHM22_RLZ"
+readonly TARGET="./WORKDIR/ARROW/HB_RLZ_DFG"
+#"s3://ths-dataset-prod/NZSHM22_RLZ"
+readonly LOG_DIR="./WORKDIR/LOG"
+
+
+# make time alias
+#readonly time="$time" # ubuntu/debian 
+readonly time="/opt/homebrew/bin/gtime" # macosx `brew install gnu-time` 
+
 
 # Check if the input file was provided as an argument
 if [ $# -ne 1 ]; then
@@ -28,7 +36,7 @@ while IFS= read -r id; do
     echo "============================" >> "$LOG_DIR/defrag.log"
     {
         start_time=$(date +%s)  # Record the start time
-        /usr/bin/time -f "Time taken for ths_ds_defrag %E" ths_ds_defrag "$SOURCE/$id" "$TARGET" --verbose >> "$LOG_DIR/defrag.log" 2>&1 | grep 'Time taken for' &
+        $time -f "Time taken for ths_ds_defrag %E" ths_ds_defrag "$SOURCE/$id" "$TARGET" --verbose >> "$LOG_DIR/defrag.log" 2>&1 | grep 'Time taken for' &
         pid=$!
         wait $pid # Wait until the command is done.
         end_time=$(date +%s)  # Record the end time

@@ -46,7 +46,6 @@ def build_nloc0_series(nloc_001_locations: List[coded_location.CodedLocation], n
 
 def generate_rlz_record_batches(
     extractor,
-    vs30: float,
     imtl_keys: Iterable[str],
     calculation_id: str,
     compatible_calc_id: str,
@@ -58,10 +57,20 @@ def generate_rlz_record_batches(
     rlz_map = build_rlz_mapper(extractor)
 
     # get the site index values
-    nloc_001_locations = []
-    for props in extractor.get('sitecol').to_dict()['array']:
-        site_loc = coded_location.CodedLocation(lat=props[2], lon=props[1], resolution=0.001)
+    nloc_001_locations, site_vs30s = [], []
+    df0 = extractor.get('sitecol').to_dframe()
+    for idx in range(df0.shape[0]):
+        site_loc = coded_location.CodedLocation(lat=df0.iloc[idx].lat, lon=df0.iloc[idx].lon, resolution=0.001)
         nloc_001_locations.append(site_loc)  # locations in OG order
+        site_vs30s.append(df0.iloc[idx].vs30)  # site_vs30 in OG orderß
+
+    #
+    # >>> extractor.get('sitecol')
+    # <ArrayWrapper(19480,)>
+    # >>> extractor.get('sitecol').to_dframe()
+    #         sids      lon     lat  depth  backarc    vs30  vs30measured  z1pt0  z2pt5
+    # 0          0  176.121 -39.289    0.0        0  1000.0         False    8.0    0.4
+    # 1          1  176.110 -39.289    0.0        0  1000.0         False    8.0    0.4
 
     nloc_0_map = build_nloc_0_mapping(nloc_001_locations)
     nloc_0_series = build_nloc0_series(nloc_001_locations, nloc_0_map)
@@ -82,7 +91,7 @@ def generate_rlz_record_batches(
         nloc_0_idx = np.repeat(nloc_0_series, n_imts)  # 0,0.0,0,0..............56,56
         imt_idx = np.tile(np.arange(n_imts), n_sites)  # 0,1,2,3.....0,1,2,3....26,27
         rlz_idx = np.full(n_sites * n_imts, r_idx)  # 0..........................0
-        vs30s_series = np.full(n_sites * n_imts, vs30)
+        vs30s_series = np.repeat(np.array(site_vs30s), n_imts)
         calculation_id_idx = np.full(n_sites * n_imts, 0)
         compatible_calc_idx = np.full(n_sites * n_imts, 0)
         producer_digest_idx = np.full(n_sites * n_imts, 0)
@@ -155,7 +164,7 @@ def rlzs_to_record_batch_reader(
     oqparam = json.loads(extractor.get('oqparam').json)
     assert oqparam['calculation_mode'] == 'classical', "calculation_mode is not 'classical'"
 
-    vs30 = int(oqparam['reference_vs30_value'])  # this is not set for site_specific
+    # vs30 = int(oqparam['reference_vs30_value'])  # this is not set for site_specific
 
     # get the IMT props
     # imtls = oqparam['hazard_imtls']  # dict of imt and the levels used at each imt e.g {'PGA': [0.011. 0.222]}
@@ -165,7 +174,7 @@ def rlzs_to_record_batch_reader(
     schema = get_hazard_realisation_schema(use_64bit_values)
 
     batches = generate_rlz_record_batches(
-        extractor, vs30, imtl_keys, calculation_id, compatible_calc_id, producer_digest, config_digest
+        extractor, imtl_keys, calculation_id, compatible_calc_id, producer_digest, config_digest
     )
 
     record_batch_reader = pa.RecordBatchReader.from_batches(schema, batches)

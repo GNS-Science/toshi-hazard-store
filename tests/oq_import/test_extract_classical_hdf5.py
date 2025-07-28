@@ -110,11 +110,10 @@ def test_realisation_batches_from_hdf5(tmp_path):
     extractor = Extractor(str(hdf5_fixture))
     oqparam = json.loads(extractor.get('oqparam').json)
     assert oqparam['calculation_mode'] == 'classical', "calculation_mode is not 'classical'"
-    vs30 = int(oqparam['reference_vs30_value'])
     oq = extractor.dstore['oqparam']  # old skool way
     imtl_keys = sorted(list(oq.imtls.keys()))
 
-    batches = list(extract_classical_hdf5.generate_rlz_record_batches(extractor, vs30, imtl_keys, 'A', 'B', 'C', 'D'))
+    batches = list(extract_classical_hdf5.generate_rlz_record_batches(extractor, imtl_keys, 'A', 'B', 'C', 'D'))
     assert len(batches) == 12
 
 
