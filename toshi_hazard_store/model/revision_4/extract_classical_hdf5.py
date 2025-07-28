@@ -58,10 +58,11 @@ def generate_rlz_record_batches(
 
     # get the site index values
     nloc_001_locations, site_vs30s = [], []
-    for props in extractor.get('sitecol').to_dict()['array']:
-        site_loc = coded_location.CodedLocation(lat=props[2], lon=props[1], resolution=0.001)
-        site_vs30s.append(props[5])  # site_vs30 in OG order
+    df0 = extractor.get('sitecol').to_dframe()
+    for idx in range(df0.shape[0]):
+        site_loc = coded_location.CodedLocation(lat=df0.iloc[idx].lat, lon=df0.iloc[idx].lon, resolution=0.001)
         nloc_001_locations.append(site_loc)  # locations in OG order
+        site_vs30s.append(df0.iloc[idx].vs30)  # site_vs30 in OG orderß
 
     #
     # >>> extractor.get('sitecol')

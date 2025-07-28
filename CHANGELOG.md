@@ -7,6 +7,7 @@
 ### Changed
  - HDF5 classical extraction obtains vs30 values from HDF5. [`#99`](https://github.com/GNS-Science/toshi-hazard-store/issues/99)
    This supports hazard with site-specific vs30 and regular jobs. 
+ - use hdf5 column names rather than indexes to extract site info.
  - move shell scripts out of docs;
  - fix ths_ds_sanity check;
  - move shell scripts;
