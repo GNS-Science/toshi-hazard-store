@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.2] 2025-07-8
+
+### Added
+ - add vs30 test to `ths_ds_check.py`; fix level options;
+
+## Changed
+ - HDF5 classical extraction obtains vs30 values from HDF5.[`#99`](https://github.com/GNS-Science/toshi-hazard-store/issues/99)
+   This supports hazard with site-specific vs30 and regular jobs. 
+ - move shell scripts out of docs;
+ - fix ths_ds_sanity check;
+ - move shell scripts;
+ - make time cmd configurable;
+
 ## [1.2.1] 2025-07-22
 
 ## Changed

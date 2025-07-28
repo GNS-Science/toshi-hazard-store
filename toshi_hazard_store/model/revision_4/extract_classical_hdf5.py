@@ -46,7 +46,6 @@ def build_nloc0_series(nloc_001_locations: List[coded_location.CodedLocation], n
 
 def generate_rlz_record_batches(
     extractor,
-    # vs30: float,
     imtl_keys: Iterable[str],
     calculation_id: str,
     compatible_calc_id: str,
@@ -61,7 +60,7 @@ def generate_rlz_record_batches(
     nloc_001_locations, site_vs30s = [], []
     for props in extractor.get('sitecol').to_dict()['array']:
         site_loc = coded_location.CodedLocation(lat=props[2], lon=props[1], resolution=0.001)
-        site_vs30s.append(props[5]) # site_vs30 in OG order
+        site_vs30s.append(props[5])  # site_vs30 in OG order
         nloc_001_locations.append(site_loc)  # locations in OG order
 
     #
@@ -71,7 +70,6 @@ def generate_rlz_record_batches(
     #         sids      lon     lat  depth  backarc    vs30  vs30measured  z1pt0  z2pt5
     # 0          0  176.121 -39.289    0.0        0  1000.0         False    8.0    0.4
     # 1          1  176.110 -39.289    0.0        0  1000.0         False    8.0    0.4
-
 
     nloc_0_map = build_nloc_0_mapping(nloc_001_locations)
     nloc_0_series = build_nloc0_series(nloc_001_locations, nloc_0_map)
@@ -92,7 +90,6 @@ def generate_rlz_record_batches(
         nloc_0_idx = np.repeat(nloc_0_series, n_imts)  # 0,0.0,0,0..............56,56
         imt_idx = np.tile(np.arange(n_imts), n_sites)  # 0,1,2,3.....0,1,2,3....26,27
         rlz_idx = np.full(n_sites * n_imts, r_idx)  # 0..........................0
-        # vs30s_series = np.full(n_sites * n_imts, vs30)
         vs30s_series = np.repeat(np.array(site_vs30s), n_imts)
         calculation_id_idx = np.full(n_sites * n_imts, 0)
         compatible_calc_idx = np.full(n_sites * n_imts, 0)
