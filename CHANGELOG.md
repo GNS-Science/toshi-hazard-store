@@ -1,12 +1,11 @@
 # Changelog
 
-## [1.2.2] 2025-07-8
-
+## [1.2.2] 2025-07-28
 ### Added
  - add vs30 test to `ths_ds_check.py`; fix level options;
 
-## Changed
- - HDF5 classical extraction obtains vs30 values from HDF5.[`#99`](https://github.com/GNS-Science/toshi-hazard-store/issues/99)
+### Changed
+ - HDF5 classical extraction obtains vs30 values from HDF5. [`#99`](https://github.com/GNS-Science/toshi-hazard-store/issues/99)
    This supports hazard with site-specific vs30 and regular jobs. 
  - move shell scripts out of docs;
  - fix ths_ds_sanity check;
@@ -14,8 +13,7 @@
  - make time cmd configurable;
 
 ## [1.2.1] 2025-07-22
-
-## Changed
+### Changed
  - use pyarrow module to get correct filesystem type
  - retain og error info for deferred errors
  - improve debug logging
@@ -25,16 +23,14 @@
  - new script for checking aggregate datasets `check_aggs_exist.py`
 
 ## [1.2.0] 2025-07-22
-
 ### Added
  - new function `toshi_hazard_store.query.datasets.get_hazard_curves` 
-   for compatibility with legacy dynamodb queries. [`#121](https://github.com/GNS-Science/toshi-hazard-store/issues/121)
+   for compatibility with legacy dynamodb queries. [`#121`](https://github.com/GNS-Science/toshi-hazard-store/issues/121)
 
 ## [1.1.3] 2025-07
+### Changed
 
-## Changed
-
- - missed dataset exceptions are now deferred [`#120](https://github.com/GNS-Science/toshi-hazard-store/issues/120)
+ - missed dataset exceptions are now deferred [`#120`](https://github.com/GNS-Science/toshi-hazard-store/issues/120)
 
 ## [1.1.2] 2025-07-07
 
