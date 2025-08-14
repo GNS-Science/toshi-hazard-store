@@ -1,7 +1,9 @@
 import json
+import copy
 from pathlib import Path
 import pandas as pd
 from pandas.testing import assert_frame_equal
+import dataclasses
 
 import pyarrow.dataset as ds
 import pytest
@@ -21,6 +23,8 @@ from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
 from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_gmm_map, build_rlz_source_map
 from toshi_hazard_store.oq_import.transform import parse_logic_tree_branches
+from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_mapper
+
 
 
 def build_maps(hdf5_file):
@@ -59,6 +63,30 @@ def test_parse_logic_tree_branches():
     assert_frame_equal(source_lt, source_lt_expected, check_names=False, check_dtype=False)
     assert_frame_equal(gsim_lt, gsim_lt_expected, check_names=False, check_dtype=False)
     assert_frame_equal(rlz_lt, rlz_lt_expected, check_names=False, check_dtype=False)
+
+
+def test_rlz_mapper():
+    def to_dict(rlz_record):
+        rlz_record_dict = rlz_record._asdict()
+        for k,v in rlz_record_dict.items():
+            if dataclasses.is_dataclass(v):
+                rlz_record_dict[k] = dataclasses.asdict(v)
+        return rlz_record_dict
+
+    hdf5_file = (
+        Path(__file__).parent.parent
+        / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz/calc_1.hdf5'
+    )
+    rlz_mapper_file = Path(__file__).parent.parent / 'fixtures/oq_import/rlz_mapper.json'
+    extractor = Extractor(str(hdf5_file))
+    rlz_mapper = build_rlz_mapper(extractor)
+    rlz_mapper_dict = {str(k):to_dict(v) for k,v in rlz_mapper.items()}
+    # with rlz_mapper_file.open('w') as mf:
+    #     json.dump(rlz_mapper_dict, mf)
+
+    expected = json.loads(rlz_mapper_file.read_text())
+    assert rlz_mapper_dict == expected
+
 
 # @pytest.mark.skip('fixtures not checked in')
 def test_logic_tree_registry_lookup():
