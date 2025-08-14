@@ -66,12 +66,16 @@ def test_parse_logic_tree_branches():
 
 
 def test_rlz_mapper():
-    def to_dict(rlz_record):
-        rlz_record_dict = rlz_record._asdict()
-        for k,v in rlz_record_dict.items():
-            if dataclasses.is_dataclass(v):
-                rlz_record_dict[k] = dataclasses.asdict(v)
-        return rlz_record_dict
+    # we have to jump through a few hoops to serialize/deserialize the realization mapper
+    def to_dict(rlz_mapper):
+        rlz_mapper_dict = {}
+        for ind,rlz_record in rlz_mapper.items():
+            rlz_record_dict = rlz_record._asdict()
+            for k,v in rlz_record_dict.items():
+                if dataclasses.is_dataclass(v):
+                    rlz_record_dict[k] = dataclasses.asdict(v)
+            rlz_mapper_dict[str(ind)] = rlz_record_dict
+        return rlz_mapper_dict
 
     hdf5_file = (
         Path(__file__).parent.parent
@@ -80,10 +84,7 @@ def test_rlz_mapper():
     rlz_mapper_file = Path(__file__).parent.parent / 'fixtures/oq_import/rlz_mapper.json'
     extractor = Extractor(str(hdf5_file))
     rlz_mapper = build_rlz_mapper(extractor)
-    rlz_mapper_dict = {str(k):to_dict(v) for k,v in rlz_mapper.items()}
-    # with rlz_mapper_file.open('w') as mf:
-    #     json.dump(rlz_mapper_dict, mf)
-
+    rlz_mapper_dict = to_dict(rlz_mapper)
     expected = json.loads(rlz_mapper_file.read_text())
     assert rlz_mapper_dict == expected
 
