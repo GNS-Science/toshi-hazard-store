@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+import pandas as pd
+from pandas.testing import assert_frame_equal
 
 import pyarrow.dataset as ds
 import pytest
@@ -37,6 +39,26 @@ def build_maps(hdf5_file):
         # return False
     return True
 
+def test_parse_logic_tree_branches():
+    hdf5_file = Path(__file__).parent.parent / 'fixtures/oq_import/calc_12.hdf5'
+    source_file = Path(__file__).parent.parent / 'fixtures/oq_import/source_lt.json'
+    gsim_file = Path(__file__).parent.parent / 'fixtures/oq_import/gsim_lt.json'
+    rlz_file = Path(__file__).parent.parent / 'fixtures/oq_import/rlz_lt.json'
+
+    extractor = Extractor(str(hdf5_file))
+    source_lt, gsim_lt, rlz_lt = parse_logic_tree_branches(extractor)
+
+    # source_lt.to_json(source_file)
+    # gsim_lt.to_json(gsim_file)
+    # rlz_lt.to_json(rlz_file)
+    
+    source_lt_expected = pd.read_json(source_file)
+    gsim_lt_expected = pd.read_json(gsim_file)
+    rlz_lt_expected = pd.read_json(rlz_file)
+    
+    assert_frame_equal(source_lt, source_lt_expected, check_names=False, check_dtype=False)
+    assert_frame_equal(gsim_lt, gsim_lt_expected, check_names=False, check_dtype=False)
+    assert_frame_equal(rlz_lt, rlz_lt_expected, check_names=False, check_dtype=False)
 
 # @pytest.mark.skip('fixtures not checked in')
 def test_logic_tree_registry_lookup():
