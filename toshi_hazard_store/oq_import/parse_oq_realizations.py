@@ -125,7 +125,10 @@ def build_rlz_map(
     rlz_map = dict()
     for rlz in realizations:
         idx = rlz.ordinal
-        path = '_'
+
+        # this nolonger mirrors the OpenQuake path (e.g. 'AA~A') becasue we are using the full source name
+        # and the full gsim id.
+        path = '~'.join((rlz.source_path[0], rlz.gsim_path[0]))
         sources = source_map[rlz.source_path[0]]
         gmms = gmm_map[rlz.gsim_path[0]]
         rlz_map[idx] = RealizationRecord(idx=idx, path=path, sources=sources, gmms=gmms)
