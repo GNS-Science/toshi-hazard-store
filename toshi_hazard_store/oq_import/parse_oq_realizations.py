@@ -25,8 +25,7 @@ RealizationRecord = collections.namedtuple('RealizationRecord', 'idx, path, sour
 
 
 def build_rlz_mapper(extractor: 'Extractor') -> dict[int, RealizationRecord]:
-    """
-    Builds a realization mapper from an extractor.
+    """Builds a realization mapper from an extractor.
 
     Args:
         extractor (Extractor): An OpenQuake Extractor object.
@@ -40,6 +39,16 @@ def build_rlz_mapper(extractor: 'Extractor') -> dict[int, RealizationRecord]:
 def get_rlz_mapper(
     source_branches: dict[str, str], gsim_branches: dict[str, str], realizations: list[Realization]
 ) -> dict[int, RealizationRecord]:
+    """Build a realization mapper from source branches, ground motion branches, and realizations.
+
+    Args:
+        source_branches: the source branch dict keyed by branch id and valued by branch name.
+        gsim_branches: the ground motion branch dict keyed by branch id and valued by branch name.
+        realizations: a list of Realizations.
+
+    Returns:
+        A dictionary mapping realization indices to their corresponding RealizationRecord objects.
+    """
     gmm_map = build_rlz_gmm_map(gsim_branches)
     source_map = build_rlz_source_map(source_branches)
     rlz_map = build_rlz_map(realizations, source_map, gmm_map)
@@ -47,6 +56,14 @@ def get_rlz_mapper(
 
 
 def build_rlz_gmm_map(gsim_branches: dict[str, str]) -> dict[str, branch_registry.BranchRegistryEntry]:
+    """Build a map of realizations to GMMs.
+
+    Args:
+        gsim_branches: the ground motion branch dict keyed by branch id and valued by branch name.
+
+    Returns:
+        A dictionary mapping realization IDs to branch registry entries.
+    """
     rlz_gmm_map = {}
     for gsim_id, gsim in gsim_branches.items():
         log.debug(f"build_rlz_gmm_map(gsim_lt): {gsim_id} {gsim}")
@@ -57,6 +74,14 @@ def build_rlz_gmm_map(gsim_branches: dict[str, str]) -> dict[str, branch_registr
 
 
 def build_rlz_source_map(source_branches: dict[str, str]) -> dict[str, branch_registry.BranchRegistryEntry]:
+    """Build a map of realizations to sources.
+
+    Args:
+        source_branches: the source branch dict keyed by branch id and valued by branch name.
+
+    Returns:
+        A dictionary mapping realization IDs to branch registry entries.
+    """
     rlz_source_map = dict()
     for source_str in source_branches.values():
         log.debug(f"build_rlz_source_map(source_lt): {source_str}")
@@ -84,9 +109,7 @@ def build_rlz_map(
     source_map: dict[str, branch_registry.BranchRegistryEntry],
     gmm_map: dict[str, branch_registry.BranchRegistryEntry],
 ) -> dict[int, RealizationRecord]:
-    """
-    Builds a dictionary mapping realization indices to their corresponding
-    RealizationRecord objects.
+    """Builds a dictionary mapping realization indices to their corresponding RealizationRecord objects.
 
     Args:
         rlz_lt (pandas.DataFrame): The dataframe containing the logic tree branches.
@@ -94,8 +117,7 @@ def build_rlz_map(
         gmm_map (dict): A map of GMM identifiers to BranchRegistryEntry objects.
 
     Returns:
-        dict[int, RealizationRecord]: A dictionary mapping realization indices
-            to their corresponding RealizationRecord objects.
+        A dictionary mapping realization indices to their corresponding RealizationRecord objects.
     """
     # TODO: these realizations only handle one source and one gmm branch. We may want to handle at least multiple
     # gmm branches (e.g. sources with multiple TRTs). We may also want to hanlde multiple source branches, such
