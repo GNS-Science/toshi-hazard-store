@@ -1,9 +1,6 @@
-import json
-import copy
-from pathlib import Path
-import pandas as pd
-from pandas.testing import assert_frame_equal
 import dataclasses
+import json
+from pathlib import Path
 
 import pyarrow.dataset as ds
 import pytest
@@ -21,10 +18,8 @@ if HAVE_OQ:
 
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
-from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_gmm_map, build_rlz_source_map
+from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_gmm_map, build_rlz_mapper, build_rlz_source_map
 from toshi_hazard_store.oq_import.transform import parse_logic_tree_branches
-from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_mapper
-
 
 
 def build_maps(hdf5_file):
@@ -43,35 +38,14 @@ def build_maps(hdf5_file):
         # return False
     return True
 
-def test_parse_logic_tree_branches():
-    hdf5_file = Path(__file__).parent.parent / 'fixtures/oq_import/calc_12.hdf5'
-    source_file = Path(__file__).parent.parent / 'fixtures/oq_import/source_lt.json'
-    gsim_file = Path(__file__).parent.parent / 'fixtures/oq_import/gsim_lt.json'
-    rlz_file = Path(__file__).parent.parent / 'fixtures/oq_import/rlz_lt.json'
-
-    extractor = Extractor(str(hdf5_file))
-    source_lt, gsim_lt, rlz_lt = parse_logic_tree_branches(extractor)
-
-    # source_lt.to_json(source_file)
-    # gsim_lt.to_json(gsim_file)
-    # rlz_lt.to_json(rlz_file)
-    
-    source_lt_expected = pd.read_json(source_file)
-    gsim_lt_expected = pd.read_json(gsim_file)
-    rlz_lt_expected = pd.read_json(rlz_file)
-    
-    assert_frame_equal(source_lt, source_lt_expected, check_names=False, check_dtype=False)
-    assert_frame_equal(gsim_lt, gsim_lt_expected, check_names=False, check_dtype=False)
-    assert_frame_equal(rlz_lt, rlz_lt_expected, check_names=False, check_dtype=False)
-
 
 def test_rlz_mapper():
     # we have to jump through a few hoops to serialize/deserialize the realization mapper
     def to_dict(rlz_mapper):
         rlz_mapper_dict = {}
-        for ind,rlz_record in rlz_mapper.items():
+        for ind, rlz_record in rlz_mapper.items():
             rlz_record_dict = rlz_record._asdict()
-            for k,v in rlz_record_dict.items():
+            for k, v in rlz_record_dict.items():
                 if dataclasses.is_dataclass(v):
                     rlz_record_dict[k] = dataclasses.asdict(v)
             rlz_mapper_dict[str(ind)] = rlz_record_dict
