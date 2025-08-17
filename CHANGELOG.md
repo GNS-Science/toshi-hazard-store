@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.3] 2025-08-15
+### Changed
+ - HDF5 extraction uses OpenQuake logic tree API solving compatibility issue with openquake-engine>=3.21.0
+
 ## [1.2.2] 2025-07-28
 ### Added
  - add vs30 test to `ths_ds_check.py`; fix level options;

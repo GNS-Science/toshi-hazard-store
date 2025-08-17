@@ -1,8 +1,8 @@
 """Top-level package for toshi-hazard-store."""
 
 __author__ = """GNS Science"""
-__email__ = 'chrisbc@artisan.co.nz'
-__version__ = '1.2.2'
+__email__ = 'nshm@gns.cri.nz'
+__version__ = '1.2.3'
 
 
 import toshi_hazard_store.model as model
