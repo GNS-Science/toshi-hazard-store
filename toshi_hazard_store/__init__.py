@@ -1,7 +1,7 @@
 """Top-level package for toshi-hazard-store."""
 
 __author__ = """GNS Science"""
-__email__ = 'chrisbc@artisan.co.nz'
+__email__ = 'nshm@gns.cri.nz'
 __version__ = '1.2.3'
 
 
