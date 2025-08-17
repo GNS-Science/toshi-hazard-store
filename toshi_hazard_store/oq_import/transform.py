@@ -1,7 +1,4 @@
-"""Helper functions to export an openquake calculation and save it with toshi-hazard-store.
-
-Courtesy of Anne Hulsey
-"""
+"""Helper functions to export an openquake calculation and save it with toshi-hazard-store."""
 
 from collections import namedtuple
 from dataclasses import dataclass
