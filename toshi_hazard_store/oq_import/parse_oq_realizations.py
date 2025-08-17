@@ -33,22 +33,7 @@ def build_rlz_mapper(extractor: 'Extractor') -> dict[int, RealizationRecord]:
     Returns:
         dict[int, RealizationRecord]: A dictionary of realization records.
     """
-    return get_rlz_mapper(*parse_logic_tree_branches(extractor))
-
-
-def get_rlz_mapper(
-    source_branches: dict[str, str], gsim_branches: dict[str, str], realizations: list[Realization]
-) -> dict[int, RealizationRecord]:
-    """Build a realization mapper from source branches, ground motion branches, and realizations.
-
-    Args:
-        source_branches: the source branch dict keyed by branch id and valued by branch name.
-        gsim_branches: the ground motion branch dict keyed by branch id and valued by branch name.
-        realizations: a list of Realizations.
-
-    Returns:
-        A dictionary mapping realization indices to their corresponding RealizationRecord objects.
-    """
+    source_branches, gsim_branches, realizations = parse_logic_tree_branches(extractor)
     gmm_map = build_rlz_gmm_map(gsim_branches)
     source_map = build_rlz_source_map(source_branches)
     rlz_map = build_rlz_map(realizations, source_map, gmm_map)
