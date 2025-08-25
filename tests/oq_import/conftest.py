@@ -149,10 +149,10 @@ def hdf5_calc_fixture():
 
 
 @pytest.fixture
-def mock_task_args_file_path(tmp_path, latest_config):
+def mock_task_args_file_path(tmp_path, general_task_id, task_id, latest_config):
 
     # mock artefects
-    subtasks_folder = tmp_path / GT_ID / 'subtasks'
+    subtasks_folder = tmp_path / general_task_id / 'subtasks'
     subtasks_folder.mkdir(parents=True)
     # task_id = '12345'
     ta_fixt = json.load(open(latest_config, 'r'))
@@ -170,7 +170,7 @@ def mock_task_args_file_path(tmp_path, latest_config):
         "site_params-locations_file": None,
     }
 
-    task_args_file = subtasks_folder / str(TASK_ID) / TASK_ARGS_JSON
+    task_args_file = subtasks_folder / str(task_id) / TASK_ARGS_JSON
     task_args_file.parent.mkdir()
     task_args_file.write_text(json.dumps(ta))
     # config = oq_config.config_from_task(task_id, subtasks_folder)

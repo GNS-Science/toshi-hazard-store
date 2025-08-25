@@ -42,7 +42,7 @@ def test_compatible_hazard_calculation_round_trip(storage_path):
 
 def test_compatible_hazard_calculation_update(ch_manager, compatible_hazard_calc_data):
     new_updated_at = datetime.now(timezone.utc)
-    data_to_update = {"updated_at": new_updated_at.isoformat()}
+    data_to_update = {"updated_at": new_updated_at}
     ch_manager.update(compatible_hazard_calc_data["unique_id"], data_to_update)
 
     chc = ch_manager.load(compatible_hazard_calc_data["unique_id"])
@@ -78,7 +78,7 @@ def test_hazard_curve_producer_config_create_load(hcp_manager, hazard_curve_prod
 
 def test_hazard_curve_producer_config_update(hcp_manager, hazard_curve_producer_config_data):
     new_updated_at = datetime.now(timezone.utc)
-    data_to_update = {"updated_at": new_updated_at.isoformat()}
+    data_to_update = {"updated_at": new_updated_at}
     hcp_manager.update("ImageDigest1234567890", data_to_update)
 
     hcp = hcp_manager.load("ImageDigest1234567890")

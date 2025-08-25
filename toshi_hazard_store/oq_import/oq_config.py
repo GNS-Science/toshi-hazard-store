@@ -110,7 +110,10 @@ def process_hdf5(
             hdf5_file_name = calc_files[0]
             log.info(f"extracting {hdf5_file_name} from {hdf5_archive} into {subtask_folder}")
             myzip.extract(hdf5_file_name, subtask_folder)
-            hdf5_archive.unlink()  # delete the zip
+
+        # delete the archive
+        hdf5_archive.unlink()
+
     else:  # pragma: no cover
         log.info('skipping hdf5 download - files exist.')
 
