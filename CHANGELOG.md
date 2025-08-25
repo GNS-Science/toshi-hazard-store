@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.4] 2025-08
+### Added
+ - GHA tests: add python`3.12` and `windows-latest` to matrix.
+
 ## [1.2.3] 2025-08-15
 ### Changed
  - HDF5 extraction uses OpenQuake logic tree API solving compatibility issue with openquake-engine>=3.21.0
