@@ -4,12 +4,16 @@ Basic model migration, structure
 
 import itertools
 
+import pandas as pd
+import pyarrow as pa
 import pyarrow.dataset as ds
 import pytest
 from moto import mock_dynamodb
 from pyarrow import fs
 
 from toshi_hazard_store.model import drop_r4, migrate_r4
+
+# from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.model.revision_4 import hazard_aggregate_curve
 
@@ -149,23 +153,49 @@ class TestRevisionFourModelCreation_WithAdaption:
         assert res.values[0] == m.values[0]
         assert res.sort_key == '-38.160~178.247:0250:PGA:mean:NSHM_DUMMY_MODEL'
 
-    @pytest.mark.skip("Test needs schema, but do we still want this feature???")
-    def test_HazardAggregation_roundtrip_dataset(self, generate_rev4_aggregation_models, tmp_path):
+
+@pytest.fixture(scope='function')
+def pyarrow_aggregation_models(many_rlz_args):
+    def model_generator():
+        for loc, vs30, imt, agg in itertools.product(
+            many_rlz_args["locs"][:5], many_rlz_args["vs30s"], many_rlz_args["imts"], ['mean', 'cov', '0.95']
+        ):
+            yield dict(
+                compatible_calc_id="NZSHM22",
+                hazard_model_id="MyNewModel",
+                nloc_001=loc.resample(0.001).code,
+                nloc_0=loc.resample(1).code,
+                imt=imt,
+                vs30=vs30,
+                aggr=agg,
+                values=[(x / 1000) for x in range(44)],
+            )
+
+    df = pd.DataFrame(model_generator())
+    yield pa.Table.from_pandas(df)
+
+
+class TestPyarrowModelCreation:
+
+    # @pytest.mark.skip("Test needs schema, but do we still want this feature???")
+    def test_HazardAggregation_roundtrip_dataset(self, pyarrow_aggregation_models, tmp_path):
 
         output_folder = tmp_path / "ds"
 
-        models = generate_rev4_aggregation_models()
+        models = pyarrow_aggregation_models
+
+        print(models)
 
         filesystem = fs.LocalFileSystem()
 
         # write the dataset
-        model_count = pyarrow_dataset.append_models_to_dataset(models, output_folder, filesystem=filesystem)
+        pyarrow_dataset.append_models_to_dataset(models, output_folder, filesystem=filesystem)
 
         # read and check the dataset
         dataset = ds.dataset(output_folder, filesystem=filesystem, format='parquet', partitioning='hive')
         table = dataset.to_table()
         df = table.to_pandas()
 
-        assert table.shape[0] == model_count
-        assert df.shape[0] == model_count
+        assert table.shape == models.shape
+        assert df.shape == models.shape
         print(df)
