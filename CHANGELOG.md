@@ -3,6 +3,11 @@
 ## [1.2.4] 2025-08
 ### Added
  - GHA tests: add python`3.12` and `windows-latest` to matrix.
+ - more test coverage on `pyarrow` package.
+
+### Changed
+ - fixed unlink bug
+ - minor test issues
 
 ## [1.2.3] 2025-08-15
 ### Changed
