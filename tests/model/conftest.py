@@ -23,7 +23,7 @@ def storage_path(tmpdir_factory):
     return Path(tmpdir_factory.mktemp("hazard_storage"))
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def compatible_hazard_calc_data():
     now = datetime.now(timezone.utc)
     return {"unique_id": "chc1", "created_at": now, "updated_at": now}

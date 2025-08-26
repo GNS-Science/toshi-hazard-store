@@ -94,7 +94,8 @@ def append_models_to_dataset(
     dataset_format: str = 'parquet',
     filesystem: Optional[fs.FileSystem] = None,
     partitioning: Optional[Iterable[str]] = None,
-    existing_data_behavior: str = "overwrite_or_ignore",
+    existing_data_behavior: Optional[str] = "overwrite_or_ignore",
+    schema: Optional[pa.schema] = None,
 ) -> None:
     """
     Appends realisations to a dataset using the pyarrow library.
@@ -105,7 +106,8 @@ def append_models_to_dataset(
     dataset_format (optional): The format of the dataset. Defaults to 'parquet'.
     filesystem (optional): The file system to use for storage. Defaults to None.
     partitioning (optional): The partitioning scheme to apply. Defaults to ['nloc_0'].
-    existing_data_behavior: how to treat existing data (see pyarrow docs).
+    existing_data_behavior (optional): how to treat existing data (see pyarrow docs).
+    schema (optional): the dataset schema.
 
     Returns: None
 
@@ -129,6 +131,7 @@ def append_models_to_dataset(
         format=dataset_format,
         file_visitor=write_metadata_fn,
         filesystem=filesystem,
+        schema=schema,
     )
 
 

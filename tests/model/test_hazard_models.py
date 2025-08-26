@@ -4,13 +4,15 @@ Basic model migration, structure
 
 import itertools
 
+import pyarrow as pa
 import pyarrow.dataset as ds
 import pytest
 from moto import mock_dynamodb
 from pyarrow import fs
 
 from toshi_hazard_store.model import drop_r4, migrate_r4
-from toshi_hazard_store.model.pyarrow import pyarrow_dataset
+from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
+from toshi_hazard_store.model.pyarrow import pyarrow_aggr_dataset
 from toshi_hazard_store.model.revision_4 import hazard_aggregate_curve
 
 
@@ -149,23 +151,88 @@ class TestRevisionFourModelCreation_WithAdaption:
         assert res.values[0] == m.values[0]
         assert res.sort_key == '-38.160~178.247:0250:PGA:mean:NSHM_DUMMY_MODEL'
 
-    @pytest.mark.skip("Test needs schema, but do we still want this feature???")
-    def test_HazardAggregation_roundtrip_dataset(self, generate_rev4_aggregation_models, tmp_path):
+
+@pytest.fixture
+def pyarrow_aggregation_models(many_rlz_args):
+    def generator_fn():
+        for loc, vs30, imt, agg in itertools.product(
+            many_rlz_args["locs"][:5], many_rlz_args["vs30s"], many_rlz_args["imts"], ['mean', 'cov', '0.95']
+        ):
+            yield HazardAggregateCurve(
+                compatible_calc_id="NZSHM22",
+                hazard_model_id="MyNewModel",
+                nloc_001=loc.resample(0.001).code,
+                nloc_0=loc.resample(1).code,
+                imt=imt,
+                vs30=vs30,
+                aggr=agg,
+                values=[(x / 1000) for x in range(44)],
+            )
+
+    yield generator_fn
+
+
+# Test pyarrow HazardAggregation models
+def test_HazardAggregation_roundtrip_dataset(pyarrow_aggregation_models, tmp_path):
+
+    output_folder = tmp_path / "ds"
+
+    models = pyarrow_aggregation_models()
+
+    print(models)
+    filesystem = fs.LocalFileSystem()
+
+    # write the dataset
+    pyarrow_aggr_dataset.append_models_to_dataset(models, output_folder, filesystem=filesystem)
+
+    # read and check the dataset
+    dataset = ds.dataset(output_folder, filesystem=filesystem, format='parquet', partitioning='hive')
+    table = dataset.to_table()
+    df = table.to_pandas()
+
+    expected = pyarrow_aggr_dataset.table_from_models(pyarrow_aggregation_models())
+
+    assert table.shape == expected.shape
+    assert df.shape == expected.shape
+
+
+def test_HazardAggregation_write_dataset_with_bad_schema(pyarrow_aggregation_models, tmp_path, monkeypatch):
+
+    # monkeypatch with a bad schema
+    bad_schema = pa.schema([("mumbo", pa.string()), ("jumbo", pa.string())])
+    monkeypatch.setattr(pyarrow_aggr_dataset, "hazard_agreggate_schema", bad_schema)
+
+    # should raise excption about the schema mismatch
+    with pytest.raises(pa.ArrowTypeError, match=r"which does not match expected schema"):
 
         output_folder = tmp_path / "ds"
-
-        models = generate_rev4_aggregation_models()
-
+        models = pyarrow_aggregation_models()
         filesystem = fs.LocalFileSystem()
 
-        # write the dataset
-        model_count = pyarrow_dataset.append_models_to_dataset(models, output_folder, filesystem=filesystem)
+        pyarrow_aggr_dataset.append_models_to_dataset(models, output_folder, filesystem=filesystem)
 
-        # read and check the dataset
-        dataset = ds.dataset(output_folder, filesystem=filesystem, format='parquet', partitioning='hive')
-        table = dataset.to_table()
-        df = table.to_pandas()
 
-        assert table.shape[0] == model_count
-        assert df.shape[0] == model_count
-        print(df)
+def test_HazardAggregation_read_dataset_with_bad_schema_doesnt_fail(pyarrow_aggregation_models, tmp_path, monkeypatch):
+
+    dataset_folder = tmp_path / "ds"
+    models = pyarrow_aggregation_models()
+    filesystem = fs.LocalFileSystem()
+
+    pyarrow_aggr_dataset.append_models_to_dataset(models, dataset_folder, filesystem=filesystem)
+
+    filesystem = fs.LocalFileSystem()
+    dataset = ds.dataset(dataset_folder, schema=None, format='parquet', filesystem=filesystem, partitioning='hive')
+
+    print()
+    print(dataset.schema)
+    print()
+
+    # I epected this should raise exception about the schema mismatch
+    # based on https://arrow.apache.org/docs/python/generated/pyarrow.\
+    #  dataset.Dataset.html#pyarrow.dataset.Dataset.replace_schema
+    bad_schema = pa.schema([("numeric", pa.int64()), ("mumbo", pa.string()), ("jumbo", pa.string())])
+    dataset = dataset.replace_schema(bad_schema)  # should raise exception but doesn't
+
+    table = dataset.to_table()
+    df = table.to_pandas()
+    print(df)  # still no exception

@@ -1,24 +1,22 @@
 """pyarrow helper function"""
 
 import logging
-import pathlib
-import uuid
-from functools import partial
 from typing import TYPE_CHECKING, Iterable, Optional
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-import pyarrow.dataset as ds
 from pyarrow import fs
 
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
-from toshi_hazard_store.model.pyarrow.pyarrow_dataset import _write_metadata
 
 log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover
     from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
+
+hazard_agreggate_schema = get_hazard_aggregate_schema()
 
 
 def append_models_to_dataset(
@@ -42,35 +40,35 @@ def append_models_to_dataset(
 
     Returns: None
     """
-    item_dicts = [hag.model_dump() for hag in models]
-    df = pd.DataFrame(item_dicts)
+    table = table_from_models(models)
+    pyarrow_dataset.append_models_to_dataset(
+        table,
+        base_dir,
+        dataset_format,
+        filesystem,
+        partitioning,
+        existing_data_behavior,
+        schema=hazard_agreggate_schema,
+    )
+
+
+def table_from_models(models: Iterable['HazardAggregateCurve']) -> pa.Table:
+    """build a pyarrow table from HazardAggregateCurve models.
+
+    Args:
+    models: An iterable of model data objects.
+
+    Returns: The pyarrow hazard aggregations table.
+    """
+
+    df = pd.DataFrame([hazagg.model_dump() for hazagg in models])
 
     # MANUALLY set the dataframe typing to match the pyarrow schema UGHHHH
     dtype = {
         "vs30": "int32",
     }
+    # coerce the the types
     df = df.astype(dtype)
-    # coerce the the types UGGH
     df['values'] = df['values'].apply(lambda x: np.array(x, dtype=np.float32))
 
-    log.debug("in df >>>")
-    log.debug(df.info())
-    log.debug("in df <<<")
-
-    table = pa.Table.from_pandas(df)
-
-    schema = get_hazard_aggregate_schema()
-    using_s3 = isinstance(filesystem, fs.S3FileSystem)
-    write_metadata_fn = partial(_write_metadata, using_s3, pathlib.Path(base_dir))
-    ds.write_dataset(
-        table,
-        base_dir=base_dir,
-        basename_template="%s-part-{i}.%s" % (uuid.uuid4(), dataset_format),
-        partitioning=partitioning,
-        partitioning_flavor="hive",
-        existing_data_behavior=existing_data_behavior,
-        format=dataset_format,
-        file_visitor=write_metadata_fn,
-        filesystem=filesystem,
-        schema=schema,
-    )
+    return pa.Table.from_pandas(df)
