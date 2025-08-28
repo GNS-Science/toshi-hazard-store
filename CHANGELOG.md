@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.5] 2025-08-TBC
+## Changed
+ - add support for python 313
+ - upgrade nzshm-model lib (for python 3.13 support)
+
 ## [1.2.4] 2025-08
 ### Added
  - GHA tests: add python`3.12` and `windows-latest` to matrix.
