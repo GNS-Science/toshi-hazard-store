@@ -2907,7 +2907,7 @@ toshi = ["boto3 (>=1.26.28,<2.0.0)", "nshm-toshi-client[toshi] (>=1.0.1,<2.0.0)"
 [package.source]
 type = "git"
 url = "https://github.com/GNS-Science/nzshm-model.git"
-reference = "chore/add_py313_upgrade_lxml"
+reference = "6e7fa5f6bc78ab1762371c3140ba27b537679eec"
 resolved_reference = "6e7fa5f6bc78ab1762371c3140ba27b537679eec"
 
 [[package]]
@@ -5152,4 +5152,4 @@ openquake = ["fiona", "networkx", "numba", "openquake-engine"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "b3d4586c06767eeb9a7d19a9f99b18c66ad3d84341470d155e9b1e8c21c87ca1"
+content-hash = "248f550440f6cc13fdfd2aa653c984c7f51c1344c0a2343fb69e8c4b6ea9c27a"
