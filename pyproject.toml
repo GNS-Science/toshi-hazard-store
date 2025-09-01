@@ -59,7 +59,7 @@ s3path = "^0.6.1"
 # the optional packages needed for `openquake` 
 fiona = {version = "^1.9.5", optional = true}
 networkx = {version = "^3.2.1", optional = true}
-numba = {version="<0.61.0", optional = true}
+numba = {version="0.61.0", optional = true}
 pydantic-to-pyarrow = "^0.1.6"
 openquake-engine = {version = "^3.20.1", optional = true}
 nzshm-model = {git = "https://github.com/GNS-Science/nzshm-model.git", rev = "6e7fa5f6bc78ab1762371c3140ba27b537679eec"}
