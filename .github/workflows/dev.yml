@@ -21,4 +21,5 @@ jobs:
       python-versions: "['3.11', '3.12', '3.13']"
       delete-poetry-lock:  ${{ github.event_name == 'schedule' }} # the scheduled build tests against newer dependencies
       fail-fast: false
+      timeout-minutes: 15 # Windows py3.13 is slow
     secrets: inherit

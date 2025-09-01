@@ -13,7 +13,7 @@
 * Free software: GPL-3.0-only
 
 
-This library provides different hazard storage options used withon NSHM hazard pipelines. Third parties may wish to
+This library provides different hazard storage options used within NSHM hazard pipelines. Third parties may wish to
 process models based on, or similar in scale to the NZSHM 22.
 
 ## Features
