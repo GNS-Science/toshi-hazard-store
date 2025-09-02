@@ -1,9 +1,15 @@
 # Changelog
 
-## [1.2.5] 2025-08-TBC
+## [1.2.5] 2025-09-TBC
+
+## Added
+ - Python 3.13 support
+
 ## Changed
- - add support for python 313, remove support for 310
  - upgrade nzshm-model lib (for python 3.13 support)
+
+## Removed
+ - Python 3.10 support
 
 ## [1.2.4] 2025-08
 ### Added
