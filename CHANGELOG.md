@@ -2,7 +2,7 @@
 
 ## [1.2.5] 2025-08-TBC
 ## Changed
- - add support for python 313
+ - add support for python 313, remove support for 310
  - upgrade nzshm-model lib (for python 3.13 support)
 
 ## [1.2.4] 2025-08

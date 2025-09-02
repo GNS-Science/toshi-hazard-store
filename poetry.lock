@@ -2915,10 +2915,10 @@ geometry = ["shapely (>=2.0.2,<3.0.0)"]
 
 [[package]]
 name = "nzshm-model"
-version = "0.13.7"
+version = "0.14.0"
 description = "The logic tree definitions, final configurations, and versioning of the New Zealand | Aotearoa National Seismic Hazard Model"
 optional = false
-python-versions = ">=3.9,<4.0"
+python-versions = ">=3.10,<4.0"
 groups = ["main"]
 files = []
 develop = false
@@ -2935,8 +2935,8 @@ toshi = ["boto3 (>=1.26.28,<2.0.0)", "nshm-toshi-client[toshi] (>=1.0.1,<2.0.0)"
 [package.source]
 type = "git"
 url = "https://github.com/GNS-Science/nzshm-model.git"
-reference = "6e7fa5f6bc78ab1762371c3140ba27b537679eec"
-resolved_reference = "6e7fa5f6bc78ab1762371c3140ba27b537679eec"
+reference = "97c13d43cf33f660da0b832649d3bdc80f057710"
+resolved_reference = "97c13d43cf33f660da0b832649d3bdc80f057710"
 
 [[package]]
 name = "openquake-engine"
@@ -5201,4 +5201,4 @@ openquake = ["fiona", "networkx", "numba", "openquake-engine"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "d575a77294059f0147c7219755897760a3fa1795c710f96a9b81058f8c40628f"
+content-hash = "8072c3b279ef7dc6c17aa1d704b2cc3ddd4772ea7e1f3572af2297a657e09393"
