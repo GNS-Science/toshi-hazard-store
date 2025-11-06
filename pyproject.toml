@@ -98,6 +98,9 @@ dev = [
     "tox (>=4.4.4)",
     "semver",
     "pytest-lazy-fixtures",
+    "moto (>=4,<5.0.0)",
+    "types-requests (>=2.32.4.20250913,<3.0.0.0)",
+    "twine (>=6.2.0,<7.0.0)",
 ]
 
 [tool.black]

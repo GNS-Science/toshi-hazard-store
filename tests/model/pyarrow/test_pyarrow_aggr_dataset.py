@@ -18,7 +18,7 @@ def random_hazard_curves():
                 imt="PGA",
                 vs30="1000",
                 aggr="mean",
-                values=[(x / 1000) for x in range(44)],
+                values=[(x / 1000.0) for x in range(44)],
             )
 
     yield some_curves()
