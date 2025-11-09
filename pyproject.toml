@@ -1,6 +1,6 @@
 [project]
 name = "toshi-hazard-store"
-version = "1.2.4"
+version = "1.2.5"
 
 homepage = "https://github.com/GNS-Science/toshi-hazard-store"
 description = "Library for saving and retrieving NZHSM openquake hazard results with convenience (uses AWS Dynamodb)."
