@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.2.5] 2025-11
+## [1.2.5] 2025-11-10
 ### Added
  - audit step in setup.cfg
  
