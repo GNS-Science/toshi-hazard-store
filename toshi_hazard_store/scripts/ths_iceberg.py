@@ -12,7 +12,7 @@ Brief summary of findings:
  - AWS GLUE/ Iceberg do offer some  convenince factors perticualry around `shcema evolution`, however the
    need for this is not high in our use cases
 
- '''
+'''
 
 import datetime as dt
 

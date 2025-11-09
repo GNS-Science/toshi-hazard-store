@@ -69,6 +69,5 @@ def table_from_models(models: Iterable['HazardAggregateCurve']) -> pa.Table:
     }
     # coerce the the types
     df = df.astype(dtype)
-    df['values'] = df['values'].apply(lambda x: np.array(x, dtype=np.float32))
-
+    df['values'] = df['values'].apply(lambda x: np.array(x, dtype=np.float32))  # type: ignore
     return pa.Table.from_pandas(df)

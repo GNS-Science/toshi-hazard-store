@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.5] 2025-11-10
+### Added
+ - audit step in setup.cfg
+ 
+### Changed
+ - test skipped for AWS error, deprecated package will eventually be removed
+ - migrate pyproject.toml to PEP508
+ - security updates
+ - CI/CD workflows use latest shared actions
+ - minor typing issue ignored
+
 ## [1.2.4] 2025-08
 ### Added
  - GHA tests: add python`3.12` and `windows-latest` to matrix.

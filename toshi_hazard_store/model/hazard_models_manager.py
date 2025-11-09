@@ -12,7 +12,7 @@ Note:
 Classes:
   - CompatibleHazardCalculationManager
   - HazardCurveProducerConfigManager
- """
+"""
 
 import logging
 from datetime import datetime, timezone

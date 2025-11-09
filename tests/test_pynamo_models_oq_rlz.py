@@ -36,6 +36,11 @@ class TestOpenquakeRealizationModel:
 
 
 class TestOpenquakeRealizationQuery:
+
+    # pynamodb.exceptions.QueryError: Failed to query items: An error occurred (ValidationException) on request ()
+    #  on table (THS_OpenquakeRealization-PROD) when calling the Query operation: One or more parameter values are
+    #  not valid. The AttributeValue for a key attribute cannot contain an empty string value. Key: sort_key
+    @pytest.mark.skip("An empty sort_key is no longer supported.")
     def test_model_query_no_condition(self, adapted_rlz_model, get_one_rlz):
         rlz = get_one_rlz()
         rlz.save()
