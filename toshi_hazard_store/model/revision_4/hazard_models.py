@@ -10,7 +10,8 @@ from toshi_hazard_store.config import DEPLOYMENT_STAGE, IS_OFFLINE, REGION
 
 from ..attributes import ForeignKeyAttribute
 from ..location_indexed_model import datetime_now
-from .hazard_realization_curve import HazardRealizationCurve  # noqa: F401
+
+# from .hazard_realization_curve import HazardRealizationCurve  # noqa: F401
 
 log = logging.getLogger(__name__)
 
