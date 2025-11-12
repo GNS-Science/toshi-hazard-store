@@ -31,6 +31,7 @@ from nzshm_model.psha_adapter.openquake import gmcm_branch_from_element_text
 
 import toshi_hazard_store  # noqa: E402
 import toshi_hazard_store.config
+
 # import toshi_hazard_store.model.openquake_models
 import toshi_hazard_store.model.revision_4.hazard_models  # noqa: E402
 import toshi_hazard_store.query.hazard_query
@@ -169,7 +170,6 @@ def report_arrow_count_loc_rlzs(ds_name, location, verbose):
     click.echo(f"Grand total: {count_all}")
 
 
-
 def report_rlzs_grouped_by_partition(source: str, verbose, bail_on_error=True) -> int:
     """Report on dataset realisations by hive partion."""
 
@@ -271,9 +271,6 @@ def count_rlz(context, source, strict, expected_rlzs, verbose, dry_run):
     #         report_v3_count_loc_rlzs(location, verbose)
     #     elif report == 'ALL':
     #         report_v3_grouped_by_calc(verbose, bail_on_error=strict)
-
-
-
 
 
 if __name__ == "__main__":
