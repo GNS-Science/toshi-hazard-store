@@ -1,119 +1,13 @@
-import importlib
 import itertools
-import json
 import logging
-import sys
 
 import pytest
-from moto import mock_dynamodb
 from nzshm_common.location.coded_location import CodedLocation
 from nzshm_common.location.location import LOCATIONS_BY_ID
 
 from toshi_hazard_store import model
-from toshi_hazard_store.model import openquake_models
-from toshi_hazard_store.model.revision_4 import hazard_models  # noqa we need this for adaptation
 
 log = logging.getLogger(__name__)
-
-
-# ref https://docs.pytest.org/en/7.3.x/example/parametrize.html#deferring-the-setup-of-parametrized-resources
-def pytest_generate_tests(metafunc):
-    if "adapted_rlz_model" in metafunc.fixturenames:
-        metafunc.parametrize("adapted_rlz_model", ["pynamodb"], indirect=True)
-    if "adapted_hazagg_model" in metafunc.fixturenames:
-        metafunc.parametrize("adapted_hazagg_model", ["pynamodb"], indirect=True)
-    if "adapted_meta_model" in metafunc.fixturenames:
-        metafunc.parametrize("adapted_meta_model", ["pynamodb"], indirect=True)
-
-
-@pytest.fixture
-def adapted_hazagg_model(request, tmp_path):
-    if request.param == 'pynamodb':
-        with mock_dynamodb():
-            openquake_models.HazardAggregation.create_table(wait=True)
-            yield openquake_models
-            openquake_models.HazardAggregation.delete_table()
-    else:
-        raise ValueError("invalid internal test config")
-
-
-@pytest.fixture
-def adapted_rlz_model(request, tmp_path):
-
-    importlib.reload(sys.modules['toshi_hazard_store.model.openquake_models'])
-
-    log.debug(f"adapted_rlz_model() called with {request.param}")
-    if request.param == 'pynamodb':
-        log.debug(f"mock_dynamodb {request.param}")
-        with mock_dynamodb():
-            openquake_models.OpenquakeRealization.create_table(wait=True)
-            yield openquake_models
-            openquake_models.OpenquakeRealization.delete_table()
-    else:
-        raise ValueError("invalid internal test config")
-
-
-@pytest.fixture
-def adapted_meta_model(request, tmp_path):
-
-    if request.param == 'pynamodb':
-        with mock_dynamodb():
-            # set_adapter(Model)
-            openquake_models.ToshiOpenquakeMeta.create_table(wait=True)
-            yield openquake_models
-            openquake_models.ToshiOpenquakeMeta.delete_table()
-    else:
-        raise ValueError("invalid internal test config")
-
-
-@pytest.fixture()
-def get_one_meta():
-    yield lambda cls=openquake_models.ToshiOpenquakeMeta: cls(
-        partition_key="ToshiOpenquakeMeta",
-        hazard_solution_id="AMCDEF",
-        general_task_id="GBBSGG",
-        hazsol_vs30_rk="AMCDEF:350",
-        # updated=dt.datetime.now(tzutc()),
-        # known at configuration
-        vs30=350,  # vs30 value
-        imts=['PGA', 'SA(0.5)'],  # list of IMTs
-        locations_id='AKL',  # Location code or list ID
-        source_tags=["hiktlck", "b0.979", "C3.9", "s0.78"],
-        source_ids=["SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwODA3NQ==", "RmlsZToxMDY1MjU="],
-        inv_time=1.0,
-        # extracted from the OQ HDF5
-        src_lt=json.dumps(dict(sources=[1, 2])),  # sources meta as DataFrame JSON
-        gsim_lt=json.dumps(dict(gsims=[1, 2])),  # gmpe meta as DataFrame JSON
-        rlz_lt=json.dumps(dict(rlzs=[1, 2])),  # realization meta as DataFrame JSON
-    )
-
-
-@pytest.fixture(scope='function')
-def get_one_rlz():
-    imtvs = []
-    for t in ['PGA', 'SA(0.5)', 'SA(1.0)']:
-        levels = range(1, 51)
-        values = range(101, 151)
-        imtvs.append(model.IMTValuesAttribute(imt="PGA", lvls=levels, vals=values))
-
-    location = CodedLocation(lat=-41.3, lon=174.78, resolution=0.001)
-    yield lambda cls=openquake_models.OpenquakeRealization: cls(
-        values=imtvs,
-        rlz=10,
-        vs30=450,
-        hazard_solution_id="AMCDEF",
-        source_tags=["hiktlck", "b0.979", "C3.9", "s0.78"],
-        source_ids=["SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwODA3NQ==", "RmlsZToxMDY1MjU="],
-    ).set_location(location)
-
-
-@pytest.fixture(scope='function')
-def get_one_hazagg():
-    lvps = list(map(lambda x: model.LevelValuePairAttribute(lvl=x / 1e3, val=(x / 1e6)), range(1, 51)))
-    location = CodedLocation(lat=-41.3, lon=174.78, resolution=0.001)
-    yield lambda: openquake_models.HazardAggregation(
-        values=lvps, agg=model.AggregationEnum.MEAN.value, imt="PGA", vs30=450, hazard_model_id="HAZ_MODEL_ONE"
-    ).set_location(location)
 
 
 @pytest.fixture
