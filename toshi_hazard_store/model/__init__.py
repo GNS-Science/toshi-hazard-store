@@ -10,7 +10,6 @@ from .disagg_models import migrate as migrate_disagg
 from .gridded_hazard import GriddedHazard
 from .gridded_hazard import drop_tables as drop_gridded
 from .gridded_hazard import migrate as migrate_gridded
-from .revision_4 import CompatibleHazardCalculation, HazardCurveProducerConfig
 
 log = logging.getLogger(__name__)
 

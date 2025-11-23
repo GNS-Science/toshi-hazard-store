@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3] 2025-11
+
+### Removed
+ - PynamoDB model `hazard_aggregate_curve.HazardAggregateCurve`
+ - PynamoDB model `hazard_realization_curve.HazardRealizationCurve`
+ - PynamoDB model `hazard_models.CompatibleHazardCalculation`
+ - PynamoDB model `hazard_models.HazardCurveProducerConfig`
+
 ## [1.2.5] 2025-11-10
 ### Added
  - audit step in setup.cfg
