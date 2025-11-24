@@ -2,12 +2,16 @@
 
 ## [1.3] 2025-11
 
+### Added
+ - new producer config `8c09bffb9f4c`
+
 ### Removed
  - PynamoDB model `hazard_aggregate_curve.HazardAggregateCurve`
  - PynamoDB model `hazard_realization_curve.HazardRealizationCurve`
  - PynamoDB model `hazard_models.CompatibleHazardCalculation`
  - PynamoDB model `hazard_models.HazardCurveProducerConfig`
  - remove disagg models and queries
+ - stale workflow files
 
 ## [1.2.5] 2025-11-10
 ### Added

@@ -116,3 +116,8 @@ site/
 
 # working directory
 WORKING
+WORKDIR
+
+# audit
+audit.txt
+.safety-project.ini
