@@ -30,14 +30,11 @@ from nzshm_model import branch_registry
 from nzshm_model.psha_adapter.openquake import gmcm_branch_from_element_text
 
 import toshi_hazard_store  # noqa: E402
-# import toshi_hazard_store.config
-
-# import toshi_hazard_store.model.openquake_models
-# import toshi_hazard_store.model.revision_4.hazard_models  # noqa: E402
 import toshi_hazard_store.query.hazard_query
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.oq_import.oq_manipulate_hdf5 import migrate_nshm_uncertainty_string
 from toshi_hazard_store.scripts.core import echo_settings  # noqa
+
 
 nz1_grid = load_grid('NZ_0_1_NB_1_1')
 # print(location.get_location_list(["NZ"]))
@@ -201,6 +198,7 @@ def count_rlz(context, source, strict, expected_rlzs, verbose, dry_run):
         raise click.UsageError(
             f"The count of realisations: {rlz_count} doesn't match specified expected_rlzs: {expected_rlzs}"
         )
+
 
 if __name__ == "__main__":
     main()
