@@ -39,7 +39,6 @@ nav:
   - Query API:
       - Hazard: hazard_query_api.md
       - Gridded Hazard: gridded_hazard_query_api.md
-      - Hazard Disaggregation: hazard_disagg_query_api.md
   - Database Models:
       - New Hazard: domain_model/proposed_hazard_models.md
       - Hazard: domain_model/openquake_models.md

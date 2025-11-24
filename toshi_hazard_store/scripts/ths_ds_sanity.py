@@ -30,10 +30,10 @@ from nzshm_model import branch_registry
 from nzshm_model.psha_adapter.openquake import gmcm_branch_from_element_text
 
 import toshi_hazard_store  # noqa: E402
-import toshi_hazard_store.config
+# import toshi_hazard_store.config
 
 # import toshi_hazard_store.model.openquake_models
-import toshi_hazard_store.model.revision_4.hazard_models  # noqa: E402
+# import toshi_hazard_store.model.revision_4.hazard_models  # noqa: E402
 import toshi_hazard_store.query.hazard_query
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.oq_import.oq_manipulate_hdf5 import migrate_nshm_uncertainty_string
@@ -73,11 +73,6 @@ IMTS = [
     'SA(10.0)',
 ]
 all_locs = set(nz1_grid + srwg_locs + city_locs)
-
-# print(nz1_grid[:10])
-# print(srwg_locs[:10])
-# print(city_locs[:10])
-
 registry = branch_registry.Registry()
 
 
@@ -94,56 +89,6 @@ def get_random_args(gt_info, how_many):
             rlz=random.choice(range(20)),
             locs=[CodedLocation(o[0], o[1], 0.001) for o in random.sample(nz1_grid, how_many)],
         )
-
-
-def query_table(args):
-    for res in toshi_hazard_store.query.hazard_query.get_rlz_curves_v3(
-        locs=[loc.code for loc in args['locs']], vs30s=[275], rlzs=[args['rlz']], tids=[args['tid']], imts=[args['imt']]
-    ):
-        yield (res)
-
-
-def get_table_rows(random_args_list):
-    result = {}
-    for args in random_args_list:
-        meta = next(query_hazard_meta(args))
-        gsim_lt = ast.literal_eval(meta.gsim_lt)
-        src_lt = ast.literal_eval(meta.src_lt)
-        assert len(src_lt['branch']) == 1
-
-        # print(gsim_lt['uncertainty'])
-        # source digest
-        try:
-            # handle the task T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTMyODU2MA== which has messed up meta...
-            ids = [x for x in src_lt['branch']['A'].split('|') if x != '']
-            srcs = "|".join(sorted(ids))
-            src_id = registry.source_registry.get_by_identity(srcs)
-        except Exception as exc:
-            print(f'args: {args}')
-            print()
-            print(f'meta: {meta}')
-            print()
-            print(srcs)
-            raise exc
-
-        for res in query_table(args):
-            obj = res.to_simple_dict(force=True)
-            # gmm_digest
-            gsim = gmcm_branch_from_element_text(
-                migrate_nshm_uncertainty_string(gsim_lt['uncertainty'][str(obj['rlz'])])
-            )
-            # print(gsim)
-            gsim_id = registry.gmm_registry.get_by_identity(gsim.registry_identity)
-
-            obj['slt_sources'] = src_lt['branch']['A']
-            obj['sources_digest'] = src_id.hash_digest
-            obj['gsim_uncertainty'] = gsim
-            obj['gmms_digest'] = gsim_id.hash_digest
-            result[obj["sort_key"]] = obj
-            # print()
-            # print( obj )
-
-    return result
 
 
 def report_arrow_count_loc_rlzs(ds_name, location, verbose):
@@ -256,22 +201,6 @@ def count_rlz(context, source, strict, expected_rlzs, verbose, dry_run):
         raise click.UsageError(
             f"The count of realisations: {rlz_count} doesn't match specified expected_rlzs: {expected_rlzs}"
         )
-
-    # TODO: the  following may still be useful for a little while, but should be moved into
-    # a separate sub-command
-    # # location = CodedLocation(lat=-39, lon=175.93, resolution=0.001)
-    # location = CodedLocation(lat=-41, lon=175, resolution=0.001)
-
-    # if (source_type == 'ARROW') and source:
-    #     if report == 'LOC':
-    #         report_arrow_count_loc_rlzs(source, location, verbose)
-    #
-    # if source == 'AWS':
-    #     if report == 'LOC':
-    #         report_v3_count_loc_rlzs(location, verbose)
-    #     elif report == 'ALL':
-    #         report_v3_grouped_by_calc(verbose, bail_on_error=strict)
-
 
 if __name__ == "__main__":
     main()

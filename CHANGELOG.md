@@ -7,6 +7,7 @@
  - PynamoDB model `hazard_realization_curve.HazardRealizationCurve`
  - PynamoDB model `hazard_models.CompatibleHazardCalculation`
  - PynamoDB model `hazard_models.HazardCurveProducerConfig`
+ - remove disagg models and queries
 
 ## [1.2.5] 2025-11-10
 ### Added
