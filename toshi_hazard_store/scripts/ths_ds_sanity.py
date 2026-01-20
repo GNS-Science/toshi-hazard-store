@@ -4,6 +4,7 @@ Console script for querying tables before and after import/migration to ensure t
 
 TODO this script needs a little housekeeping.
 """
+
 import ast
 import itertools
 import json
