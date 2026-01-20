@@ -1,7 +1,10 @@
 # Changelog
 
-## [1.3] 2025-11
+## [1.3.1] 2026-01-20
+### Changed
+ - update dependencies for new advisories
 
+## [1.3.0] 2025-11-25
 ### Added
  - new producer config `8c09bffb9f4c`
 
