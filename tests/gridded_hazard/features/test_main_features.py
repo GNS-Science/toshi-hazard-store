@@ -1,23 +1,23 @@
 #!/usr/bin/env python
 """Tests for `toshi_hazard_haste` package."""
 
-# import pytest
-import unittest
-
 # import random
 import itertools
 
-# import io
-# import csv
+# import pytest
+import unittest
 
 from moto import mock_dynamodb
-
 from nzshm_common.grids.region_grid import load_grid
 
 # from nzshm_common.location.code_location import CodedLocation
 from nzshm_common.location.coded_location import CodedLocation
 
 from toshi_hazard_store import model
+
+# import io
+# import csv
+
 
 HAZARD_MODEL_ID = "MYHAZID"
 GRID_02 = load_grid('NZ_0_2_NB_1_1')

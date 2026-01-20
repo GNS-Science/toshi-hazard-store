@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 """Tests for `toshi_hazard_haste` package."""
 
+import csv
+
 # import pytest
 import unittest
-import csv
 from pathlib import Path
+
 from moto import mock_dynamodb
 from nzshm_common.grids import RegionGrid
 from nzshm_common.location import CodedLocation
@@ -47,7 +49,6 @@ def hazard_aggregation_models(model, csv_path, limit=100):
             imt=imt,
             hazard_model_id=HAZARD_MODEL_ID,
         ).set_location(loc)
-        
 
 
 # @mock_dynamodb

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """Tests for `toshi_hazard_haste` package."""
 
-import pytest
 from pathlib import Path
+
+# import pytest
 from click.testing import CliRunner
 
 from toshi_hazard_store.scripts import ths_build_gridded as cli

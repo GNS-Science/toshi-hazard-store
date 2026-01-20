@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Tests for `toshi_hazard_store.gridded_hazard` package."""
 
-import pytest
 import numpy as np
+import pytest
 
 from toshi_hazard_store.gridded_hazard import compute_hazard_at_poe
 from toshi_hazard_store.gridded_hazard.gridded_poe import trim_poes
