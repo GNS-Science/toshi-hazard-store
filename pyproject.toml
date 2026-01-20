@@ -36,12 +36,13 @@ dependencies = [
     "pydantic (>=2.11.5)",
     "nzshm-model (>=0.13.6)",
     "s3path (>=0.6.1)",
-    "geopandas (>=1.1.2,<2.0.0)",
+    "geopandas (>=1.1.2)",
 ]
 
 [project.scripts]
 ths_compat = 'toshi_hazard_store.scripts.ths_compat:main'
 ths_import = 'toshi_hazard_store.scripts.ths_import:main'
+ths_build_grid = 'toshi_hazard_store.scripts.ths_build_gridded:main'
 ths_ds_check = 'toshi_hazard_store.scripts.ths_ds_check:main'
 ths_ds_sanity = 'toshi_hazard_store.scripts.ths_ds_sanity:main'
 ths_ds_defrag = 'toshi_hazard_store.scripts.ths_ds_defrag:main'

@@ -36,12 +36,18 @@ log.addHandler(screen_handler)
 log.addHandler(file_handler)
 
 
+#  _ __ ___   __ _(_)_ __
+# | '_ ` _ \ / _` | | '_ \
+# | | | | | | (_| | | | | |
+# |_| |_| |_|\__,_|_|_| |_|
+#
 @click.group()
-def thh():
-    pass
+def main():
+    """Console script for building NSHM hazard griud tables in parquet dataset format.
+    """
 
 
-@thh.command(name='geojson')
+@main.command(name='geojson')
 @click.option('-H', '--hazard_model_ids', help='comma-delimted list of hazard model ids.')
 @click.option('-L', '--site-list', help='A site list ENUM.')
 @click.option('-I', '--imts', help='comma-delimited list of imts.')
@@ -114,7 +120,7 @@ def cli_geojson(hazard_model_ids, site_list, imts, aggs, vs30s, poes, config):
     click.echo('table scan produced %s gridded_hazard rows and %s poe levels' % (count, poe_count))
 
 
-@thh.command(name='build')
+@main.command(name='build')
 @click.option('-H', '--hazard_model_ids', help='comma-delimted list of hazard model ids.')
 @click.option('-L', '--site-list', help='A site list ENUM.')
 @click.option('-I', '--imts', help='comma-delimited list of imts.')
@@ -210,4 +216,4 @@ def cli_gridded_hazard(
 
 
 if __name__ == "__main__":
-    thh()  # pragma: no cover
+    main()  # pragma: no cover
