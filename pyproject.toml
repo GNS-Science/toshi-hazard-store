@@ -36,6 +36,7 @@ dependencies = [
     "pydantic (>=2.11.5)",
     "nzshm-model (>=0.13.6)",
     "s3path (>=0.6.1)",
+    "geopandas (>=1.1.2,<2.0.0)",
 ]
 
 [project.scripts]
