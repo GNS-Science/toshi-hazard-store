@@ -6,7 +6,7 @@ Central to this is the concept of long term verificaiton and compararison betwee
 or versions of the same product. There have been multiple revisions of the openquake software 3.16.0 - 3.22. over the three years
 that hazard curves have been paroduced by the NSHM project.
 
-To handle this at the meta dat level we have several metadata constructs:
+To handle this at the meta data level we have several metadata constructs:
 
  1. **HazardCurveProducerConfig** (HCPC) - captures the unique attributes that define some hazard curve production software/configuration. 
  2. **CompatibleHazardConfig** (CHC) - which provides a logical identifier for compatability accoss HCCs.

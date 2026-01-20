@@ -1,4 +1,7 @@
-"""Console script for building hazard grid tables from NSHM hazard curves in parquet dataset format"""
+"""Console script for building hazard grid tables from NSHM hazard curves.
+
+This script was migrated from the `toshi-hazard-haste` project.
+"""
 
 import logging
 import sys
@@ -6,8 +9,8 @@ import sys
 import click
 import geopandas as gpd
 import matplotlib as mpl
-import matplotlib.cm
-import matplotlib.colors
+# import matplotlib.cm
+# import matplotlib.colors
 import toml
 from nzshm_common.geometry.geometry import create_square_tile
 from nzshm_common.grids import RegionGrid
@@ -43,7 +46,7 @@ log.addHandler(file_handler)
 #
 @click.group()
 def main():
-    """Console script for building NSHM hazard griud tables in parquet dataset format.
+    """Console script for building/reading NSHM hazard grid tables in parquet dataset format.
     """
 
 
@@ -127,7 +130,7 @@ def cli_geojson(hazard_model_ids, site_list, imts, aggs, vs30s, poes, config):
 @click.option('-A', '--aggs', help='comma-delimited list of aggs.')
 @click.option('-V', '--vs30s', help='comma-delimited list of vs30s.')
 @click.option('-P', '--poes', help='comma-delimited list of poe_levels.')
-@click.option('-c', '--config', type=click.Path(exists=True))  # help="path to a valid THU configuration file."
+@click.option('-c', '--config', type=click.Path(exists=True))  # help="path to a valid configuration file."
 @click.option('-lsl', '--list-site-lists', help='print the list of sites list ENUMs and exit', is_flag=True)
 @click.option('-v', '--verbose', is_flag=True)
 @click.option('-d', '--dry-run', is_flag=True)
