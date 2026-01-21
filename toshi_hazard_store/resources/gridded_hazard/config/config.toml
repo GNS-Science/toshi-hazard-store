@@ -2,11 +2,12 @@
 # hazard_model_ids = ["SLT_v5_gmm_v0"]
 # hazard_model_ids = ["SLT_v7_gmm_v1"]
 # hazard_model_ids = ["SLT_TAG_FINAL"]
-hazard_model_ids = ["SLT_v8_gmm_v2_FINAL"]
+# hazard_model_ids = ["SLT_v8_gmm_v2_FINAL"]
+hazard_model_ids = ["NSHM_v1.0.4"]
 
-site_list = "NZ_0_2_NB_1_1"         #0.2 degree NZ grid
+# site_list = "NZ_0_2_NB_1_1"         #0.2 degree NZ grid
 # site_list = "NZ_0_1_NB_1_0"         #0.1 degree NZ grid ver 0
-# site_list = "NZ_0_1_NB_1_1"           #0.1 degree NZ grid ver 1
+site_list = "NZ_0_1_NB_1_1"           #0.1 degree NZ grid ver 1
 
 vs30s = [400]
 # imts = ["PGA", "SA(0.1)", "SA(0.2)", "SA(0.3)", "SA(0.5)", "SA(1.0)", "SA(1.5)", "SA(2.0)"]

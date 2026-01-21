@@ -9,6 +9,7 @@ import sys
 import click
 import geopandas as gpd
 import matplotlib as mpl
+
 # import matplotlib.cm
 # import matplotlib.colors
 import toml
@@ -16,7 +17,7 @@ from nzshm_common.geometry.geometry import create_square_tile
 from nzshm_common.grids import RegionGrid
 from nzshm_common.location import CodedLocation
 
-from toshi_hazard_store import model
+from toshi_hazard_store import model, query
 from toshi_hazard_store.gridded_hazard import calc_gridded_hazard
 
 log = logging.getLogger()
@@ -46,8 +47,7 @@ log.addHandler(file_handler)
 #
 @click.group()
 def main():
-    """Console script for building/reading NSHM hazard grid tables in parquet dataset format.
-    """
+    """Console script for building/reading NSHM hazard grid tables in parquet dataset format."""
 
 
 @main.command(name='geojson')
@@ -80,7 +80,7 @@ def cli_geojson(hazard_model_ids, site_list, imts, aggs, vs30s, poes, config):
     region_grid = RegionGrid[site_list]
     grid = region_grid.load()
     loc, geometry = [], []
-    cmap = mpl.cm.get_cmap("jet")
+    cmap = mpl.cm.get_cmap("inferno")
     norm = mpl.colors.Normalize(vmin=0.0, vmax=3.0)
 
     for pt in grid:
@@ -96,11 +96,11 @@ def cli_geojson(hazard_model_ids, site_list, imts, aggs, vs30s, poes, config):
 
     count = 0
     poe_count = 0
-    for ghaz in model.get_gridded_hazard(hazard_model_ids, [site_list], vs30s, imts, aggs, poes):
+    for ghaz in query.get_gridded_hazard(hazard_model_ids, [site_list], vs30s, imts, aggs, poes):
         poe_count += len(list(filter(lambda x: x is not None, ghaz.grid_poes)))
         count += 1
         poes = fix_nan(ghaz.grid_poes)
-        color_values = [mpl.colors.to_hex(cmap(norm(v)), keep_alpha=True) for v in poes]
+        color_values = [mpl.colors.to_hex(cmap(norm(v)), keep_alpha=False) for v in poes]
         gdf = gpd.GeoDataFrame(
             data=dict(
                 loc=loc,
@@ -108,9 +108,9 @@ def cli_geojson(hazard_model_ids, site_list, imts, aggs, vs30s, poes, config):
                 value=ghaz.grid_poes,
                 fill=color_values,
                 stroke=color_values,
-                fill_opacity=[0.75 for n in poes],
+                fill_opacity=[1 for n in poes],
                 stroke_width=[0.5 for n in poes],
-                stroke_opacity=[0.75 for n in poes],
+                stroke_opacity=[1 for n in poes],
                 # style = [{"color":"0x000FFF"} for v in ghaz.grid_poes],
             )
         )
