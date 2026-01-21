@@ -25,7 +25,7 @@ we use the same [Import workflow (see above) ](#import-workflow), then:
  - `ths_defrag` to reorganise and optimise hazard datasets.
  - `ths_check` to verify equivalence of two hazard datasets
  - `ths_filter` to create a subset dataset from a larger one.
- - `ths_query` run simple queries on a hazdard dataset.
+ - `ths_query` run simple queries on a hazard dataset.
 
 
 ## History

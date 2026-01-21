@@ -24,6 +24,7 @@ nav:
       - ths_defrag: cli/ths_ds_defrag.md
       - ths_check: cli/ths_ds_check.md
       - ths_filter: cli/ths_ds_filter.md
+      - ths_build_grid: cli/ths_build_grid.md
   - API:
     - api/index.md
     - query: 

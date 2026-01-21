@@ -4,7 +4,7 @@ import logging
 import unittest
 
 # from dateutil.tz import tzutc
-from moto import mock_dynamodb
+from moto import mock_aws
 
 from toshi_hazard_store import model, query
 
@@ -18,7 +18,7 @@ GRID = "NZGRID"
 HAZARD_MODELS = "SOMESUCH"
 
 
-@mock_dynamodb
+@mock_aws
 class PynamoTest(unittest.TestCase):
     def setUp(self):
 
@@ -52,7 +52,7 @@ class PynamoTest(unittest.TestCase):
         self.assertEqual(obj.grid_poes[0], 1.0)
 
 
-@mock_dynamodb
+@mock_aws
 class PynamoTestQuery(unittest.TestCase):
     def setUp(self):
         model.migrate()
