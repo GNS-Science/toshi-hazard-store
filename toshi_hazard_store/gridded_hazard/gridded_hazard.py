@@ -69,7 +69,7 @@ def process_gridded_hazard(location_keys, poe_lvl, location_grid_id, hazard_mode
     )
 
 
-class GriddedHAzardWorkerMP(multiprocessing.Process):
+class GriddedHazardWorkerMP(multiprocessing.Process):
     """A worker that batches and saves records to DynamoDB."""
 
     def __init__(self, task_queue):
@@ -131,7 +131,7 @@ def calc_gridded_hazard(
     task_queue: multiprocessing.JoinableQueue = multiprocessing.JoinableQueue()
 
     log.debug('Creating %d workers' % num_workers)
-    workers = [GriddedHAzardWorkerMP(task_queue) for i in range(num_workers)]
+    workers = [GriddedHazardWorkerMP(task_queue) for i in range(num_workers)]
     for w in workers:
         w.start()
 
