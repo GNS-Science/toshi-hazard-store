@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.0-next-release] 2026-01
+### Added
+ - migrated 'ths_build_grid` script, module and tests from `toshi-hazard-haste` project.
+
 ## [1.3.1] 2026-01-20
 ### Changed
  - update dependencies for new advisories
