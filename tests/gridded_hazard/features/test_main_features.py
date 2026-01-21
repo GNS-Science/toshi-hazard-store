@@ -7,7 +7,7 @@ import itertools
 # import pytest
 import unittest
 
-from moto import mock_dynamodb
+from moto import mock_aws
 from nzshm_common.grids.region_grid import load_grid
 
 # from nzshm_common.location.code_location import CodedLocation
@@ -42,7 +42,7 @@ def build_hazard_aggregation_models():
             ).set_location(loc)
 
 
-@mock_dynamodb
+@mock_aws
 class HighLevelHazard(unittest.TestCase):
     def setUp(self):
         model.migrate()

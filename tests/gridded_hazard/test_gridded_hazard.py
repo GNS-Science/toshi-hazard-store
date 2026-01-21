@@ -7,7 +7,7 @@ import csv
 import unittest
 from pathlib import Path
 
-from moto import mock_dynamodb
+from moto import mock_aws
 from nzshm_common.grids import RegionGrid
 from nzshm_common.location import CodedLocation
 
@@ -51,7 +51,7 @@ def hazard_aggregation_models(model, csv_path, limit=100):
         ).set_location(loc)
 
 
-# @mock_dynamodb
+# @mock_aws
 # def setup_module():
 #     model.migrate()
 #     model.migrate()
@@ -66,14 +66,14 @@ def hazard_aggregation_models(model, csv_path, limit=100):
 #     #     pass
 #     # super(GriddedHazardTest, self).setUp()
 
-# @mock_dynamodb
+# @mock_aws
 # def tearDown(self):
 #     model.drop_tables()
 #     model.drop_tables()
 #     return super(GriddedHazardTest, self).tearDown()
 
 
-@mock_dynamodb
+@mock_aws
 class GriddedHazardTest(unittest.TestCase):
     @unittest.skip("line 134 assertion failing")
     def test_calculate_gridded_hazard(self):
