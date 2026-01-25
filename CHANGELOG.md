@@ -4,6 +4,9 @@
 ### Added
  - migrated 'ths_build_grid` script, module and tests from `toshi-hazard-haste` project.
 
+### Changed
+ - set `pyarrow <3` upper bound as the new 3.0.0. version introduces some schema issues.
+
 ## [1.3.1] 2026-01-20
 ### Changed
  - update dependencies for new advisories
