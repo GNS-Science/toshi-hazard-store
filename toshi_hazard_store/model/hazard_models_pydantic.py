@@ -3,8 +3,9 @@
 from datetime import datetime, timezone
 from typing import List
 
-from pydantic import BaseModel, Field, field_validator, model_validator
 from nzshm_common.grids import RegionGrid
+from pydantic import BaseModel, Field, field_validator, model_validator
+
 from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 
 # Float32 = Annotated[float, {"pyarrow_type": pyarrow.float32()}]
@@ -105,9 +106,10 @@ class GriddedHazardPoeLevels(BaseModel):
         imt: the imt label e.g. `PGA`, `SA(5.0)`.
         vs30: the VS30 value.
         aggr: the aggregation type. e.g `mean`, `0.9`, `0.95`.
-        investigation_time: the time period (in years) for which the poe applies. Typically 50 years, but other values are possible.
+        investigation_time: the time period (in years) for which the poe applies.
         poe: the Probability of Exceedance (poe) expressed as a coeeffient/percentage/ratio (??).
-        accel_levels: a list of floats representing the acceleration level in G at the given poe for each grid location. This list must align with the locations in the given `location_grid_id`.
+        accel_levels: a list of floats representing the acceleration level in G at the given poe for each grid location.
+           This list must align with the locations in the given `location_grid_id`.
     """
 
     compatible_calc_id: str
@@ -125,21 +127,21 @@ class GriddedHazardPoeLevels(BaseModel):
     @field_validator('vs30', mode='before')
     # @classmethod
     def validate_vs30_value(cls, value: int) -> int:
-        if not value in VS30Enum:
+        if value not in VS30Enum:
             raise ValueError(f'vs30 value {value} is not supported')
         return value
 
     @field_validator('imt', mode='before')
     # @classmethod
     def validate_imt_value(cls, value: str) -> str:
-        if not value in IntensityMeasureTypeEnum:
+        if value not in IntensityMeasureTypeEnum:
             raise ValueError(f'imt value {value} is not supported')
         return value
 
     @field_validator('aggr', mode='before')
     # @classmethod
     def validate_aggr_value(cls, value: str) -> str:
-        if not value in AggregationEnum:
+        if value not in AggregationEnum:
             raise ValueError(f'aggr value {value} is not supported')
         return value
 
