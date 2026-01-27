@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import List
 
-from nzshm_common.grids import RegionGrid
+from nzshm_common import grids
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
@@ -11,6 +11,8 @@ from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 # Float32 = Annotated[float, {"pyarrow_type": pyarrow.float32()}]
 # Int32 = Annotated[int, {"pyarrow_type": pyarrow.int32()}]
 from .constraints import AggregationEnum, IntensityMeasureTypeEnum, VS30Enum
+
+DISABLE_GRIDDED_MODEL_VALIDATOR = False
 
 
 class CompatibleHazardCalculation(BaseModel):
@@ -125,28 +127,28 @@ class GriddedHazardPoeLevels(BaseModel):
     accel_levels: List[float]  # was grid_poes, but this was incrreect
 
     @field_validator('vs30', mode='before')
-    # @classmethod
+    @classmethod
     def validate_vs30_value(cls, value: int) -> int:
         if value not in VS30Enum:
             raise ValueError(f'vs30 value {value} is not supported')
         return value
 
     @field_validator('imt', mode='before')
-    # @classmethod
+    @classmethod
     def validate_imt_value(cls, value: str) -> str:
         if value not in IntensityMeasureTypeEnum:
             raise ValueError(f'imt value {value} is not supported')
         return value
 
     @field_validator('aggr', mode='before')
-    # @classmethod
+    @classmethod
     def validate_aggr_value(cls, value: str) -> str:
         if value not in AggregationEnum:
             raise ValueError(f'aggr value {value} is not supported')
         return value
 
     @field_validator('investigation_time', mode='before')
-    # @classmethod
+    @classmethod
     def validate_investigation_time_value(cls, value: int) -> int:
         if not value == 50:
             raise ValueError(f'investigation time must be 50 years. {value} is not supported')
@@ -154,7 +156,12 @@ class GriddedHazardPoeLevels(BaseModel):
 
     @model_validator(mode='before')
     def validate_len_accel_levels(cls, data) -> List:
-        grid = RegionGrid[data.location_grid_id]
-        if not len(data.accel_levels) == len(grid):
-            raise ValueError(f'expected accel_levels to have `{len(grid)}` values but found: {len(data.accel_levels)}')
+        if DISABLE_GRIDDED_MODEL_VALIDATOR:
+            return data
+        else:
+            grid = grids.get_location_grid(data['location_grid_id'])
+            if not len(data['accel_levels']) == len(grid):
+                raise ValueError(
+                    f'expected accel_levels to have `{len(grid)}` values' f'but found: {len(data['accel_levels'])}'
+                )
         return data
