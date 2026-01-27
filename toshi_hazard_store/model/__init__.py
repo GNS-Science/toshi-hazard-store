@@ -2,6 +2,7 @@ import logging
 from typing import Type
 
 from .constraints import AggregationEnum, IntensityMeasureTypeEnum, ProbabilityEnum, VS30Enum
+
 # from .gridded_hazard import GriddedHazard
 # from .gridded_hazard import drop_tables as drop_gridded
 # from .gridded_hazard import migrate as migrate_gridded
