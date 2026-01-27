@@ -162,6 +162,6 @@ class GriddedHazardPoeLevels(BaseModel):
             grid = grids.get_location_grid(data['location_grid_id'])
             if not len(data['accel_levels']) == len(grid):
                 raise ValueError(
-                    f'expected accel_levels to have `{len(grid)}` values' f'but found: {len(data['accel_levels'])}'
+                    f"expected accel_levels to have `{len(grid)}` values f'but found: {len(data['accel_levels'])}"
                 )
         return data
