@@ -129,21 +129,21 @@ class GriddedHazardPoeLevels(BaseModel):
     @field_validator('vs30', mode='before')
     @classmethod
     def validate_vs30_value(cls, value: int) -> int:
-        if value not in VS30Enum:
+        if value not in [x.value for x in VS30Enum]:
             raise ValueError(f'vs30 value {value} is not supported')
         return value
 
     @field_validator('imt', mode='before')
     @classmethod
     def validate_imt_value(cls, value: str) -> str:
-        if value not in IntensityMeasureTypeEnum:
+        if value not in [x.value for x in IntensityMeasureTypeEnum]:
             raise ValueError(f'imt value {value} is not supported')
         return value
 
     @field_validator('aggr', mode='before')
     @classmethod
     def validate_aggr_value(cls, value: str) -> str:
-        if value not in AggregationEnum:
+        if value not in [x.value for x in AggregationEnum]:
             raise ValueError(f'aggr value {value} is not supported')
         return value
 
