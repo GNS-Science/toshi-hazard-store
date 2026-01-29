@@ -29,7 +29,7 @@ def process_gridded_hazard(
     location_grid_id: str,
     compatible_calc_id: str,
     hazard_model_id: str,
-    vs30: float,
+    vs30: int,
     imt: str,
     agg: str,
 ) -> Iterable[GriddedHazardPoeLevels]:
@@ -42,7 +42,7 @@ def process_gridded_hazard(
         location_grid_id (str): ID of the region grid.
         compatible_calc_id (str): ID of the compatible calculation.
         hazard_model_id (str): ID of the hazard model.
-        vs30 (float): VS30 value for each location.
+        vs30 (int): VS30 value for each location.
         imt (str): Intensity measure type (e.g. PGA, PGV).
         agg (str): Aggregation method (e.g. mean, max).
 

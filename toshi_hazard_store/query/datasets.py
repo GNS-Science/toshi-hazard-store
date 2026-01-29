@@ -12,7 +12,7 @@ import logging
 import sys
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Iterator, Union
+from typing import Iterator
 
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -112,7 +112,7 @@ class AggregatedHazard:
     imt: str
     vs30: int
     agg: str
-    values: list[Union[float, 'IMTValue']]
+    values: list['IMTValue']
 
     def to_imt_values(self):
         """
