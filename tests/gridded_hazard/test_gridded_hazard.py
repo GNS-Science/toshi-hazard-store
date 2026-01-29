@@ -32,7 +32,7 @@ def test_get_one_degree_grid(get_one_degree_region_grid_fixture):
     assert len(grid) == 13
 
 
-def test_process_gridded_hazard(get_one_degree_region_grid_fixture, monkeypatch):
+def test_process_gridded_hazard_basic(get_one_degree_region_grid_fixture, monkeypatch):
     grid = get_one_degree_region_grid_fixture
 
     folder = Path(Path(os.path.realpath(__file__)).parent.parent, 'fixtures', 'aggregate_hazard')
@@ -41,7 +41,9 @@ def test_process_gridded_hazard(get_one_degree_region_grid_fixture, monkeypatch)
 
     gridded = []
     for record in gridded_hazard.process_gridded_hazard(
-        location_keys=[loc.code for loc in grid],
+        location_keys=[
+            loc.code for loc in grid
+        ],  # TODO this field should not be used since only valid locaion_grid should be stored to grid tables
         poe_lvl=0.02,
         location_grid_id='NZ_0_1_NB_1_1',
         compatible_calc_id='NZSHM22',
@@ -52,12 +54,13 @@ def test_process_gridded_hazard(get_one_degree_region_grid_fixture, monkeypatch)
     ):
         gridded.append(record)
 
-    # print(gridded)
-    # assert 0
+    print(gridded)
+    assert 'mean' in [obj.aggr for obj in gridded]
+    assert 'cov' in [obj.aggr for obj in gridded]
+    assert [obj.vs30 for obj in gridded] == [400, 400]
 
-    pass
 
-
+# TODO delete this once it's fully replaced by above
 # @mock_aws
 # class GriddedHazardTest(unittest.TestCase):
 #     @unittest.skip("line 134 assertion failing")

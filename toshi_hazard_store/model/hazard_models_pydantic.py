@@ -8,8 +8,6 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 
-# Float32 = Annotated[float, {"pyarrow_type": pyarrow.float32()}]
-# Int32 = Annotated[int, {"pyarrow_type": pyarrow.int32()}]
 from .constraints import AggregationEnum, IntensityMeasureTypeEnum, VS30Enum
 
 DISABLE_GRIDDED_MODEL_VALIDATOR = False
@@ -109,7 +107,7 @@ class GriddedHazardPoeLevels(BaseModel):
         vs30: the VS30 value.
         aggr: the aggregation type. e.g `mean`, `0.9`, `0.95`.
         investigation_time: the time period (in years) for which the poe applies.
-        poe: the Probability of Exceedance (poe) expressed as a coeeffient/percentage/ratio (??).
+        poe: the Probability of Exceedance (poe) expressed as a normalized percentage (i.e 0 to 1.0).
         accel_levels: a list of floats representing the acceleration level in G at the given poe for each grid location.
            This list must align with the locations in the given `location_grid_id`.
     """
@@ -130,21 +128,21 @@ class GriddedHazardPoeLevels(BaseModel):
     @classmethod
     def validate_vs30_value(cls, value: int) -> int:
         if value not in [x.value for x in VS30Enum]:
-            raise ValueError(f'vs30 value {value} is not supported')
+            raise ValueError(f'vs30 value {value} is not supported.')
         return value
 
     @field_validator('imt', mode='before')
     @classmethod
     def validate_imt_value(cls, value: str) -> str:
         if value not in [x.value for x in IntensityMeasureTypeEnum]:
-            raise ValueError(f'imt value {value} is not supported')
+            raise ValueError(f'imt value {value} is not supported.')
         return value
 
     @field_validator('aggr', mode='before')
     @classmethod
     def validate_aggr_value(cls, value: str) -> str:
         if value not in [x.value for x in AggregationEnum]:
-            raise ValueError(f'aggr value {value} is not supported')
+            raise ValueError(f'aggr value {value} is not supported.')
         return value
 
     @field_validator('investigation_time', mode='before')
@@ -152,6 +150,13 @@ class GriddedHazardPoeLevels(BaseModel):
     def validate_investigation_time_value(cls, value: int) -> int:
         if not value == 50:
             raise ValueError(f'investigation time must be 50 years. {value} is not supported')
+        return value
+
+    @field_validator('poe', mode='before')
+    @classmethod
+    def validate_poe_value(cls, value: float) -> float:
+        if not (0 < value < 1):
+            raise ValueError(f'poe value {value} is not supported.')
         return value
 
     @model_validator(mode='before')

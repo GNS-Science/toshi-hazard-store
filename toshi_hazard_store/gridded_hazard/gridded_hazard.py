@@ -24,8 +24,31 @@ GridHazTaskArgs = namedtuple("GridHazTaskArgs", "location_keys poe_lvl location_
 
 
 def process_gridded_hazard(
-    location_keys, poe_lvl, location_grid_id, compatible_calc_id, hazard_model_id, vs30, imt, agg
-):
+    location_keys: List[CodedLocation],
+    poe_lvl: float,
+    location_grid_id: str,
+    compatible_calc_id: str,
+    hazard_model_id: str,
+    vs30: float,
+    imt: str,
+    agg: str,
+) -> Iterable[GriddedHazardPoeLevels]:
+    """
+    Compute and yield GriddedHazardPoeLevels for the given location keys, POE level, and hazard model.
+
+    Args:
+        location_keys (List[CodedLocation]): List of location keys.
+        poe_lvl (float): POE level to compute for.
+        location_grid_id (str): ID of the region grid.
+        compatible_calc_id (str): ID of the compatible calculation.
+        hazard_model_id (str): ID of the hazard model.
+        vs30 (float): VS30 value for each location.
+        imt (str): Intensity measure type (e.g. PGA, PGV).
+        agg (str): Aggregation method (e.g. mean, max).
+
+    Yields:
+        GriddedHazardPoeLevels: Computed GriddedHazardPoeLevels for the given location keys and POE level.
+    """
     grid_accel_levels: List = [None for i in range(len(location_keys))]
     for haz in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[agg]):
         accel_levels = [val.lvl for val in haz.values]
@@ -44,15 +67,8 @@ def process_gridded_hazard(
     if agg == 'mean':
         grid_covs: List = [None for i in range(len(location_keys))]
         for cov in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[COV_AGG_KEY]):
-            # cov_accel_levels = [val.lvl for val in cov.values]
             cov_values = [val.val for val in cov.values]
             index = location_keys.index(cov.nloc_001)
-            # log.debug(f'cov_values {cov_values}')
-            # log.debug(f'index {index}')
-            # log.debug(f'grid_accel_levels[index]: {grid_accel_levels[index]}')  # NONE !
-            # log.debug(f'np.log(accel_levels): { np.log(accel_levels)}')
-            # log.debug(f'np.log(cov_values): { np.log(cov_values)}')
-
             grid_covs[index] = np.exp(
                 np.interp(np.log(grid_accel_levels[index]), np.log(accel_levels), np.log(cov_values))
             )
@@ -89,6 +105,7 @@ class GriddedHazardWorkerMP(multiprocessing.Process):
         multiprocessing.Process.__init__(self)
         self.task_queue = task_queue
 
+    # TODO: reinstate using new pyarrow outputs in place of dynamodb
     # def run(self):
     #     log.info("worker %s running." % self.name)
     #     proc_name = self.name
@@ -121,7 +138,22 @@ def calc_gridded_hazard(
     num_workers: int,
     filter_locations: Optional[Iterable[CodedLocation]] = None,
 ):
+    """
+    Compute and save gridded hazard rows for the given parameters.
 
+    Args:
+        location_grid_id (str): ID of the region grid.
+        poe_levels (Iterable[float]): POE levels to compute for.
+        hazard_model_ids (Iterable[str]): IDs of the hazard models.
+        vs30s (Iterable[float]): VS30 values for each location.
+        imts (Iterable[str]): Intensity measure types (e.g. PGA, PGV).
+        aggs (Iterable[str]): Aggregation methods (e.g. mean, max).
+        num_workers (int): Number of worker processes to use.
+        filter_locations (Optional[Iterable[CodedLocation]]): Optional list of locations to filter by.
+
+    Returns:
+        None
+    """
     log.debug(
         'calc_gridded_hazard( grid: %s poes: %s models: %s vs30s: %s imts: %s aggs: %s'
         % (location_grid_id, poe_levels, hazard_model_ids, vs30s, imts, aggs)
