@@ -49,6 +49,9 @@ def process_gridded_hazard(
     Yields:
         GriddedHazardPoeLevels: Computed GriddedHazardPoeLevels for the given location keys and POE level.
     """
+    if not (0 < poe_lvl < 1):
+        raise ValueError(f'poe value {poe_lvl} is not supported.')
+
     grid_accel_levels: List = [None for i in range(len(location_keys))]
     for haz in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[agg]):
         accel_levels = [val.lvl for val in haz.values]

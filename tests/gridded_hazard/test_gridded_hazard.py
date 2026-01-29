@@ -4,8 +4,11 @@
 import os
 from pathlib import Path
 
+import pytest
+
 from toshi_hazard_store import gridded_hazard
 from toshi_hazard_store.model import hazard_models_pydantic
+from toshi_hazard_store.model.hazard_models_pydantic import GriddedHazardPoeLevels
 from toshi_hazard_store.query import datasets
 
 
@@ -58,6 +61,40 @@ def test_process_gridded_hazard_basic(get_one_degree_region_grid_fixture, monkey
     assert 'mean' in [obj.aggr for obj in gridded]
     assert 'cov' in [obj.aggr for obj in gridded]
     assert [obj.vs30 for obj in gridded] == [400, 400]
+
+
+@pytest.mark.parametrize(
+    'kwargs, message',
+    [
+        ({'poe': 0.0}, "unsupported"),
+        ({'poe': 1.0}, "unsupported"),
+        ({'poe': 2.0}, "unsupported"),
+        ({'vs30': "400"}, "unsupported"),
+        ({'vs30': 400.1}, "unsupported"),
+        ({'imt': "VGA"}, "unsupported"),
+        ({'aggr': "sum"}, "unsupported"),
+        ({'investigation_time': 1}, "unsupported"),
+    ],
+)
+def test_gridded_hazard_poe_model_validations(monkeypatch, kwargs, message):
+
+    folder = Path(Path(os.path.realpath(__file__)).parent.parent, 'fixtures', 'aggregate_hazard')
+    monkeypatch.setattr(datasets, 'DATASET_AGGR_URI', str(folder.absolute()))
+    monkeypatch.setattr(hazard_models_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True)
+
+    with pytest.raises(ValueError, match=r".* not supported"):
+        assert GriddedHazardPoeLevels(
+            location_grid_id='NZ_0_1_NB_1_1',
+            compatible_calc_id='NZSHM22',
+            hazard_model_id='NSHM_v1.0.4',
+            vs30=kwargs.get('vs30', 400),
+            imt=kwargs.get('imt', 'PGA'),
+            aggr=kwargs.get('aggr', 'mean'),
+            investigation_time=kwargs.get('investigation_time', 50),
+            poe=kwargs.get('poe', 0.02),
+            accel_levels=[1, 2, 3, 4],
+        )
+        print(kwargs)
 
 
 # TODO delete this once it's fully replaced by above
