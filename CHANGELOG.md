@@ -3,9 +3,12 @@
 ## [1.4.0-next-release] 2026-01
 ### Added
  - migrated 'ths_build_grid` script, module and tests from `toshi-hazard-haste` project.
+ - DEVELOPMENT.md describes developer environment setup.
+ - gridded pydantic model
 
 ### Changed
  - set `pyarrow <3` upper bound as the new 3.0.0. version introduces some schema issues.
+ - revised tox configuration for proper environment selection
 
 ## [1.3.1] 2026-01-20
 ### Changed
