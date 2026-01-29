@@ -66,23 +66,26 @@ def test_process_gridded_hazard_basic(get_one_degree_region_grid_fixture, monkey
 @pytest.mark.parametrize(
     'kwargs, message',
     [
-        ({'poe': 0.0}, "unsupported"),
-        ({'poe': 1.0}, "unsupported"),
-        ({'poe': 2.0}, "unsupported"),
-        ({'vs30': "400"}, "unsupported"),
-        ({'vs30': 400.1}, "unsupported"),
-        ({'imt': "VGA"}, "unsupported"),
-        ({'aggr': "sum"}, "unsupported"),
-        ({'investigation_time': 1}, "unsupported"),
+        ({'poe': 0.0}, "poe.*not supported"),
+        ({'poe': 1.0}, "poe.*not supported"),
+        ({'poe': 2.0}, "poe.*not supported"),
+        ({'vs30': "400"}, "vs30.*not supported"),
+        ({'vs30': 400.1}, "vs30.*not supported"),
+        ({'imt': "VGA"}, "imt.*not supported"),
+        ({'aggr': "sum"}, "aggr.*not supported"),
+        ({'investigation_time': 1}, "not supported"),
+        ({'accel_levels': [1, 2, 3, 4]}, "expected accel_levels to have"),
     ],
 )
 def test_gridded_hazard_poe_model_validations(monkeypatch, kwargs, message):
 
     folder = Path(Path(os.path.realpath(__file__)).parent.parent, 'fixtures', 'aggregate_hazard')
     monkeypatch.setattr(datasets, 'DATASET_AGGR_URI', str(folder.absolute()))
-    monkeypatch.setattr(hazard_models_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True)
+    monkeypatch.setattr(
+        hazard_models_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", not kwargs.get('accel_levels', False)
+    )
 
-    with pytest.raises(ValueError, match=r".* not supported"):
+    with pytest.raises(ValueError, match=f".* {message}"):
         assert GriddedHazardPoeLevels(
             location_grid_id='NZ_0_1_NB_1_1',
             compatible_calc_id='NZSHM22',
@@ -92,7 +95,7 @@ def test_gridded_hazard_poe_model_validations(monkeypatch, kwargs, message):
             aggr=kwargs.get('aggr', 'mean'),
             investigation_time=kwargs.get('investigation_time', 50),
             poe=kwargs.get('poe', 0.02),
-            accel_levels=[1, 2, 3, 4],
+            accel_levels=kwargs.get('accel_levels', range(13)),
         )
         print(kwargs)
 
