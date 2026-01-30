@@ -5,6 +5,7 @@
  - migrated 'ths_build_grid` script, module and tests from `toshi-hazard-haste` project.
  - DEVELOPMENT.md describes developer environment setup.
  - gridded pydantic model
+ - pa schemas built from pydantic model
 
 ### Changed
  - set `pyarrow <3` upper bound as the new 3.0.0. version introduces some schema issues.

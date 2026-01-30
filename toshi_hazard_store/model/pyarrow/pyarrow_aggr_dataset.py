@@ -3,7 +3,6 @@
 import logging
 from typing import TYPE_CHECKING, Iterable, Optional
 
-import numpy as np
 import pandas as pd
 import pyarrow as pa
 from pyarrow import fs
@@ -62,12 +61,4 @@ def table_from_models(models: Iterable['HazardAggregateCurve']) -> pa.Table:
     """
 
     df = pd.DataFrame([hazagg.model_dump() for hazagg in models])
-
-    # MANUALLY set the dataframe typing to match the pyarrow schema UGHHHH
-    dtype = {
-        "vs30": "int32",
-    }
-    # coerce the the types
-    df = df.astype(dtype)
-    df['values'] = df['values'].apply(lambda x: np.array(x, dtype=np.float32))  # type: ignore
-    return pa.Table.from_pandas(df)
+    return pa.Table.from_pandas(df, schema=hazard_agreggate_schema)

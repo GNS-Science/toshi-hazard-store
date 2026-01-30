@@ -64,12 +64,12 @@ def test_HazardAggregation_write_dataset_with_bad_schema(pyarrow_aggregation_mod
     monkeypatch.setattr(pyarrow_aggr_dataset, "hazard_agreggate_schema", bad_schema)
 
     # should raise excption about the schema mismatch
-    with pytest.raises(pa.ArrowTypeError, match=r"which does not match expected schema"):
-
+    with pytest.raises(
+        KeyError, match=r"name 'mumbo' present in the specified schema is not found in the columns or index"
+    ):
         output_folder = tmp_path / "ds"
         models = pyarrow_aggregation_models()
         filesystem = fs.LocalFileSystem()
-
         pyarrow_aggr_dataset.append_models_to_dataset(models, output_folder, filesystem=filesystem)
 
 
