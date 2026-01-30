@@ -16,7 +16,7 @@ necessary environments for both poetry and tox.
 
 By contrast `poetry env use 3.11` expicitly activates the python 3.11 virtualenv. BUT DO NOT do this as it will override the python interpreter used by tox for tests.
 
-NB `poetry env list` will show that the first python envionement is activated, even though it isn't!
+NB `poetry env list` will show that the first python environment is activated, even though it isn't!
 
 ## Testing 
 
