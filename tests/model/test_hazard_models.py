@@ -2,8 +2,6 @@
 Basic model migration, structure
 """
 
-import itertools
-
 import pyarrow as pa
 import pyarrow.dataset as ds
 import pytest
@@ -11,26 +9,6 @@ from pyarrow import fs
 
 from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_aggr_dataset, pyarrow_dataset
-
-
-@pytest.fixture
-def pyarrow_aggregation_models(many_rlz_args):
-    def generator_fn():
-        for loc, vs30, imt, agg in itertools.product(
-            many_rlz_args["locs"][:5], many_rlz_args["vs30s"], many_rlz_args["imts"], ['mean', 'cov', '0.95']
-        ):
-            yield HazardAggregateCurve(
-                compatible_calc_id="NZSHM22",
-                hazard_model_id="MyNewModel",
-                nloc_001=loc.resample(0.001).code,
-                nloc_0=loc.resample(1).code,
-                imt=imt,
-                vs30=vs30,
-                aggr=agg,
-                values=[(x / 1000) for x in range(44)],
-            )
-
-    yield generator_fn
 
 
 # Test pyarrow HazardAggregation models
@@ -74,7 +52,7 @@ def test_HazardAggregation_write_dataset_with_bad_schema(pyarrow_aggregation_mod
         pyarrow_aggr_dataset.append_models_to_dataset(models, output_folder, filesystem=filesystem)
 
 
-def test_HazardAggregation_read_dataset_with_bad_schema_doesnt_fail(pyarrow_aggregation_models, tmp_path, monkeypatch):
+def test_HazardAggregation_read_dataset_with_bad_schema_doesnt_raise(pyarrow_aggregation_models, tmp_path, monkeypatch):
 
     dataset_folder = tmp_path / "ds"
     models = pyarrow_aggregation_models()
@@ -82,19 +60,20 @@ def test_HazardAggregation_read_dataset_with_bad_schema_doesnt_fail(pyarrow_aggr
 
     pyarrow_aggr_dataset.append_models_to_dataset(models, dataset_folder, filesystem=filesystem)
 
-    filesystem = fs.LocalFileSystem()
-    dataset = ds.dataset(dataset_folder, schema=None, format='parquet', filesystem=filesystem, partitioning='hive')
-
-    print()
-    print(dataset.schema)
-    print()
-
     # I expected this should raise exception about the schema mismatch
     # based on https://arrow.apache.org/docs/python/generated/pyarrow.\
     #  dataset.Dataset.html#pyarrow.dataset.Dataset.replace_schema
-    bad_schema = pa.schema([("numeric", pa.int64()), ("mumbo", pa.string()), ("jumbo", pa.string())])
-    dataset = dataset.replace_schema(bad_schema)  # should raise exception but doesn't
 
+    # however, pyarrow won't verify the schema matches
+    bad_schema = pa.schema([("numeric", pa.int64()), ("mumbo", pa.string()), ("jumbo", pa.string())])
+    dataset = ds.dataset(
+        dataset_folder, schema=bad_schema, format='parquet', filesystem=filesystem, partitioning='hive'
+    )
     table = dataset.to_table()
     df = table.to_pandas()
+
     print(df)  # still no exception
+
+    # but we can do it ourselves
+    with pytest.raises(AssertionError):
+        assert dataset.schema == HazardAggregateCurve.pyarrow_schema()

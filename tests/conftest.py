@@ -9,7 +9,7 @@ from toshi_hazard_store import model
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def many_rlz_args():
     yield dict(
         TOSHI_ID='FAk3T0sHi1D==',
@@ -20,7 +20,7 @@ def many_rlz_args():
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def many_hazagg_args():
     yield dict(
         HAZARD_MODEL_ID='MODEL_THE_FIRST',
