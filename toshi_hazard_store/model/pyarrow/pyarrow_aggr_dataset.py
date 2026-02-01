@@ -1,21 +1,18 @@
 """pyarrow helper function"""
 
 import logging
-from typing import TYPE_CHECKING, Iterable, Optional
+from typing import Iterable, Optional
 
 import pandas as pd
 import pyarrow as pa
 from pyarrow import fs
 
+from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
-from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
 
 log = logging.getLogger(__name__)
 
-if TYPE_CHECKING:  # pragma: no cover
-    from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
-
-hazard_agreggate_schema = get_hazard_aggregate_schema()
+hazard_agreggate_schema = HazardAggregateCurve.pyarrow_schema()
 
 
 def append_models_to_dataset(

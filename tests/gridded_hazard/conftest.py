@@ -7,8 +7,8 @@ import pytest
 from nzshm_common import grids
 from nzshm_common.location.coded_location import CodedLocation
 
+from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
-from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
 
 
 @pytest.fixture(scope='function')
@@ -22,7 +22,7 @@ def one_degree_hazard_sample_dataframe():
         filesystem=source_filesystem,
         partitioning='hive',
         format='parquet',
-        schema=get_hazard_aggregate_schema(),
+        schema=HazardAggregateCurve.pyarrow_schema(),
     )
     nloc0 = grids.get_location_grid("NZ_0_1_NB_1_1", 1.0)[0].code
     flt = (

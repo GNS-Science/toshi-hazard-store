@@ -18,8 +18,10 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 
 from toshi_hazard_store.config import DATASET_AGGR_URI
+
+# from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
+from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
-from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
 from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
 
 log = logging.getLogger(__name__)
@@ -142,7 +144,7 @@ def get_dataset() -> ds.Dataset:
             filesystem=source_filesystem,
             partitioning='hive',
             format='parquet',
-            schema=get_hazard_aggregate_schema(),
+            schema=HazardAggregateCurve.pyarrow_schema(),
         )
         log.info(f"Opened dataset `{dataset}` in {dt.datetime.now() - start_time}.")
     except Exception as e:  # pragma: no cover
@@ -167,7 +169,7 @@ def get_dataset_vs30(vs30: int) -> ds.Dataset:
             filesystem=source_filesystem,
             partitioning='hive',
             format='parquet',
-            schema=get_hazard_aggregate_schema(),
+            schema=HazardAggregateCurve.pyarrow_schema(),
         )
         log.info(f"Opened dataset `{dataset}` in {dt.datetime.now() - start_time}.")
     except Exception as e:  # pragma: no cover
@@ -194,7 +196,7 @@ def get_dataset_vs30_nloc0(vs30: int, nloc: str) -> ds.Dataset:
             filesystem=source_filesystem,
             partitioning='hive',
             format='parquet',
-            schema=get_hazard_aggregate_schema(),
+            schema=HazardAggregateCurve.pyarrow_schema(),
         )
         log.info(f"Opened dataset `{dataset}` in {dt.datetime.now() - start_time}.")
     except Exception as e:  # pragma: no cover

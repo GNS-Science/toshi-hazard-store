@@ -3,9 +3,10 @@ Define the standard schema used with pyarrow datasets.
 """
 
 import pyarrow as pa
-from lancedb.pydantic import pydantic_to_schema
 
-from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
+# from lancedb.pydantic import pydantic_to_schema
+
+# from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 
 USE_64BIT_VALUES_DEFAULT = False
 
@@ -50,22 +51,3 @@ def get_hazard_realisation_schema(use_64_bit_values: bool = USE_64BIT_VALUES_DEF
             ("values", values_type),  # a list of the 44 IMTL values
         ]
     )
-
-
-def get_hazard_aggregate_schema(use_64_bit_values: bool = USE_64BIT_VALUES_DEFAULT) -> pa.schema:
-    """A schema for aggregate hazard curve datasets.
-
-    built dynamically from the pydantic model, using lancedb helper method.
-    """
-
-    # Convert the Pydantic model to a PyArrow schema
-    arrow_schema = pydantic_to_schema(HazardAggregateCurve)
-    if not use_64_bit_values:
-        arrow_schema = arrow_schema.set(
-            arrow_schema.get_field_index('vs30'), pa.lib.field('vs30', pa.int32(), nullable=False)
-        )
-        arrow_schema = arrow_schema.set(
-            arrow_schema.get_field_index('values'), pa.lib.field('values', pa.list_(pa.float32()), nullable=False)
-        )
-
-    return arrow_schema

@@ -3,7 +3,6 @@ import pytest
 
 from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_aggr_dataset, pyarrow_dataset
-from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
 
 
 @pytest.fixture
@@ -35,7 +34,7 @@ def test_serialise_aggregate_hazard_curves(tmp_path, random_hazard_curves):
     )
 
     # read and check the dataset
-    schema = get_hazard_aggregate_schema()
+    schema = HazardAggregateCurve.pyarrow_schema()
     dataset = ds.dataset(output_folder, format='parquet', partitioning='hive', schema=schema)
     table = dataset.to_table()
     dfout = table.to_pandas()
