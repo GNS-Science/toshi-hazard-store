@@ -9,9 +9,10 @@ https://arrow.apache.org/docs/python/parquet.html#reading-and-writing-the-apache
 import datetime as dt
 import itertools
 import logging
+import sys
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Iterator, Union
+from typing import Iterator
 
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -105,12 +106,13 @@ class AggregatedHazard:
 
     compatable_calc_id: str
     hazard_model_id: str
+
     nloc_001: str
     nloc_0: str
     imt: str
     vs30: int
     agg: str
-    values: list[Union[float, 'IMTValue']]
+    values: list['IMTValue']
 
     def to_imt_values(self):
         """
@@ -124,7 +126,7 @@ class AggregatedHazard:
         return self
 
 
-@lru_cache()
+@lru_cache(maxsize=0 if "pytest" in sys.modules else 12)
 def get_dataset() -> ds.Dataset:
     """
     Cache the dataset.
@@ -148,7 +150,7 @@ def get_dataset() -> ds.Dataset:
     return dataset
 
 
-@lru_cache()
+@lru_cache(maxsize=0 if "pytest" in sys.modules else 12)
 def get_dataset_vs30(vs30: int) -> ds.Dataset:
     """
     Cache the dataset for a given vs30.
@@ -173,7 +175,7 @@ def get_dataset_vs30(vs30: int) -> ds.Dataset:
     return dataset
 
 
-@lru_cache()
+@lru_cache(maxsize=0 if "pytest" in sys.modules else 12)
 def get_dataset_vs30_nloc0(vs30: int, nloc: str) -> ds.Dataset:
     """
     Cache the dataset for a given vs30 and nloc_0.
@@ -241,6 +243,9 @@ def get_hazard_curves_naive(
         for row in zip(*batch.columns):  # pragma: no branch
             count += 1
             item = (x.as_py() for x in row)
+            # log.info(f'row: {row}')
+            item = (x.as_py() for x in row)
+            # log.info(f'item: {item}')
             obj = AggregatedHazard(*item).to_imt_values()
             if obj.vs30 not in vs30s:
                 raise RuntimeError(f"vs30 {obj.vs30} not in {vs30s}. Is schema correct?")  # pragma: no cover
