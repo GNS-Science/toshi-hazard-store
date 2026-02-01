@@ -3,16 +3,12 @@
 import logging
 from typing import Iterable, Optional
 
-import pandas as pd
-import pyarrow as pa
 from pyarrow import fs
 
 from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 
 log = logging.getLogger(__name__)
-
-hazard_agreggate_schema = HazardAggregateCurve.pyarrow_schema()
 
 
 def append_models_to_dataset(
@@ -36,7 +32,7 @@ def append_models_to_dataset(
 
     Returns: None
     """
-    table = table_from_models(models)
+    table = pyarrow_dataset.table_from_models(models)
     pyarrow_dataset.append_models_to_dataset(
         table,
         base_dir,
@@ -44,18 +40,5 @@ def append_models_to_dataset(
         filesystem,
         partitioning,
         existing_data_behavior,
-        schema=hazard_agreggate_schema,
+        schema=HazardAggregateCurve.pyarrow_schema(),
     )
-
-
-def table_from_models(models: Iterable['HazardAggregateCurve']) -> pa.Table:
-    """build a pyarrow table from HazardAggregateCurve models.
-
-    Args:
-    models: An iterable of model data objects.
-
-    Returns: The pyarrow hazard aggregations table.
-    """
-
-    df = pd.DataFrame([hazagg.model_dump() for hazagg in models])
-    return pa.Table.from_pandas(df, schema=hazard_agreggate_schema)

@@ -8,11 +8,13 @@ import uuid
 from functools import partial
 from typing import Callable, Iterable, Optional, Tuple, Union
 
+import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset
 import pyarrow.dataset as ds
 import s3path
 from pyarrow import fs
+from pydantic import BaseModel
 
 REGION = os.getenv('REGION', 'ap-southeast-2')  # SYDNEY
 
@@ -159,3 +161,19 @@ def configure_output(output_target: str) -> Tuple[str, fs.FileSystem]:
         output = str(pathlib.Path(output_target).resolve())
         filesystem = fs.LocalFileSystem()
     return output, filesystem
+
+
+def table_from_models(models: Iterable[BaseModel]) -> pa.Table:
+    """build a pyarrow table from suitable Pydantic models.
+
+    Args:
+    models: An iterable of model data objects.
+
+    Returns: The pyarrow hazard aggregations table.
+    """
+    models = list(models)
+    # [model_instance.model_dump() for model_instance in models]
+    df = pd.DataFrame([m.model_dump() for m in models])
+    if len(models):
+        schema = models[0].pyarrow_schema()  # type: ignore
+        return pa.Table.from_pandas(df, schema=schema)

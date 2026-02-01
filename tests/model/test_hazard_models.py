@@ -10,7 +10,7 @@ import pytest
 from pyarrow import fs
 
 from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
-from toshi_hazard_store.model.pyarrow import pyarrow_aggr_dataset
+from toshi_hazard_store.model.pyarrow import pyarrow_aggr_dataset, pyarrow_dataset
 
 
 @pytest.fixture
@@ -51,7 +51,7 @@ def test_HazardAggregation_roundtrip_dataset(pyarrow_aggregation_models, tmp_pat
     table = dataset.to_table()
     df = table.to_pandas()
 
-    expected = pyarrow_aggr_dataset.table_from_models(pyarrow_aggregation_models())
+    expected = pyarrow_dataset.table_from_models(pyarrow_aggregation_models())
 
     assert table.shape == expected.shape
     assert df.shape == expected.shape
@@ -61,11 +61,12 @@ def test_HazardAggregation_write_dataset_with_bad_schema(pyarrow_aggregation_mod
 
     # monkeypatch with a bad schema
     bad_schema = pa.schema([("mumbo", pa.string()), ("jumbo", pa.string())])
-    monkeypatch.setattr(pyarrow_aggr_dataset, "hazard_agreggate_schema", bad_schema)
+    monkeypatch.setattr(HazardAggregateCurve, "pyarrow_schema", lambda x: bad_schema)
 
-    # should raise excption about the schema mismatch
     with pytest.raises(
-        KeyError, match=r"name 'mumbo' present in the specified schema is not found in the columns or index"
+        # pa.lib.ArrowTypeError, match=r"which does not match expected schema\n.*mumbo"
+        KeyError,
+        match=r"name 'mumbo' present in the specified schema is not found in the columns or index",
     ):
         output_folder = tmp_path / "ds"
         models = pyarrow_aggregation_models()
