@@ -12,6 +12,7 @@ from nzshm_common.location import CodedLocation
 
 from toshi_hazard_store import query
 from toshi_hazard_store.model.hazard_models_pydantic import GriddedHazardPoeLevels
+# from toshi_hazard_store.model.pyarrow.pyarrow_dataset import append_models_to_dataset
 
 from .gridded_poe import compute_hazard_at_poe
 
@@ -109,26 +110,28 @@ class GriddedHazardWorkerMP(multiprocessing.Process):
         self.task_queue = task_queue
 
     # TODO: reinstate using new pyarrow outputs in place of dynamodb
-    # def run(self):
-    #     log.info("worker %s running." % self.name)
-    #     proc_name = self.name
+    def run(self):
+        log.info("worker %s running." % self.name)
+        proc_name = self.name
 
-    #     while True:
-    #         nt = self.task_queue.get()
-    #         if nt is None:
-    #             # Poison pill means shutdown
-    #             self.task_queue.task_done()
-    #             log.info('%s: Exiting' % proc_name)
-    #             break
+        while True:
+            nt = self.task_queue.get()
+            if nt is None:
+                # Poison pill means shutdown
+                self.task_queue.task_done()
+                log.info('%s: Exiting' % proc_name)
+                break
 
-    #         with model.GriddedHazard.batch_write() as batch:
-    #             for ghaz in process_gridded_hazard(*nt):
-    #                 if SPOOF_SAVE is False:
-    #                     batch.save(ghaz)
-    #                     print('save', ghaz)
+            # for grid_record in process_gridded_hazard(*nt):
+            #     pass
+            # with model.GriddedHazard.batch_write() as batch:
+            #     for ghaz in process_gridded_hazard(*nt):
+            #         if SPOOF_SAVE is False:
+            #             batch.save(ghaz)
+            #             print('save', ghaz)
 
-    #         self.task_queue.task_done()
-    #         log.info('%s task done.' % self.name)
+            self.task_queue.task_done()
+            log.info('%s task done.' % self.name)
 
 
 def calc_gridded_hazard(

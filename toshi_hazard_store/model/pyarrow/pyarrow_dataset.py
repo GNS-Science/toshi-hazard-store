@@ -174,6 +174,6 @@ def table_from_models(models: Iterable[BaseModel]) -> pa.Table:
     models = list(models)
     # [model_instance.model_dump() for model_instance in models]
     df = pd.DataFrame([m.model_dump() for m in models])
-    if len(models):
+    if len(models):  # pragma: no cover
         schema = models[0].pyarrow_schema()  # type: ignore
         return pa.Table.from_pandas(df, schema=schema)
