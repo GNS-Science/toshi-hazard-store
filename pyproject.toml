@@ -48,6 +48,7 @@ ths_ds_check = 'toshi_hazard_store.scripts.ths_ds_check:main'
 ths_ds_sanity = 'toshi_hazard_store.scripts.ths_ds_sanity:main'
 ths_ds_defrag = 'toshi_hazard_store.scripts.ths_ds_defrag:main'
 ths_ds_filter = 'toshi_hazard_store.scripts.ths_ds_filter:main'
+ths_grid_sanity = 'toshi_hazard_store.scripts.ths_grid_sanity:main'
 
 # Legacy stuff
 # ths_r4_query = 'toshi_hazard_store.scripts.ths_r4_query:main'

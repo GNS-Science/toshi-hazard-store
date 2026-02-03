@@ -21,13 +21,13 @@ from toshi_hazard_store import query
 from toshi_hazard_store.gridded_hazard import calc_gridded_hazard
 
 log = logging.getLogger()
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logging.getLogger('nshm_toshi_client.toshi_client_base').setLevel(logging.INFO)
 logging.getLogger('urllib3').setLevel(logging.INFO)
 logging.getLogger('botocore').setLevel(logging.INFO)
 logging.getLogger('pynamodb').setLevel(logging.INFO)
 # logging.getLogger('toshi_hazard_haste').setLevel(logging.INFO)
-# logging.getLogger('toshi_hazard_store').setLevel(logging.INFO)
+logging.getLogger('toshi_hazard_store').setLevel(logging.INFO)
 logging.getLogger('gql.transport.requests').setLevel(logging.WARN)
 
 formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
@@ -58,12 +58,20 @@ def main():
 @click.option('-V', '--vs30s', help='comma-delimited list of vs30s.')
 @click.option('-P', '--poes', help='comma-delimited list of poe_levels.')
 @click.option('-c', '--config', type=click.Path(exists=True))  # help="path to a valid THU configuration file."
-def cli_geojson(hazard_model_ids, site_list, imts, aggs, vs30s, poes, config):
+def cli_geojson(
+    hazard_model_ids,
+    site_list,
+    imts,
+    aggs,
+    vs30s,
+    poes,
+    config,
+):
     """Query gridded hazard and build geojson."""
 
     hazard_model_ids = hazard_model_ids.split(',') if hazard_model_ids else None
     imts = imts.split(',') if imts else None
-    vs30s = [float(v) for v in vs30s.split(',')] if vs30s else None
+    vs30s = [int(v) for v in vs30s.split(',')] if vs30s else None
     aggs = aggs.split(',') if aggs else None
     poes = [float(v) for v in poes.split(',')] if poes else None
 
@@ -90,7 +98,7 @@ def cli_geojson(hazard_model_ids, site_list, imts, aggs, vs30s, poes, config):
     def fix_nan(poes):
         for i in range(len(poes)):
             if poes[i] is None:
-                log.debug('Nan at %s' % i)
+                log.warning('Nan at %s' % i)
                 poes[i] = 0.0
         return poes
 

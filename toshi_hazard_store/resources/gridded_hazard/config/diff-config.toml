@@ -1,0 +1,8 @@
+# cli command configuration example
+hazard_model_ids = ["NSHM_v1.0.4"]
+site_list = "NZ_0_1_NB_1_1"           #0.1 degree NZ grid ver 1
+vs30s = [400]
+imts = ["PGA"]
+poes = [0.1]
+aggs = ["0.5"]
+

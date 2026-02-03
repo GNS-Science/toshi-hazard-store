@@ -20,7 +20,7 @@ import pyarrow.dataset as ds
 from toshi_hazard_store.config import DATASET_AGGR_URI
 
 # from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
-from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
+from toshi_hazard_store.model.hazard_models_pydantic import GriddedHazardPoeLevels, HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
 
@@ -145,6 +145,23 @@ def get_dataset() -> ds.Dataset:
             partitioning='hive',
             format='parquet',
             schema=HazardAggregateCurve.pyarrow_schema(),
+        )
+        log.info(f"Opened dataset `{dataset}` in {dt.datetime.now() - start_time}.")
+    except Exception as e:  # pragma: no cover
+        raise RuntimeError(f"Failed to open dataset: {e}")
+    return dataset
+
+
+def get_gridded_dataset(dataset_uri) -> ds.Dataset:
+    start_time = dt.datetime.now()
+    try:
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(dataset_uri)
+        dataset = ds.dataset(
+            source_dir,
+            filesystem=source_filesystem,
+            partitioning='hive',
+            format='parquet',
+            schema=GriddedHazardPoeLevels.pyarrow_schema(),
         )
         log.info(f"Opened dataset `{dataset}` in {dt.datetime.now() - start_time}.")
     except Exception as e:  # pragma: no cover
@@ -455,3 +472,53 @@ def get_hazard_curves(
 
     if deferred_warning:  # pragma: no cover
         raise deferred_warning
+
+
+def get_gridded_hazard(
+    dataset_uri: str,
+    location_grid_id: str,
+    hazard_model_ids: list[str],
+    vs30s: list[float],
+    imts: list[str],
+    aggs: list[str],
+    poes: list[float],
+) -> Iterator[GriddedHazardPoeLevels]:
+    """
+    Retrieves gridded hazard from the parquet dataset.
+    """
+
+    log.debug('> get_gridded_hazard')
+    t0 = dt.datetime.now()
+
+    gridded_dataset = get_gridded_dataset(dataset_uri)
+    flt = (
+        (pc.field('location_grid_id') == location_grid_id)
+        & (pc.field('aggr').isin(aggs))
+        & (pc.field("imt").isin(imts))
+        & (pc.field("vs30").isin(vs30s))
+        & (pc.field("poe").isin(poes))
+        & (pc.field('hazard_model_id').isin(hazard_model_ids))
+    )
+
+    log.debug(f"filter: {flt}")
+    table = gridded_dataset.to_table(filter=flt)
+
+    t1 = dt.datetime.now()
+    log.debug(f"to_table for filter took {(t1 - t0).total_seconds()} seconds.")
+    log.debug(f"schema {table.schema}")
+
+    # for batch in table.to_batches():  # pragma: no branch
+    #     for row in zip(*batch.columns):  # pragma: no branch
+    #         # count += 1
+    #         print(row)
+    #         assert 0
+    #         item = (x.as_py() for x in row)
+
+    #         print(*item)
+    #         obj = GriddedHazardPoeLevels(**item)
+    #         yield obj
+
+    df0 = table.to_pandas()
+    for row_dict in df0.to_dict(orient="records"):
+        print(row_dict)
+        yield GriddedHazardPoeLevels(**row_dict)

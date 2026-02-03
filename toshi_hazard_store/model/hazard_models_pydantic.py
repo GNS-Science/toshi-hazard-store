@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from typing import Any, List
 
+import numpy as np
 import pyarrow as pa
 from lancedb.pydantic import pydantic_to_schema
 from nzshm_common import grids
@@ -222,7 +223,7 @@ class GriddedHazardPoeLevels(BaseModel):
         errs = []
         vals = []
         for idx, val in enumerate(values_list):
-            if not isinstance(val, float):
+            if not isinstance(val, (np.float32, float)):
                 errs.append(val)
             else:
                 vals.append(val)
