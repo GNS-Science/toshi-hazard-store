@@ -2,7 +2,7 @@
 
 import pytest
 
-from toshi_hazard_store.gridded_hazard import compute_hazard_at_poe
+from toshi_hazard_store.gridded_hazard import gridded_hazard, gridded_poe
 
 ex0 = dict(
     annual_poes=[
@@ -200,7 +200,8 @@ ex1 = dict(
 
 
 @pytest.mark.parametrize("example", [ex0, ex1])
-def test_non_monotic_examples(example):
-    with pytest.raises(ValueError, match='Poe values not monotonous') as exc:
-        compute_hazard_at_poe(**example)
+def test_non_monotic_examples(example, monkeypatch):
+    monkeypatch.setattr(gridded_poe, "HAZARD_CURVE_MAX_POE", 0.632)
+    with pytest.raises(ValueError, match='Poe values not monotonic') as exc:
+        gridded_hazard.compute_hazard_at_poe(**example)
     print(exc)
