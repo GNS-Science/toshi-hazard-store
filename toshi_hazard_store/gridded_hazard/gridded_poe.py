@@ -1,12 +1,10 @@
 """Calculate hazard at a given probability of exceedance level from a hazard curve."""
 
-# import json
-# from itertools import product
-from typing import Iterable  # Any, Iterator, List, Tuple
+from typing import Iterable, List
 
 import numpy as np
 
-# import pandas as pd
+HAZARD_CURVE_MAX_POE = 0.632  # 0.6318
 
 
 def trim_poes(min_poe: float, max_poe: float, ground_accels: Iterable[float], annual_poes: Iterable[float]):
@@ -29,19 +27,22 @@ def trim_poes(min_poe: float, max_poe: float, ground_accels: Iterable[float], an
 
 
 def compute_hazard_at_poe(
-    poe: float, ground_accels: Iterable[float], annual_poes: Iterable[float], investigation_time: int
+    poe: float, ground_accels: List[float], annual_poes: List[float], investigation_time: int
 ) -> float:
     """Compute hazard at given poe using numpy.interpolate().
 
     see https://numpy.org/doc/stable/reference/generated/numpy.interp.html?highlight=interp
     """
-    ground_accels, annual_poes = trim_poes(1e-10, 0.632, ground_accels, annual_poes)
+    trimmed_ground_accels, trimmed_annual_poes = trim_poes(1e-10, HAZARD_CURVE_MAX_POE, ground_accels, annual_poes)
     return_period = -investigation_time / np.log(1 - poe)
 
-    xp = np.flip(np.log(annual_poes))  # type: ignore
-    yp = np.flip(np.log(ground_accels))  # type: ignore
+    xp = np.flip(np.log(trimmed_annual_poes))  # type: ignore
+    yp = np.flip(np.log(trimmed_ground_accels))  # type: ignore
 
-    if not np.all(np.diff(xp) >= 0):  # raise is x_accel_levels not increasing or at least not dropping,
-        raise ValueError('Poe values not monotonous.')
+    was_trimmed = len(trimmed_annual_poes) < len(annual_poes)
+    if not np.all(np.diff(xp) >= 0):  # raise if x_accel_levels not increasing or at least not dropping,
+        raise ValueError(
+            f'Poe values not monotonous.\n xp: {xp}\n annual_poes: {annual_poes}\n ground_accel: {ground_accels}\n Trimmed: {was_trimmed}'
+        )
 
     return np.exp(np.interp(np.log(1 / return_period), xp, yp))  # type: ignore

@@ -1,7 +1,7 @@
 """The hazard metatdata models for (de)serialisation as json."""
 
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, List, Union
 
 import pyarrow as pa
 from lancedb.pydantic import pydantic_to_schema
@@ -138,14 +138,12 @@ class GriddedHazardPoeLevels(BaseModel):
     compatible_calc_id: str
     hazard_model_id: str
     location_grid_id: str
-
     imt: str
     vs30: int
     aggr: str
     investigation_time: int
     poe: float
-
-    accel_levels: List[float]  # was grid_poes, but this was incrreect
+    accel_levels: List[float]
 
     @field_validator('vs30', mode='before')
     @classmethod
@@ -182,6 +180,12 @@ class GriddedHazardPoeLevels(BaseModel):
             raise ValueError(f'poe value {value} is not supported.')
         return value
 
+    @field_validator('accel_levels', mode='before')
+    @classmethod
+    def validate_accel_levels_value(cls, value: List[Any]) -> List[Any]:
+        GriddedHazardPoeLevels.validate_grid_accel_levels(value)
+        return value
+
     @model_validator(mode='before')
     def validate_len_accel_levels(cls, data) -> List:
         if DISABLE_GRIDDED_MODEL_VALIDATOR:
@@ -212,3 +216,17 @@ class GriddedHazardPoeLevels(BaseModel):
                 pa.lib.field('accel_levels', pa.list_(pa.float32()), nullable=False),
             )
         return arrow_schema
+
+    @staticmethod
+    def validate_grid_accel_levels(values_list):
+        errs = []
+        vals = []
+        for idx, val in enumerate(values_list):
+            if not isinstance(val, float):
+                errs.append(val)
+            else:
+                vals.append(val)
+        if len(errs):
+            raise ValueError(
+                f"list members non-floats {len(errs)} ; floats {len(vals)}. First ten bad: {[x for x in errs[:10]]}. first 10 OK: {[x for x in vals[:10]]}."
+            )
