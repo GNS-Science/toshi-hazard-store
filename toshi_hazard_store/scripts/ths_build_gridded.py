@@ -17,7 +17,7 @@ from nzshm_common.geometry.geometry import create_square_tile
 from nzshm_common.grids import RegionGrid
 from nzshm_common.location import CodedLocation
 
-from toshi_hazard_store import model, query
+from toshi_hazard_store import query
 from toshi_hazard_store.gridded_hazard import calc_gridded_hazard
 
 log = logging.getLogger()

@@ -1,7 +1,7 @@
 """The hazard metatdata models for (de)serialisation as json."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Union
+from typing import Any, List
 
 import pyarrow as pa
 from lancedb.pydantic import pydantic_to_schema
@@ -228,5 +228,7 @@ class GriddedHazardPoeLevels(BaseModel):
                 vals.append(val)
         if len(errs):
             raise ValueError(
-                f"list members non-floats {len(errs)} ; floats {len(vals)}. First ten bad: {[x for x in errs[:10]]}. first 10 OK: {[x for x in vals[:10]]}."
+                f"list members non-floats {len(errs)} ; floats {len(vals)}.]\n"
+                f"First ten bad: {[x for x in errs[:10]]}.\n"
+                f"First 10 OK: {[x for x in vals[:10]]}."
             )

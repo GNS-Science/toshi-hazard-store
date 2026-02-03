@@ -42,7 +42,8 @@ def compute_hazard_at_poe(
     was_trimmed = len(trimmed_annual_poes) < len(annual_poes)
     if not np.all(np.diff(xp) >= 0):  # raise if x_accel_levels not increasing or at least not dropping,
         raise ValueError(
-            f'Poe values not monotonous.\n xp: {xp}\n annual_poes: {annual_poes}\n ground_accel: {ground_accels}\n Trimmed: {was_trimmed}'
+            f'Poe values not monotonous.\n xp: {xp}\n annual_poes: {annual_poes}\n'
+            f'ground_accel: {ground_accels}\n Trimmed: {was_trimmed}'
         )
 
     return np.exp(np.interp(np.log(1 / return_period), xp, yp))  # type: ignore

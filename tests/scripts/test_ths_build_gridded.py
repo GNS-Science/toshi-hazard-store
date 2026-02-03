@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 """Tests for `toshi_hazard_haste` package."""
 
-from pathlib import Path
+# from pathlib import Path
 
-# import pytest
-from click.testing import CliRunner
+# # import pytest
+# from click.testing import CliRunner
 
-from toshi_hazard_store.scripts import ths_build_gridded as cli
+# from toshi_hazard_store.scripts import ths_build_gridded as cli
 
-config = Path(__file__).parent / 'fixtures' / 'config.toml'
+# config = Path(__file__).parent / 'fixtures' / 'config.toml'
 
 
 # @pytest.fixture

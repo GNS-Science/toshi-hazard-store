@@ -73,7 +73,8 @@ def process_gridded_hazard(
             grid_accel_levels[index] = compute_hazard_at_poe(poe_lvl, accel_levels, poe_values, INVESTIGATION_TIME)
         except ValueError as err:
             log.error(
-                'Error in compute_hazard_at_poe: `%s` for poe_lvl: `%s`, hazard_model: `%s`, vs30: `%s`, imt: `%s`, agg: `%s`, loc:%s'
+                'Error in compute_hazard_at_poe: `%s` for poe_lvl: `%s`, hazard_model: `%s`,`'
+                ' vs30: `%s`, imt: `%s`, agg: `%s`, loc:%s'
                 % (err, poe_lvl, hazard_model_id, vs30, imt, agg, haz.nloc_001)
             )
             log.warning(f"index: {index}; ` poe_values`: {poe_values}")
@@ -86,7 +87,7 @@ def process_gridded_hazard(
     # try:
     #     GriddedHazardPoeLevels.validate_grid_accel_levels(grid_accel_levels)  # raise
     # except ValueError as err:
-    #     log.warning(f"invalid values found in `grid_accel_levels`. first 20 indices_computed: {indices_computed[:20]}.")
+    #     log.warning(f"invalid values found in `grid_accel_levels`. 1st 20 indices_computed: {indices_computed[:20]}.")
     #     log.warning(err)
     #     raise err
 

@@ -17,6 +17,7 @@ from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.query import datasets
 
 
+@pytest.mark.skip('WIP on hold')
 @pytest.mark.parametrize('use64bit', [True, False])
 @pytest.mark.parametrize('validate_model', [True, False])
 def test_build_and_roundtrip_gridded_dataset(

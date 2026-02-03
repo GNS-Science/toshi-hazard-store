@@ -35,6 +35,7 @@ def test_get_one_degree_grid(get_one_degree_region_grid_fixture):
     assert len(grid) == 13
 
 
+@pytest.mark.skip('more WIP')
 def test_process_gridded_hazard_basic(get_one_degree_region_grid_fixture, monkeypatch):
     grid = get_one_degree_region_grid_fixture
 

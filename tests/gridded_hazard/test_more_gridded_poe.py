@@ -1,10 +1,8 @@
 """Tests for `toshi_hazard_store.gridded_hazard` package using examples from parquet hazard aggregate curves"""
 
-import numpy as np
 import pytest
 
 from toshi_hazard_store.gridded_hazard import compute_hazard_at_poe
-from toshi_hazard_store.gridded_hazard.gridded_poe import trim_poes
 
 ex0 = dict(
     annual_poes=[
@@ -204,5 +202,5 @@ ex1 = dict(
 @pytest.mark.parametrize("example", [ex0, ex1])
 def test_non_monotic_examples(example):
     with pytest.raises(ValueError, match='Poe values not monotonous') as exc:
-        hazard = compute_hazard_at_poe(**example)
+        compute_hazard_at_poe(**example)
     print(exc)
