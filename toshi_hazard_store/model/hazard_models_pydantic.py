@@ -209,9 +209,6 @@ class GriddedHazardPoeLevels(BaseModel):
         # Convert the Pydantic model to a PyArrow schema
         arrow_schema = pydantic_to_schema(GriddedHazardPoeLevels)
         if not USE_64BIT_VALUES:
-            # arrow_schema = arrow_schema.set(
-            #     arrow_schema.get_field_index('vs30'), pa.lib.field('vs30', pa.int32(), nullable=False)
-            # )
             arrow_schema = arrow_schema.set(
                 arrow_schema.get_field_index('accel_levels'),
                 pa.lib.field('accel_levels', pa.list_(pa.float32()), nullable=False),

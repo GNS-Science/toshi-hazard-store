@@ -21,7 +21,8 @@ INVESTIGATION_TIME = 50
 SPOOF_SAVE = False
 COV_AGG_KEY = 'cov'
 
-DEFAULT_GRID_ACCEL_VALUE = np.nan  # was None, but this cannot be serialised
+DEFAULT_GRID_ACCEL_VALUE = np.nan  # historically was None, but this cannot be serialised by pyarrow
+
 GridHazTaskArgs = namedtuple(
     "GridHazTaskArgs", "poe_lvl location_grid_id compatible_calc_id hazard_model_id vs30 imt agg output_target"
 )
@@ -57,10 +58,7 @@ def process_gridded_hazard(
     locations = list(
         map(lambda grd_loc: CodedLocation(grd_loc[0], grd_loc[1], resolution=grid.resolution), grid.load())
     )
-    # if filter_locations:
-    #     locations = list(set(locations).intersection(set(filter_locations)))
     location_keys = [loc.resample(0.001).code for loc in locations]
-    # log.debug('location_keys: %s' % location_keys)
 
     grid_accel_levels: List = [DEFAULT_GRID_ACCEL_VALUE for i in range(len(location_keys))]
     indices_computed = []
@@ -82,7 +80,7 @@ def process_gridded_hazard(
             # raise
         log.debug('replaced %s with %s' % (index, grid_accel_levels[index]))
 
-    # validate that the grid_accel_levels values are all floats ...
+    # DONE: no evidence now that we have validated that the grid_accel_levels values are all floats ...
     # now this shows us with 0.632 max_poe the non-monotonic
     # try:
     #     GriddedHazardPoeLevels.validate_grid_accel_levels(grid_accel_levels)  # raise
@@ -93,26 +91,25 @@ def process_gridded_hazard(
 
     log.info('No problem detected in in `grid_accel_levels`, all values are floats')
 
-    # TEMP SKIP
-    # if agg == 'mean':
-    #     grid_covs: List = [None for i in range(len(location_keys))]
-    #     for cov in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[COV_AGG_KEY]):
-    #         cov_values = [val.val for val in cov.values]
-    #         index = location_keys.index(cov.nloc_001)
-    #         grid_covs[index] = np.exp(
-    #             np.interp(np.log(grid_accel_levels[index]), np.log(accel_levels), np.log(cov_values))
-    #         )
-    #         yield GriddedHazardPoeLevels(
-    #             compatible_calc_id=compatible_calc_id,
-    #             hazard_model_id=hazard_model_id,
-    #             location_grid_id=location_grid_id,
-    #             vs30=vs30,
-    #             imt=imt,
-    #             aggr=COV_AGG_KEY,
-    #             investigation_time=INVESTIGATION_TIME,
-    #             poe=poe_lvl,
-    #             accel_levels=grid_covs,
-    #         )
+    if agg == 'mean':
+        grid_covs: List = [None for i in range(len(location_keys))]
+        for cov in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[COV_AGG_KEY]):
+            cov_values = [val.val for val in cov.values]
+            index = location_keys.index(cov.nloc_001)
+            grid_covs[index] = np.exp(
+                np.interp(np.log(grid_accel_levels[index]), np.log(accel_levels), np.log(cov_values))
+            )
+            yield GriddedHazardPoeLevels(
+                compatible_calc_id=compatible_calc_id,
+                hazard_model_id=hazard_model_id,
+                location_grid_id=location_grid_id,
+                vs30=vs30,
+                imt=imt,
+                aggr=COV_AGG_KEY,
+                investigation_time=INVESTIGATION_TIME,
+                poe=poe_lvl,
+                accel_levels=grid_covs,
+            )
 
     yield GriddedHazardPoeLevels(
         compatible_calc_id=compatible_calc_id,
