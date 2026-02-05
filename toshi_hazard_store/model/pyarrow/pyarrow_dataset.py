@@ -98,6 +98,7 @@ def append_models_to_dataset(
     partitioning: Optional[Iterable[str]] = None,
     existing_data_behavior: Optional[str] = "overwrite_or_ignore",
     schema: Optional[pa.schema] = None,
+    write_meta: Optional[bool] = True,
 ) -> None:
     """
     Appends realisations to a dataset using the pyarrow library.
@@ -122,7 +123,9 @@ def append_models_to_dataset(
     partitioning = partitioning or ['nloc_0']
     using_s3 = isinstance(filesystem, fs.S3FileSystem)
 
-    write_metadata_fn = partial(_write_metadata, using_s3, pathlib.Path(base_dir))
+    # writing metadata might be problematic, so ...
+    write_metadata_fn = partial(_write_metadata, using_s3, pathlib.Path(base_dir)) if write_meta else None
+
     ds.write_dataset(
         table_or_batchreader,
         base_dir=base_dir,

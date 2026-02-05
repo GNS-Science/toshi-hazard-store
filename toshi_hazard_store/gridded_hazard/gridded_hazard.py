@@ -6,7 +6,7 @@ import multiprocessing
 from collections import namedtuple
 from typing import Iterable, List, Optional
 
-import numpy as np
+import numpy as np  # noqa
 from nzshm_common.grids import RegionGrid
 from nzshm_common.location import CodedLocation
 
@@ -21,7 +21,8 @@ INVESTIGATION_TIME = 50
 SPOOF_SAVE = False
 COV_AGG_KEY = 'cov'
 
-DEFAULT_GRID_ACCEL_VALUE = np.nan  # historically was None, but this cannot be serialised by pyarrow
+DEFAULT_GRID_ACCEL_VALUE = None  # np.nan  # historically was None, but this cannot be serialised by pyarrow
+PRODUCE_COV_GRID = False
 
 GridHazTaskArgs = namedtuple(
     "GridHazTaskArgs", "poe_lvl location_grid_id compatible_calc_id hazard_model_id vs30 imt agg output_target"
@@ -80,8 +81,9 @@ def process_gridded_hazard(
             # raise
         log.debug('replaced %s with %s' % (index, grid_accel_levels[index]))
 
-    # DONE: no evidence now that we have validated that the grid_accel_levels values are all floats ...
-    # now this shows us with 0.632 max_poe the non-monotonic
+    # DONE: no evidence now of this problem, that we have validated that the grid_accel_levels values are all floats ...
+    # NB this seems to be caused only at loc = -40.100~175.000, and with max_poe = 0.632, where we see the non-monotonic
+    #
     # try:
     #     GriddedHazardPoeLevels.validate_grid_accel_levels(grid_accel_levels)  # raise
     # except ValueError as err:
@@ -91,25 +93,26 @@ def process_gridded_hazard(
 
     log.info('No problem detected in in `grid_accel_levels`, all values are floats')
 
-    if agg == 'mean':
-        grid_covs: List = [None for i in range(len(location_keys))]
-        for cov in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[COV_AGG_KEY]):
-            cov_values = [val.val for val in cov.values]
-            index = location_keys.index(cov.nloc_001)
-            grid_covs[index] = np.exp(
-                np.interp(np.log(grid_accel_levels[index]), np.log(accel_levels), np.log(cov_values))
-            )
-            yield GriddedHazardPoeLevels(
-                compatible_calc_id=compatible_calc_id,
-                hazard_model_id=hazard_model_id,
-                location_grid_id=location_grid_id,
-                vs30=vs30,
-                imt=imt,
-                aggr=COV_AGG_KEY,
-                investigation_time=INVESTIGATION_TIME,
-                poe=poe_lvl,
-                accel_levels=grid_covs,
-            )
+    # if agg == 'mean' and PRODUCE_COV_GRID:
+    #     grid_covs: List = [None for i in range(len(location_keys))]
+    #     for cov in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[COV_AGG_KEY]):
+    #         cov_values = [val.val for val in cov.values]
+    #         index = location_keys.index(cov.nloc_001)
+    #         grid_covs[index] = np.exp(
+    #             np.interp(np.log(grid_accel_levels[index]), np.log(accel_levels), np.log(cov_values))
+    #             # TODO this makdes no sense, accel_level need to be for the corresponding 'mean' entry
+    #         )
+    #         yield GriddedHazardPoeLevels(
+    #             compatible_calc_id=compatible_calc_id,
+    #             hazard_model_id=hazard_model_id,
+    #             location_grid_id=location_grid_id,
+    #             vs30=vs30,
+    #             imt=imt,
+    #             aggr=COV_AGG_KEY,
+    #             investigation_time=INVESTIGATION_TIME,
+    #             poe=poe_lvl,
+    #             accel_levels=grid_covs,
+    #         )
 
     yield GriddedHazardPoeLevels(
         compatible_calc_id=compatible_calc_id,
@@ -131,7 +134,6 @@ class GriddedHazardWorkerMP(multiprocessing.Process):
         multiprocessing.Process.__init__(self)
         self.task_queue = task_queue
 
-    # TODO: reinstate using new pyarrow outputs in place of dynamodb
     def run(self):
         log.info("worker %s running." % self.name)
         proc_name = self.name
@@ -156,6 +158,9 @@ class GriddedHazardWorkerMP(multiprocessing.Process):
                     filesystem=filesystem,
                     partitioning=['hazard_model_id'],
                     schema=GriddedHazardPoeLevels.pyarrow_schema(),
+                    write_meta=False,  # We saw this error
+                    #  Error: [Errno 2] No such file or directory:
+                    # '/private/tmp/ds5/hazard_model_id=NSHM_v1.0.4/_metadata.csv'
                 )
             except Exception as err:
                 log.warning(f'Error in process_gridded_hazard: with task args `{nt}`')
