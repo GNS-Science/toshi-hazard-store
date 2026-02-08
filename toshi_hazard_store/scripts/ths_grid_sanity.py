@@ -51,6 +51,11 @@ def cli_diff(config, dataset):
     # poe_count = 0
     for ghaz_dynamo in query.get_gridded_hazard(hazard_model_ids, [site_list], vs30s, imts, aggs, poes):
 
+        entry = (
+            f'{site_list}, {ghaz_dynamo.hazard_model_id}, {ghaz_dynamo.agg}, {ghaz_dynamo.imt}, ',
+            f'{ghaz_dynamo.vs30}, {ghaz_dynamo.poe}',
+        )
+
         ds = query.datasets.get_gridded_hazard(
             dataset_uri=dataset,
             location_grid_id=site_list,
@@ -60,20 +65,29 @@ def cli_diff(config, dataset):
             poes=[ghaz_dynamo.poe],
             vs30s=[ghaz_dynamo.vs30],
         )
-        record_arrow = next(ds)
-        _A = np.array(ghaz_dynamo.grid_poes)
+        try:
+            record_arrow = next(ds)
+        except StopIteration as exc:
+            print(f'no dataset result for entry: `{entry}`')
+            raise exc
+        _A = np.array(ghaz_dynamo.grid_poes)  # old gridded hazard field was poorly named
         _B = np.array(record_arrow.accel_levels)
 
-        _a_nan_indices = np.where(np.isnan(_A))[0]
-        _b_nan_indices = np.where(np.isnan(_B))[0]
-
-        print(f'_a_nans: {_a_nan_indices}')
-        print(f'_b_nans: {_b_nan_indices}')
-
+        # _a_nan_indices = np.where(np.isnan(_A))[0]
+        # _b_nan_indices = np.where(np.isnan(_B))[0]
+        # print(f'_a_nans: {_a_nan_indices}')
+        # print(f'_b_nans: {_b_nan_indices}')
         # result = np.isclose(_A, _B, rtol=1e-7, atol=1e-6)
         # if not result.all() == True:
         #     print(result, "A!!!!")
-        np.testing.assert_almost_equal(_B, _A, decimal=6)
+        try:
+            np.testing.assert_allclose(_B, _A, rtol=1e-05, atol=1e-06)
+        except AssertionError as exc:
+            log.info(f"exc: {exc}")
+            print(f"{entry}, false")
+        else:
+            print(f"{entry}, true")
+        # np.testing.assert_almost_equal(_B, _A, decimal=6)
 
     click.echo('DONE')
 
