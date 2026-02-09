@@ -18,6 +18,15 @@ def json_hazard():
     yield json.load(open(fxt))
 
 
+@pytest.fixture(autouse=True)
+def clear_dataset_function_caching():
+    """Fixture to clear the dataset caches before each test."""
+    datasets.get_dataset_vs30_nloc0.cache_clear()
+    datasets.get_dataset_vs30.cache_clear()
+    datasets.get_dataset.cache_clear()
+    yield  # The test runs here
+
+
 @pytest.fixture()
 def hazagg_fixture_fn(json_hazard):
 
@@ -33,7 +42,7 @@ def hazagg_fixture_fn(json_hazard):
                 and curve['loc'] == nloc_0
                 and curve['vs30'] == vs30
             ):
-                return datasets.AggregatedHazard(
+                yield datasets.AggregatedHazard(
                     'NZSHM22', hazard_model, nloc_001, nloc_0, imt, vs30, agg, curve['curve']['values']
                 ).to_imt_values()
         return None
@@ -62,7 +71,7 @@ def test_get_hazard_curves_from_dataset(monkeypatch, hazagg_fixture_fn, query_fn
     monkeypatch.setattr(datasets, 'DATASET_AGGR_URI', str(dspath))
 
     model = "NSHM_v1.0.4"
-    expected = hazagg_fixture_fn(model, imt, locn, aggr, vs30)
+    expected = next(hazagg_fixture_fn(model, imt, locn, aggr, vs30))
     # assert expected
     print(expected)
 
@@ -107,7 +116,7 @@ def test_hazard_curve_query_data_missing_for_one_location(monkeypatch, hazagg_fi
 
     locations = [good_locn] + [bad_locn]
 
-    expected = hazagg_fixture_fn(model, imt, good_locn, aggr, vs30)
+    expected = next(hazagg_fixture_fn(model, imt, good_locn, aggr, vs30))
 
     result = datasets.get_hazard_curves_by_vs30_nloc0(
         location_codes=locations, vs30s=[vs30], hazard_model=model, imts=[imt], aggs=[aggr]
@@ -150,7 +159,7 @@ def test_hazard_curve_query_data_missing_for_vs30(monkeypatch, hazagg_fixture_fn
     vs30 = [good_vs30] + [bad_vs30]
     locations = [good_locn]
 
-    expected = hazagg_fixture_fn(model, imt, good_locn, aggr, good_vs30)
+    expected = next(hazagg_fixture_fn(model, imt, good_locn, aggr, good_vs30))
 
     result = query_fn(location_codes=locations, vs30s=vs30, hazard_model=model, imts=[imt], aggs=[aggr])
 

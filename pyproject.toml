@@ -26,19 +26,21 @@ packages = [
 ]
 dependencies = [
     "geopandas (>=1.1.2)",
+    "lancedb (>=0.27.1)",
+    "matplotlib (>=3.10.8)",
     "nshm-toshi-client (>=1.0.1)",
     "numpy (>=1.24)",
     "nzshm-common (>=0.8.4)",
     "nzshm-model (>=0.13.6)",
     "pandas (>=2,<3)",
+    "pathy (>=0.11.0)",
     "pyarrow (>=20.0.0)",
     "pydantic (>=2.11.5)",
     "pynamodb (>=6.0.0)",
     "pynamodb-attributes (>=0.4.0)",
     "python-dotenv (>=1.0.1)",
     "s3path (>=0.6.1)",
-    "lancedb (>=0.27.1)",
-    "pathy (>=0.11.0,<0.12.0)",
+    "toml (>=0.10.2)",
 ]
 
 [project.scripts]

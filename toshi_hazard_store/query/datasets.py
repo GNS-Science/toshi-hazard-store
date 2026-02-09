@@ -9,7 +9,6 @@ https://arrow.apache.org/docs/python/parquet.html#reading-and-writing-the-apache
 import datetime as dt
 import itertools
 import logging
-import sys
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Iterator
@@ -25,6 +24,8 @@ from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
 
 log = logging.getLogger(__name__)
+
+GB = 1024**3
 
 IMT_44_LVLS = [
     0.0001,
@@ -128,7 +129,7 @@ class AggregatedHazard:
         return self
 
 
-@lru_cache(maxsize=0 if "pytest" in sys.modules else 12)
+@lru_cache(maxsize=1)
 def get_dataset() -> ds.Dataset:
     """
     Cache the dataset.
@@ -169,7 +170,7 @@ def get_gridded_dataset(dataset_uri) -> ds.Dataset:
     return dataset
 
 
-@lru_cache(maxsize=0 if "pytest" in sys.modules else 12)
+@lru_cache(maxsize=3)
 def get_dataset_vs30(vs30: int) -> ds.Dataset:
     """
     Cache the dataset for a given vs30.
@@ -194,7 +195,7 @@ def get_dataset_vs30(vs30: int) -> ds.Dataset:
     return dataset
 
 
-@lru_cache(maxsize=0 if "pytest" in sys.modules else 12)
+@lru_cache(maxsize=32)
 def get_dataset_vs30_nloc0(vs30: int, nloc: str) -> ds.Dataset:
     """
     Cache the dataset for a given vs30 and nloc_0.
