@@ -17,7 +17,7 @@ from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.query import datasets
 
 
-@pytest.mark.skip('WIP on hold')
+@pytest.mark.skip('WIP on hold, RegionGrid mocking needs work')
 @pytest.mark.parametrize('use64bit', [True, False])
 @pytest.mark.parametrize('validate_model', [True, False])
 def test_build_and_roundtrip_gridded_dataset(
@@ -32,7 +32,7 @@ def test_build_and_roundtrip_gridded_dataset(
     # Setup RegionGrid Mock
     mocked_grid_class = mocker.patch("toshi_hazard_store.gridded_hazard.gridded_hazard.RegionGrid")
     mocked_grid_instance = mocked_grid_class.return_value
-    mocked_grid_instance.grid.return_value = get_one_degree_region_grid_fixture
+    mocked_grid_instance.load.return_value = get_one_degree_region_grid_fixture
 
     print(mocked_grid_instance.grid())
 
@@ -40,10 +40,10 @@ def test_build_and_roundtrip_gridded_dataset(
         # Test helper
         gridded_models = []
         for record in gridded_hazard.process_gridded_hazard(
-            location_keys=[
-                loc.code for loc in get_one_degree_region_grid_fixture
-            ],  # TODO this field should not be used since only valid locaion_grid should be stored to grid tables
-            poe_lvl=0.02,
+            # location_keys=[
+            #     loc.code for loc in get_one_degree_region_grid_fixture
+            # ],  # TODO this field should not be used since only valid locaion_grid should be stored to grid tables
+            poe_levels=[0.02],
             location_grid_id='NZ_0_1_NB_1_1',
             compatible_calc_id='NZSHM22',
             hazard_model_id='NSHM_v1.0.4',

@@ -237,7 +237,7 @@ def get_hazard_curves_naive(
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
     """
-    log.debug('> get_hazard_curves_naive()')
+    log.info(f'> get_hazard_curves_naive() location_codes: {location_codes}')
     t0 = dt.datetime.now()
 
     dataset = get_dataset()
@@ -250,7 +250,7 @@ def get_hazard_curves_naive(
         & (pc.field("vs30").isin(vs30s))
         & (pc.field('hazard_model_id') == hazard_model)
     )
-    log.debug(f"filter: {flt}")
+    log.info(f"filter: {flt}")
     table = dataset.to_table(filter=flt)
 
     t1 = dt.datetime.now()

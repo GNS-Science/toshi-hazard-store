@@ -6,7 +6,7 @@ import numpy as np
 
 # HAZARD_CURVE_MAX_POE was `0.632` but location `-40.1~175.0`
 # has non-monotonic issue in gridded_poe calculation at aggr=0.9
-HAZARD_CURVE_MAX_POE = 0.632  # 0.6318
+HAZARD_CURVE_MAX_POE = 0.6318  # 0.632
 
 
 def trim_poes(min_poe: float, max_poe: float, ground_accels: Iterable[float], annual_poes: Iterable[float]):

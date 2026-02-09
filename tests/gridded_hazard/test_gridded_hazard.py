@@ -35,9 +35,7 @@ def test_get_one_degree_grid(get_one_degree_region_grid_fixture):
     assert len(grid) == 13
 
 
-@pytest.mark.skip('more WIP')
-def test_process_gridded_hazard_basic(get_one_degree_region_grid_fixture, monkeypatch):
-    grid = get_one_degree_region_grid_fixture
+def test_process_gridded_hazard_basic(monkeypatch):
 
     folder = Path(Path(os.path.realpath(__file__)).parent.parent, 'fixtures', 'aggregate_hazard')
     monkeypatch.setattr(datasets, 'DATASET_AGGR_URI', str(folder.absolute()))
@@ -45,10 +43,10 @@ def test_process_gridded_hazard_basic(get_one_degree_region_grid_fixture, monkey
 
     gridded = []
     for record in gridded_hazard.process_gridded_hazard(
-        location_keys=[
-            loc.code for loc in grid
-        ],  # TODO this field should not be used since only valid locaion_grid should be stored to grid tables
-        poe_lvl=0.02,
+        # location_keys=[
+        #     loc.code for loc in grid
+        # ],  # TODO this field should not be used since only valid locaion_grid should be stored to grid tables
+        poe_levels=[0.02, 0.1],
         location_grid_id='NZ_0_1_NB_1_1',
         compatible_calc_id='NZSHM22',
         hazard_model_id='NSHM_v1.0.4',
@@ -61,7 +59,9 @@ def test_process_gridded_hazard_basic(get_one_degree_region_grid_fixture, monkey
     print(gridded)
     assert 'mean' in [obj.aggr for obj in gridded]
     assert 'cov' in [obj.aggr for obj in gridded]
-    assert [obj.vs30 for obj in gridded] == [400, 400]
+    assert [obj.vs30 for obj in gridded] == [400, 400, 400, 400]
+    assert [obj.aggr for obj in gridded] == ['cov', 'cov', 'mean', 'mean']
+    assert [obj.poe for obj in gridded] == [0.02, 0.1, 0.02, 0.1]
 
 
 @pytest.mark.parametrize(

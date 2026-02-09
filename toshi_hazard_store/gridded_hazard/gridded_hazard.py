@@ -4,7 +4,7 @@ import itertools
 import logging
 import multiprocessing
 from collections import namedtuple
-from typing import Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 import numpy as np  # noqa
 from nzshm_common.grids import RegionGrid
@@ -21,16 +21,16 @@ INVESTIGATION_TIME = 50
 SPOOF_SAVE = False
 COV_AGG_KEY = 'cov'
 
-DEFAULT_GRID_ACCEL_VALUE = None  # np.nan  # historically was None, but this cannot be serialised by pyarrow
-PRODUCE_COV_GRID = False
+DEFAULT_GRID_ACCEL_VALUE = np.nan  # historically was None, but this cannot be serialised by pyarrow
+PRODUCE_COV_GRID = True
 
 GridHazTaskArgs = namedtuple(
-    "GridHazTaskArgs", "poe_lvl location_grid_id compatible_calc_id hazard_model_id vs30 imt agg output_target"
+    "GridHazTaskArgs", "poe_levels location_grid_id compatible_calc_id hazard_model_id vs30 imt agg output_target"
 )
 
 
 def process_gridded_hazard(
-    poe_lvl: float,
+    poe_levels: List[float],
     location_grid_id: str,
     compatible_calc_id: str,
     hazard_model_id: str,
@@ -39,9 +39,9 @@ def process_gridded_hazard(
     agg: str,
 ) -> Iterable[GriddedHazardPoeLevels]:
     """
-    Compute and yield GriddedHazardPoeLevels for the given ... POE level, and hazard model.
+    Compute and yield GriddedHazardPoeLevels for the given ... POE levels, and hazard model.
 
-        poe_lvl (float): POE level to compute for.
+        poe_levels (List[float]): POE levels to compute for.
         location_grid_id (str): ID of the region grid.
         compatible_calc_id (str): ID of the compatible calculation.
         hazard_model_id (str): ID of the hazard model.
@@ -52,34 +52,37 @@ def process_gridded_hazard(
     Yields:
         GriddedHazardPoeLevels: Computed GriddedHazardPoeLevels for the given location keys and POE level.
     """
-    if not (0 < poe_lvl < 1):
-        raise ValueError(f'poe value {poe_lvl} is not supported.')
-
+    log.info(f">>> process_gridded_hazard() poe_levels: {poe_levels}")
     grid = RegionGrid[location_grid_id]
     locations = list(
         map(lambda grd_loc: CodedLocation(grd_loc[0], grd_loc[1], resolution=grid.resolution), grid.load())
     )
     location_keys = [loc.resample(0.001).code for loc in locations]
+    log.info(f"location_keys: {location_keys}")
+    grid_accel_levels: Dict[float, List] = {
+        poe: [DEFAULT_GRID_ACCEL_VALUE for i in range(len(location_keys))] for poe in poe_levels
+    }
 
-    grid_accel_levels: List = [DEFAULT_GRID_ACCEL_VALUE for i in range(len(location_keys))]
-    indices_computed = []
     for haz in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[agg]):
         accel_levels = [val.lvl for val in haz.values]
         poe_values = [val.val for val in haz.values]
         index = location_keys.index(haz.nloc_001)
-        try:
-            indices_computed.append(index)
-            grid_accel_levels[index] = compute_hazard_at_poe(poe_lvl, accel_levels, poe_values, INVESTIGATION_TIME)
-        except ValueError as err:
-            log.error(
-                'Error in compute_hazard_at_poe: `%s` for poe_lvl: `%s`, hazard_model: `%s`,`'
-                ' vs30: `%s`, imt: `%s`, agg: `%s`, loc:%s'
-                % (err, poe_lvl, hazard_model_id, vs30, imt, agg, haz.nloc_001)
-            )
-            log.warning(f"index: {index}; ` poe_values`: {poe_values}")
-            continue
-            # raise
-        log.debug('replaced %s with %s' % (index, grid_accel_levels[index]))
+        for poe_lvl in poe_levels:
+            if not (0 < poe_lvl < 1):
+                raise ValueError(f'poe value {poe_lvl} is not supported.')
+            try:
+                grid_accel_levels[poe_lvl][index] = compute_hazard_at_poe(
+                    poe_lvl, accel_levels, poe_values, INVESTIGATION_TIME
+                )
+            except Exception as err:
+                log.error(
+                    'Error in compute_hazard_at_poe: `%s` for poe_lvl: `%s`, hazard_model: `%s`,`'
+                    ' vs30: `%s`, imt: `%s`, agg: `%s`, loc:%s'
+                    % (err, poe_lvl, hazard_model_id, vs30, imt, agg, haz.nloc_001)
+                )
+                log.warning(f"index: {index}; ` poe_values`: {poe_values}")
+                continue
+            log.debug('replaced %s with %s' % (index, grid_accel_levels[poe_lvl][index]))
 
     # DONE: no evidence now of this problem, that we have validated that the grid_accel_levels values are all floats ...
     # NB this seems to be caused only at loc = -40.100~175.000, and with max_poe = 0.632, where we see the non-monotonic
@@ -93,38 +96,43 @@ def process_gridded_hazard(
 
     log.info('No problem detected in in `grid_accel_levels`, all values are floats')
 
-    # if agg == 'mean' and PRODUCE_COV_GRID:
-    #     grid_covs: List = [None for i in range(len(location_keys))]
-    #     for cov in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[COV_AGG_KEY]):
-    #         cov_values = [val.val for val in cov.values]
-    #         index = location_keys.index(cov.nloc_001)
-    #         grid_covs[index] = np.exp(
-    #             np.interp(np.log(grid_accel_levels[index]), np.log(accel_levels), np.log(cov_values))
-    #             # TODO this makdes no sense, accel_level need to be for the corresponding 'mean' entry
-    #         )
-    #         yield GriddedHazardPoeLevels(
-    #             compatible_calc_id=compatible_calc_id,
-    #             hazard_model_id=hazard_model_id,
-    #             location_grid_id=location_grid_id,
-    #             vs30=vs30,
-    #             imt=imt,
-    #             aggr=COV_AGG_KEY,
-    #             investigation_time=INVESTIGATION_TIME,
-    #             poe=poe_lvl,
-    #             accel_levels=grid_covs,
-    #         )
+    if agg == 'mean' and PRODUCE_COV_GRID:
+        grid_covs: Dict[float, List] = {
+            poe: [DEFAULT_GRID_ACCEL_VALUE for i in range(len(location_keys))] for poe in poe_levels
+        }
+        for cov in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[COV_AGG_KEY]):
+            cov_values = [val.val for val in cov.values]
+            index = location_keys.index(cov.nloc_001)
+            for poe_lvl in poe_levels:
+                grid_covs[poe_lvl][index] = np.exp(
+                    np.interp(np.log(grid_accel_levels[poe_lvl][index]), np.log(accel_levels), np.log(cov_values))
+                )
 
-    yield GriddedHazardPoeLevels(
-        compatible_calc_id=compatible_calc_id,
-        hazard_model_id=hazard_model_id,
-        location_grid_id=location_grid_id,
-        vs30=vs30,
-        imt=imt,
-        aggr=agg,
-        investigation_time=INVESTIGATION_TIME,
-        poe=poe_lvl,
-        accel_levels=grid_accel_levels,
-    )
+        for poe_lvl in poe_levels:
+            yield GriddedHazardPoeLevels(
+                compatible_calc_id=compatible_calc_id,
+                hazard_model_id=hazard_model_id,
+                location_grid_id=location_grid_id,
+                vs30=vs30,
+                imt=imt,
+                aggr=COV_AGG_KEY,
+                investigation_time=INVESTIGATION_TIME,
+                poe=poe_lvl,
+                accel_levels=grid_covs[poe_lvl],
+            )
+
+    for poe_lvl in poe_levels:
+        yield GriddedHazardPoeLevels(
+            compatible_calc_id=compatible_calc_id,
+            hazard_model_id=hazard_model_id,
+            location_grid_id=location_grid_id,
+            vs30=vs30,
+            imt=imt,
+            aggr=agg,
+            investigation_time=INVESTIGATION_TIME,
+            poe=poe_lvl,
+            accel_levels=grid_accel_levels[poe_lvl],
+        )
 
 
 class GriddedHazardWorkerMP(multiprocessing.Process):
@@ -149,6 +157,7 @@ class GriddedHazardWorkerMP(multiprocessing.Process):
             # log.info(f"nt: {nt[:4]}")
             try:
                 gridded_models = list(process_gridded_hazard(*nt[:-1]))
+                # assert 0
                 # write the dataset
                 table = pyarrow_dataset.table_from_models(gridded_models)
                 output_folder, filesystem = pyarrow_dataset.configure_output(nt.output_target)
@@ -211,9 +220,9 @@ def calc_gridded_hazard(
     for w in workers:
         w.start()
 
-    for poe_lvl, hazard_model_id, vs30, imt, agg in itertools.product(poe_levels, hazard_model_ids, vs30s, imts, aggs):
+    for hazard_model_id, vs30, imt, agg in itertools.product(hazard_model_ids, vs30s, imts, aggs):
 
-        t = GridHazTaskArgs(poe_lvl, location_grid_id, "NZSHM22", hazard_model_id, vs30, imt, agg, output_target)
+        t = GridHazTaskArgs(poe_levels, location_grid_id, "NZSHM22", hazard_model_id, vs30, imt, agg, output_target)
         task_queue.put(t)
         count += 1
 
