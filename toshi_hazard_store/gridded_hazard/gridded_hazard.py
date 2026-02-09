@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import datetime as dt
 import itertools
 import logging
 import multiprocessing
@@ -52,18 +53,17 @@ def process_gridded_hazard(
     Yields:
         GriddedHazardPoeLevels: Computed GriddedHazardPoeLevels for the given location keys and POE level.
     """
-    log.info(f">>> process_gridded_hazard() poe_levels: {poe_levels}")
+    log.debug(f">>> process_gridded_hazard() poe_levels: {poe_levels}")
     grid = RegionGrid[location_grid_id]
     locations = list(
         map(lambda grd_loc: CodedLocation(grd_loc[0], grd_loc[1], resolution=grid.resolution), grid.load())
     )
     location_keys = [loc.resample(0.001).code for loc in locations]
-    log.info(f"location_keys: {location_keys}")
     grid_accel_levels: Dict[float, List] = {
         poe: [DEFAULT_GRID_ACCEL_VALUE for i in range(len(location_keys))] for poe in poe_levels
     }
 
-    for haz in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[agg]):
+    for haz in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[agg], strategy='d1'):
         accel_levels = [val.lvl for val in haz.values]
         poe_values = [val.val for val in haz.values]
         index = location_keys.index(haz.nloc_001)
@@ -94,7 +94,7 @@ def process_gridded_hazard(
     #     log.warning(err)
     #     raise err
 
-    log.info('No problem detected in in `grid_accel_levels`, all values are floats')
+    log.debug('No problem detected in in `grid_accel_levels`, all values are floats')
 
     if agg == 'mean' and PRODUCE_COV_GRID:
         grid_covs: Dict[float, List] = {
@@ -155,6 +155,7 @@ class GriddedHazardWorkerMP(multiprocessing.Process):
                 break
 
             # log.info(f"nt: {nt[:4]}")
+            t0 = dt.datetime.now()
             try:
                 gridded_models = list(process_gridded_hazard(*nt[:-1]))
                 # assert 0
@@ -176,7 +177,8 @@ class GriddedHazardWorkerMP(multiprocessing.Process):
                 log.warning(f'Error: {err}')
             finally:
                 self.task_queue.task_done()
-                log.info('%s task done.' % self.name)
+                t1 = dt.datetime.now()
+                log.info('%s task done in %s seconds, args: `%s`' % (self.name, (t1 - t0).total_seconds(), nt))
 
 
 def calc_gridded_hazard(
