@@ -6,6 +6,7 @@ import logging
 
 import click
 import numpy as np
+import numpy.ma as ma
 import toml
 from nzshm_common.grids import load_grid
 
@@ -15,7 +16,7 @@ DATASET_FORMAT = 'parquet'  # TODO: make this an argument
 
 log = logging.getLogger(__name__)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARN)
 
 
 #  _ __ ___   __ _(_)_ __
@@ -44,15 +45,15 @@ def cli_diff(config, dataset):
     poes = conf.get('poes')
 
     grid = load_grid(site_list)
-
     click.echo(f"Grid {site_list} has {len(grid)} locations")
 
-    # count = 0
-    # poe_count = 0
+    MAX_MISSES = 1000
+    RTOL, ATOL = 1e-5, 1e-6
+    misses = 0
     for ghaz_dynamo in query.get_gridded_hazard(hazard_model_ids, [site_list], vs30s, imts, aggs, poes):
 
         entry = (
-            f'{site_list}, {ghaz_dynamo.hazard_model_id}, {ghaz_dynamo.agg}, {ghaz_dynamo.imt}, ',
+            f'{site_list}, {ghaz_dynamo.hazard_model_id}, {ghaz_dynamo.agg}, {ghaz_dynamo.imt}, '
             f'{ghaz_dynamo.vs30}, {ghaz_dynamo.poe}',
         )
 
@@ -67,27 +68,42 @@ def cli_diff(config, dataset):
         )
         try:
             record_arrow = next(ds)
-        except StopIteration as exc:
-            print(f'no dataset result for entry: `{entry}`')
-            raise exc
-        _A = np.array(ghaz_dynamo.grid_poes)  # old gridded hazard field was poorly named
-        _B = np.array(record_arrow.accel_levels)
+        except StopIteration:
+            click.echo(f'ERROR: no dataset result for entry: `{entry}`')
+            misses += 1
+            if misses >= MAX_MISSES:
+                click.echo('ABENDING after {misses} misses.')
+                break
+            else:
+                continue
 
-        # _a_nan_indices = np.where(np.isnan(_A))[0]
-        # _b_nan_indices = np.where(np.isnan(_B))[0]
-        # print(f'_a_nans: {_a_nan_indices}')
-        # print(f'_b_nans: {_b_nan_indices}')
-        # result = np.isclose(_A, _B, rtol=1e-7, atol=1e-6)
-        # if not result.all() == True:
-        #     print(result, "A!!!!")
-        try:
-            np.testing.assert_allclose(_B, _A, rtol=1e-05, atol=1e-06)
-        except AssertionError as exc:
-            log.info(f"exc: {exc}")
-            print(f"{entry}, false")
-        else:
-            print(f"{entry}, true")
-        # np.testing.assert_almost_equal(_B, _A, decimal=6)
+        _A = np.array(ghaz_dynamo.grid_poes).astype('float')  # old gridded hazard field was poorly named
+        _B = np.array(record_arrow.accel_levels).astype('float')
+
+        # A. Difference detection (numeric)
+        # NBwe're using masked_invalid() to mask any NaN values from the diff calcs
+        _ma, _mb = ma.masked_invalid(_A), ma.masked_invalid(_B)
+        result = np.isclose(_ma, _mb, rtol=RTOL, atol=ATOL)
+        abs_diff = _ma - _mb
+        rel_diff = abs_diff / _ma
+
+        if not result.all():
+            # print some info about the failures ...
+            click.echo(
+                f"DIFF: `{entry}` has {len(result) - np.count_nonzero(result)} failures,"
+                f" with rtol: `{RTOL}` and atol: `{ATOL}`"
+                f" max abs err: {round(abs_diff.max(),8)}, max rel err: {round(rel_diff.max(),8)}"
+            )
+
+        # B. NaN detection
+        _a_nan = np.argwhere(np.isnan(_A))
+        _b_nan = np.argwhere(np.isnan(_B))
+
+        if (_a_nan.size + _b_nan.size) > 0:
+            click.echo(
+                f"DIFF: `{entry}` nan value(s) detected: DynamoDB: {np.count_nonzero(_a_nan)}"
+                f" Dataset: {np.count_nonzero(_b_nan)}"
+            )
 
     click.echo('DONE')
 

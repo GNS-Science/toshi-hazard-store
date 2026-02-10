@@ -521,5 +521,5 @@ def get_gridded_hazard(
 
     df0 = table.to_pandas()
     for row_dict in df0.to_dict(orient="records"):
-        print(row_dict)
+        # print(row_dict)
         yield GriddedHazardPoeLevels(**row_dict)
