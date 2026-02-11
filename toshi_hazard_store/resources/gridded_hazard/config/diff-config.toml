@@ -1,6 +1,6 @@
 # cli command configuration example
 hazard_model_ids = ["NSHM_v1.0.4"]
-site_list = "NZ_0_1_NB_1_1"
+region_grid_id = 'NZ_0_1_NB_1_1'
 vs30s = [
     150,
     175,
