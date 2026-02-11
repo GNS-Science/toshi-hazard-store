@@ -11,8 +11,8 @@ import pytest
 from pyarrow import fs
 
 from toshi_hazard_store.gridded_hazard import gridded_hazard
-from toshi_hazard_store.model import hazard_models_pydantic
-from toshi_hazard_store.model.hazard_models_pydantic import GriddedHazardPoeLevels
+from toshi_hazard_store.model.gridded import gridded_hazard_pydantic
+from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.query import datasets
 
@@ -26,8 +26,8 @@ def test_build_and_roundtrip_gridded_dataset(
     aggr_folder = Path(Path(os.path.realpath(__file__)).parent.parent, 'fixtures', 'aggregate_hazard')
 
     monkeypatch.setattr(datasets, 'DATASET_AGGR_URI', str(aggr_folder.absolute()))
-    monkeypatch.setattr(hazard_models_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", not validate_model)
-    monkeypatch.setattr(hazard_models_pydantic, "USE_64BIT_VALUES", use64bit)
+    monkeypatch.setattr(gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", not validate_model)
+    monkeypatch.setattr(gridded_hazard_pydantic, "USE_64BIT_VALUES", use64bit)
 
     # Setup RegionGrid Mock
     mocked_grid_class = mocker.patch("toshi_hazard_store.gridded_hazard.gridded_hazard.RegionGrid")

@@ -12,7 +12,7 @@ from nzshm_common.grids import RegionGrid
 from nzshm_common.location import CodedLocation
 
 from toshi_hazard_store import query
-from toshi_hazard_store.model.hazard_models_pydantic import GriddedHazardPoeLevels
+from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 
 from .gridded_poe import compute_hazard_at_poe

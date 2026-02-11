@@ -17,9 +17,10 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 
 from toshi_hazard_store.config import DATASET_AGGR_URI
+from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
 
 # from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
-from toshi_hazard_store.model.hazard_models_pydantic import GriddedHazardPoeLevels, HazardAggregateCurve
+from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
 
