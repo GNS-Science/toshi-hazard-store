@@ -2,13 +2,11 @@
 
 # import json
 # import logging
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 from nzshm_common.location import get_locations
 from pydantic import BaseModel
-
-# from pydantic_core import from_json
 
 
 class GridIdentity(BaseModel):
@@ -35,6 +33,13 @@ class GridIdentity(BaseModel):
         )
 
 
+class LocationDiffDetail(GridIdentity):
+    location_code: str
+    error: float
+    l_value: float
+    r_value: float
+
+
 class GridDiff(BaseModel):
     grid_id: GridIdentity
     l_values: np.ndarray
@@ -53,6 +58,11 @@ class GridDiff(BaseModel):
 
     def isclose(self, rtol: float, atol: float):
         return np.isclose(self.l_values, self.r_values, atol=atol, rtol=rtol)
+
+    def isnan(self) -> tuple[list[int], list[int]]:
+        _l_nan = np.where(np.isnan(self.l_values))[0].tolist()
+        _r_nan = np.where(np.isnan(self.r_values))[0].tolist()
+        return (_l_nan, _r_nan)
 
 
 class LocationDiff(BaseModel):
@@ -80,9 +90,14 @@ class GridDiffDiagnostic(BaseModel):
     region_grid_id: str
     r_source: str = ""
     l_source: str = ""
-    location_map: dict[str, LocationMap]
+    l_nans: int = 0
+    r_nans: int = 0
+    location_map: dict[str, LocationMap]  # location / grid id errors
+    nans_map: dict[str, Tuple[list[int], list[int]]]  # grid_id tuple , nan indices as tuples
     checked_grid_entries: int = 0
     failed_grid_entries: int = 0
+    checked_nan_entries: int = 0
+    failed_nan_entries: int = 0
 
     @property
     def location_codes(self):
@@ -110,3 +125,13 @@ class GridDiffDiagnostic(BaseModel):
 
             return f'DIFF :: {diff.grid_id} :: {len(errors)}'
         return None
+
+    def check_nans(self, diff: GridDiff) -> Optional[str]:
+        self.checked_nan_entries += 1
+        nan_result = diff.isnan()
+        if nan_result == ([], []):
+            return None
+        else:
+            self.failed_nan_entries += 1
+            self.nans_map[diff.grid_id.to_idx()] = nan_result
+            return f'DIFF :: nans found {nan_result}'

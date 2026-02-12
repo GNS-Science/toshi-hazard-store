@@ -18,8 +18,6 @@ import pyarrow.dataset as ds
 
 from toshi_hazard_store.config import DATASET_AGGR_URI
 from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
-
-# from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_aggregate_schema
 from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
@@ -512,11 +510,12 @@ def get_gridded_hazard(
     # for batch in table.to_batches():  # pragma: no branch
     #     for row in zip(*batch.columns):  # pragma: no branch
     #         # count += 1
-    #         print(row)
-    #         assert 0
+    #         # print(row)
     #         item = (x.as_py() for x in row)
 
-    #         print(*item)
+    #         # print(*item)
+    #         # assert 0
+    #         # TODO: this fails as Pydantic classes don't support positional arags liek dataclasses do
     #         obj = GriddedHazardPoeLevels(**item)
     #         yield obj
 
