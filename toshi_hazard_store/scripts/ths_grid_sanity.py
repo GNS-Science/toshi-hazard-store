@@ -73,6 +73,7 @@ def cli_iterate(config, dataset):
         count += 1
 
     assert count == expected_total
+    click.echo(f'DONE, processed {count} grids, as expected.')
 
 
 @main.command(name='diff')
