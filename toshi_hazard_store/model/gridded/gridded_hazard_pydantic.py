@@ -46,7 +46,6 @@ class GriddedHazardPoeLevels(BaseModel):
     poe: float
     accel_levels: List[float]
 
-
     @field_validator('vs30', mode='before')
     @classmethod
     def validate_vs30_value(cls, value: int) -> int:
