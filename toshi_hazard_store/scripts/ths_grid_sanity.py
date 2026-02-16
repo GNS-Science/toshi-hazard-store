@@ -153,10 +153,10 @@ def cli_diff(config, dataset):
             click.echo(f'ABENDING after {misses} misses.')
             break
 
-        count += 1
-        if count % 10 == 0:
-            with open('grid_analysis.wip.json', 'w') as fp:
-                json.dump(diagnostic.model_dump(), fp, indent=2)
+        # count += 1
+        # if count % 10 == 0:
+        #     with open('grid_analysis.wip.json', 'w') as fp:
+        #         json.dump(diagnostic.model_dump(), fp, indent=2)
 
     with open('grid_analysis.json', 'w') as fp:
         json.dump(diagnostic.model_dump(), fp, indent=2)

@@ -507,7 +507,7 @@ def get_gridded_hazard(
     log.debug(f"to_table for filter took {(t1 - t0).total_seconds()} seconds.")
     log.debug(f"schema {table.schema}")
 
-    # NB the following emulates the method used in AggrHazard, but it's significantly slower than
+    # NB the following emulates the method used in AggregatedHazard, but it's significantly slower than
     # below using pa.Table.to_pandas()
     # column_names = table.schema.names
     # for batch in table.to_batches():  # pragma: no branch
@@ -516,8 +516,6 @@ def get_gridded_hazard(
     #         # print(row)
     #         vals = (x.as_py() for x in row)
     #         item = {x[0]:x[1] for x in zip(column_names, vals)}
-    #         # assert 0
-    #         # TODO: this fails as Pydantic classes don't support positional arags liek dataclasses do
     #         obj = GriddedHazardPoeLevels.model_construct(**item)
     #         yield obj
 
@@ -525,4 +523,4 @@ def get_gridded_hazard(
     for row_dict in df0.to_dict(orient="records"):
         # yield GriddedHazardPoeLevels(**row_dict) # SLOW because of the expensive validators on
         # this Pydantic Model class.
-        yield GriddedHazardPoeLevels.model_construct(**row_dict)  # FAST (x 50,000 times)
+        yield GriddedHazardPoeLevels.model_construct(**row_dict)  # FAST

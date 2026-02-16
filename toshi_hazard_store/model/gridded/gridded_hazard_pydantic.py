@@ -1,4 +1,4 @@
-"""The gridded hazard  models for (de)serialisation as json."""
+"""The gridded hazard models for (de)serialisation as json."""
 
 from typing import Any, List
 
@@ -18,6 +18,10 @@ class GriddedHazardPoeLevels(BaseModel):
     """A list of hazard acceleration (shaking) at various locations in a grid.
 
     Ground shaking levels for the given location_grid at the given poe, investigation time, vs30, imt and aggr.
+
+    NB the validator methods on this model are 'rigorous and slow', for use when creating new model instances.
+    If models that are being rehydrated from trusted source can use the pydantic use the `model_construct` method
+    to avoid the validatoin overhead.
 
     Attributes:
         compatible_calc_id: for hazard-calc equivalence.
@@ -41,6 +45,7 @@ class GriddedHazardPoeLevels(BaseModel):
     investigation_time: int
     poe: float
     accel_levels: List[float]
+
 
     @field_validator('vs30', mode='before')
     @classmethod
