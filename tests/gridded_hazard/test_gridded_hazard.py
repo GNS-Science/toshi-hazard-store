@@ -8,8 +8,10 @@ import pytest
 
 from toshi_hazard_store import gridded_hazard
 from toshi_hazard_store.model.gridded import gridded_hazard_pydantic
-from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
-from toshi_hazard_store.query import datasets
+from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import (
+    GriddedHazardPoeLevels,
+)
+from toshi_hazard_store.query import datasets, dataset_cache
 
 
 def test_get_one_degree_df(one_degree_hazard_sample_dataframe):
@@ -17,14 +19,14 @@ def test_get_one_degree_df(one_degree_hazard_sample_dataframe):
     print(df0)
     assert df0.shape == (26, 8)
     assert df0.columns.tolist() == [
-        'compatible_calc_id',
-        'hazard_model_id',
-        'nloc_001',
-        'nloc_0',
-        'imt',
-        'vs30',
-        'aggr',
-        'values',
+        "compatible_calc_id",
+        "hazard_model_id",
+        "nloc_001",
+        "nloc_0",
+        "imt",
+        "vs30",
+        "aggr",
+        "values",
     ]
     assert len(df0.nloc_001.unique()) == 13
 
@@ -37,9 +39,13 @@ def test_get_one_degree_grid(get_one_degree_region_grid_fixture):
 
 def test_process_gridded_hazard_basic(monkeypatch):
 
-    folder = Path(Path(os.path.realpath(__file__)).parent.parent, 'fixtures', 'aggregate_hazard')
-    monkeypatch.setattr(datasets, 'DATASET_AGGR_URI', str(folder.absolute()))
-    monkeypatch.setattr(gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True)
+    folder = Path(
+        Path(os.path.realpath(__file__)).parent.parent, "fixtures", "aggregate_hazard"
+    )
+    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(folder.absolute()))
+    monkeypatch.setattr(
+        gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True
+    )
 
     gridded = []
     for record in gridded_hazard.process_gridded_hazard(
@@ -47,56 +53,60 @@ def test_process_gridded_hazard_basic(monkeypatch):
         #     loc.code for loc in grid
         # ],  # TODO this field should not be used since only valid locaion_grid should be stored to grid tables
         poe_levels=[0.02, 0.1],
-        location_grid_id='NZ_0_1_NB_1_1',
-        compatible_calc_id='NZSHM22',
-        hazard_model_id='NSHM_v1.0.4',
+        location_grid_id="NZ_0_1_NB_1_1",
+        compatible_calc_id="NZSHM22",
+        hazard_model_id="NSHM_v1.0.4",
         vs30=400,
-        imt='PGA',
-        agg='mean',
+        imt="PGA",
+        agg="mean",
     ):
         gridded.append(record)
 
     print(gridded)
-    assert 'mean' in [obj.aggr for obj in gridded]
-    assert 'cov' in [obj.aggr for obj in gridded]
+    assert "mean" in [obj.aggr for obj in gridded]
+    assert "cov" in [obj.aggr for obj in gridded]
     assert [obj.vs30 for obj in gridded] == [400, 400, 400, 400]
-    assert [obj.aggr for obj in gridded] == ['cov', 'cov', 'mean', 'mean']
+    assert [obj.aggr for obj in gridded] == ["cov", "cov", "mean", "mean"]
     assert [obj.poe for obj in gridded] == [0.02, 0.1, 0.02, 0.1]
 
 
 @pytest.mark.parametrize(
-    'kwargs, message',
+    "kwargs, message",
     [
-        ({'poe': 0.0}, "poe.*not supported"),
-        ({'poe': 1.0}, "poe.*not supported"),
-        ({'poe': 2.0}, "poe.*not supported"),
-        ({'vs30': "400"}, "vs30.*not supported"),
-        ({'vs30': 400.1}, "vs30.*not supported"),
-        ({'imt': "VGA"}, "imt.*not supported"),
-        ({'aggr': "sum"}, "aggr.*not supported"),
-        ({'investigation_time': 1}, "not supported"),
-        ({'accel_levels': [1, 2, 3, 4]}, "expected accel_levels to have"),
+        ({"poe": 0.0}, "poe.*not supported"),
+        ({"poe": 1.0}, "poe.*not supported"),
+        ({"poe": 2.0}, "poe.*not supported"),
+        ({"vs30": "400"}, "vs30.*not supported"),
+        ({"vs30": 400.1}, "vs30.*not supported"),
+        ({"imt": "VGA"}, "imt.*not supported"),
+        ({"aggr": "sum"}, "aggr.*not supported"),
+        ({"investigation_time": 1}, "not supported"),
+        ({"accel_levels": [1, 2, 3, 4]}, "expected accel_levels to have"),
     ],
 )
 def test_gridded_hazard_poe_model_validations(monkeypatch, kwargs, message):
 
-    folder = Path(Path(os.path.realpath(__file__)).parent.parent, 'fixtures', 'aggregate_hazard')
-    monkeypatch.setattr(datasets, 'DATASET_AGGR_URI', str(folder.absolute()))
+    folder = Path(
+        Path(os.path.realpath(__file__)).parent.parent, "fixtures", "aggregate_hazard"
+    )
+    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(folder.absolute()))
     monkeypatch.setattr(
-        gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", not kwargs.get('accel_levels', False)
+        gridded_hazard_pydantic,
+        "DISABLE_GRIDDED_MODEL_VALIDATOR",
+        not kwargs.get("accel_levels", False),
     )
 
     with pytest.raises(ValueError, match=f".* {message}"):
         assert GriddedHazardPoeLevels(
-            location_grid_id='NZ_0_1_NB_1_1',
-            compatible_calc_id='NZSHM22',
-            hazard_model_id='NSHM_v1.0.4',
-            vs30=kwargs.get('vs30', 400),
-            imt=kwargs.get('imt', 'PGA'),
-            aggr=kwargs.get('aggr', 'mean'),
-            investigation_time=kwargs.get('investigation_time', 50),
-            poe=kwargs.get('poe', 0.02),
-            accel_levels=kwargs.get('accel_levels', range(13)),
+            location_grid_id="NZ_0_1_NB_1_1",
+            compatible_calc_id="NZSHM22",
+            hazard_model_id="NSHM_v1.0.4",
+            vs30=kwargs.get("vs30", 400),
+            imt=kwargs.get("imt", "PGA"),
+            aggr=kwargs.get("aggr", "mean"),
+            investigation_time=kwargs.get("investigation_time", 50),
+            poe=kwargs.get("poe", 0.02),
+            accel_levels=kwargs.get("accel_levels", range(13)),
         )
         print(kwargs)
 
