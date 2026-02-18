@@ -6,7 +6,7 @@ from functools import lru_cache
 
 import pyarrow.dataset as ds
 
-from toshi_hazard_store.config import DATASET_AGGR_URI, DATASET_GRIDDED_URI
+from toshi_hazard_store.config import DATASET_AGGR_URI
 from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import (
     GriddedHazardPoeLevels,
 )

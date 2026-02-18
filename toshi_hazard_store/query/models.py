@@ -1,7 +1,6 @@
 """Data models for hazard query operations."""
 
 from dataclasses import dataclass
-from typing import Union
 
 # Constants
 IMT_44_LVLS = [

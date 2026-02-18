@@ -11,7 +11,7 @@ from toshi_hazard_store.model.gridded import gridded_hazard_pydantic
 from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import (
     GriddedHazardPoeLevels,
 )
-from toshi_hazard_store.query import datasets, dataset_cache
+from toshi_hazard_store.query import dataset_cache
 
 
 def test_get_one_degree_df(one_degree_hazard_sample_dataframe):
