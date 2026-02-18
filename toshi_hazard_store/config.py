@@ -34,3 +34,4 @@ ECR_REPONAME = "nzshm22/runzi-openquake"
 
 DATASET_AGGR_ENABLED = bool(os.getenv('THS_DATASET_AGGR_ENABLED', '').upper() in ["1", "Y", "YES", "TRUE"])
 DATASET_AGGR_URI = os.getenv('THS_DATASET_AGGR_URI', '')
+DATASET_GRIDDED_URI = os.getenv('THS_DATASET_GRIDDED_URI')

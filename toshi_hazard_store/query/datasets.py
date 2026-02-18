@@ -11,12 +11,12 @@ import itertools
 import logging
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Iterator
+from typing import Iterator, Optional
 
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 
-from toshi_hazard_store.config import DATASET_AGGR_URI
+from toshi_hazard_store.config import DATASET_AGGR_URI, DATASET_GRIDDED_URI
 from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
 from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
@@ -151,11 +151,11 @@ def get_dataset() -> ds.Dataset:
         raise RuntimeError(f"Failed to open dataset: {e}")
     return dataset
 
-
-def get_gridded_dataset(dataset_uri) -> ds.Dataset:
+@lru_cache(maxsize=32)
+def get_gridded_dataset() -> ds.Dataset:
     start_time = dt.datetime.now()
     try:
-        source_dir, source_filesystem = pyarrow_dataset.configure_output(dataset_uri)
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_GRID_URI)        
         dataset = ds.dataset(
             source_dir,
             filesystem=source_filesystem,
@@ -475,13 +475,13 @@ def get_hazard_curves(
 
 
 def get_gridded_hazard(
-    dataset_uri: str,
     location_grid_id: str,
     hazard_model_ids: list[str],
     vs30s: list[float],
     imts: list[str],
     aggs: list[str],
     poes: list[float],
+    dataset_uri: Optional[str] = None,
 ) -> Iterator[GriddedHazardPoeLevels]:
     """
     Retrieves gridded hazard from the parquet dataset.
@@ -489,6 +489,7 @@ def get_gridded_hazard(
 
     log.debug('> get_gridded_hazard')
     t0 = dt.datetime.now()
+    dataset_uri = dataset_uri or DATASET_GRIDDED_URI
 
     gridded_dataset = get_gridded_dataset(dataset_uri)
     flt = (
