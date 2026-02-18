@@ -151,11 +151,12 @@ def get_dataset() -> ds.Dataset:
         raise RuntimeError(f"Failed to open dataset: {e}")
     return dataset
 
-@lru_cache(maxsize=32)
-def get_gridded_dataset() -> ds.Dataset:
+
+@lru_cache(maxsize=1)
+def get_gridded_dataset(dataset_uri) -> ds.Dataset:
     start_time = dt.datetime.now()
     try:
-        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_GRID_URI)        
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(dataset_uri)
         dataset = ds.dataset(
             source_dir,
             filesystem=source_filesystem,
