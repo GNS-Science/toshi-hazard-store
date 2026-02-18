@@ -7,9 +7,7 @@ from typing import Iterator, Optional
 import pyarrow.compute as pc
 
 from toshi_hazard_store.config import DATASET_GRIDDED_URI
-from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import (
-    GriddedHazardPoeLevels,
-)
+from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
 from toshi_hazard_store.query.dataset_cache import get_gridded_dataset
 from toshi_hazard_store.query.models import AggregatedHazard
 from toshi_hazard_store.query.query_strategies import (
@@ -67,9 +65,7 @@ def get_hazard_curves(
 
     deferred_warning = None
     try:
-        for obj in qfn(
-            location_codes, vs30s, hazard_model, imts, aggs
-        ):  # pragma: no branch
+        for obj in qfn(location_codes, vs30s, hazard_model, imts, aggs):  # pragma: no branch
             count += 1
             yield obj
     except RuntimeWarning as err:
@@ -79,9 +75,7 @@ def get_hazard_curves(
             raise err  # pragma: no cover
 
     t1 = dt.datetime.now()
-    log.info(
-        f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds."
-    )
+    log.info(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
 
     if deferred_warning:  # pragma: no cover
         raise deferred_warning

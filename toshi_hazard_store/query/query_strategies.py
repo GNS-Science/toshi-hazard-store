@@ -7,11 +7,7 @@ from typing import Iterator
 
 import pyarrow.compute as pc
 
-from toshi_hazard_store.query.dataset_cache import (
-    get_dataset,
-    get_dataset_vs30,
-    get_dataset_vs30_nloc0,
-)
+from toshi_hazard_store.query.dataset_cache import get_dataset, get_dataset_vs30, get_dataset_vs30_nloc0
 from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
 from toshi_hazard_store.query.models import AggregatedHazard
 
@@ -68,15 +64,11 @@ def get_hazard_curves_naive(
             # log.info(f'item: {item}')
             obj = AggregatedHazard(*item).to_imt_values()
             if obj.vs30 not in vs30s:
-                raise RuntimeError(
-                    f"vs30 {obj.vs30} not in {vs30s}. Is schema correct?"
-                )  # pragma: no cover
+                raise RuntimeError(f"vs30 {obj.vs30} not in {vs30s}. Is schema correct?")  # pragma: no cover
             yield obj
 
     t1 = dt.datetime.now()  # pragma: no cover
-    log.debug(
-        f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds."
-    )
+    log.debug(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
 
 
 def get_hazard_curves_by_vs30(
@@ -138,15 +130,11 @@ def get_hazard_curves_by_vs30(
                 obj = AggregatedHazard(*item).to_imt_values()
                 obj.vs30 = vs30
                 if obj.imt not in imts:
-                    raise RuntimeError(
-                        f"imt {obj.imt} not in {imts}. Is schema correct?"
-                    )  # pragma: no cover
+                    raise RuntimeError(f"imt {obj.imt} not in {imts}. Is schema correct?")  # pragma: no cover
                 yield obj
 
         t1 = dt.datetime.now()  # pragma: no cover
-        log.debug(
-            f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds."
-        )
+        log.debug(f"Executed dataset query for {count} curves in {(t1 - t0).total_seconds()} seconds.")
 
     if dataset_exceptions:  # pragma: no branch
         raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")
@@ -222,15 +210,11 @@ def get_hazard_curves_by_vs30_nloc0(
                     obj.vs30 = vs30
                     obj.nloc_0 = hloc
                     if obj.imt not in imts:
-                        raise RuntimeError(
-                            f"imt {obj.imt} not in {imts}. Is schema correct?"
-                        )  # pragma: no cover
+                        raise RuntimeError(f"imt {obj.imt} not in {imts}. Is schema correct?")  # pragma: no cover
                     yield obj
 
         t3 = dt.datetime.now()  # pragma: no cover
-        log.debug(
-            f"Executed dataset query for {count} curves in {(t3 - t0).total_seconds()} seconds."
-        )
+        log.debug(f"Executed dataset query for {count} curves in {(t3 - t0).total_seconds()} seconds.")
 
     if dataset_exceptions:  # pragma: no branch
         raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")

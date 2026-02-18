@@ -7,9 +7,7 @@ from functools import lru_cache
 import pyarrow.dataset as ds
 
 from toshi_hazard_store.config import DATASET_AGGR_URI
-from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import (
-    GriddedHazardPoeLevels,
-)
+from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
 from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.query.hazard_query import downsample_code
@@ -29,9 +27,7 @@ def get_dataset() -> ds.Dataset:
     """
     start_time = dt.datetime.now()
     try:
-        source_dir, source_filesystem = pyarrow_dataset.configure_output(
-            DATASET_AGGR_URI
-        )
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_AGGR_URI)
         dataset = ds.dataset(
             source_dir,
             filesystem=source_filesystem,
@@ -73,9 +69,7 @@ def get_dataset_vs30(vs30: int) -> ds.Dataset:
     """
     start_time = dt.datetime.now()
     try:
-        source_dir, source_filesystem = pyarrow_dataset.configure_output(
-            DATASET_AGGR_URI
-        )
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_AGGR_URI)
         dspath = f"{source_dir}/vs30={vs30}"
         dataset = ds.dataset(
             dspath,
@@ -100,9 +94,7 @@ def get_dataset_vs30_nloc0(vs30: int, nloc: str) -> ds.Dataset:
     """
     start_time = dt.datetime.now()
     try:
-        source_dir, source_filesystem = pyarrow_dataset.configure_output(
-            DATASET_AGGR_URI
-        )
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_AGGR_URI)
         log.debug(f"source_dir:`{source_dir}`, filesystem: `{source_filesystem}`")
         dspath = f"{source_dir}/vs30={vs30}/nloc_0={downsample_code(nloc, 1.0)}"
         log.debug(f"Opening dspath :`{dspath}`")

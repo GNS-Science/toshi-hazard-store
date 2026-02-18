@@ -99,9 +99,7 @@ def import_to_iceberg():
     print(rest_catalog)
     print(dir(rest_catalog))
 
-    icetable = rest_catalog.create_table(
-        identifier=f"{DATABASE}.{TABLE_NAME}", schema=dt0.schema
-    )
+    icetable = rest_catalog.create_table(identifier=f"{DATABASE}.{TABLE_NAME}", schema=dt0.schema)
 
     t2 = dt.datetime.now()
     print(f"created iceberg table in {(t2 - t1).total_seconds()}")
@@ -113,11 +111,7 @@ def import_to_iceberg():
     t3 = dt.datetime.now()
     print(f"Saved {rows} rows to iceberg table in {(t3 - t2).total_seconds()}")
 
-    print(
-        icetable.scan(
-            row_filter=EqualTo("vs30", 400) & EqualTo("aggr", "mean")
-        ).to_pandas()
-    )
+    print(icetable.scan(row_filter=EqualTo("vs30", 400) & EqualTo("aggr", "mean")).to_pandas())
 
 
 def query_arrow():
@@ -181,9 +175,7 @@ def query_ice():
         & EqualTo("vs30", 400)
     )
 
-    res = icetable.scan(
-        row_filter=filter, selected_fields=("nloc_001", "imt", "aggr", "values")
-    ).to_pandas()
+    res = icetable.scan(row_filter=filter, selected_fields=("nloc_001", "imt", "aggr", "values")).to_pandas()
 
     print(res.shape)
     t3 = dt.datetime.now()
@@ -196,11 +188,7 @@ def query_ice():
 def query_datasets(query_fn):
     t0 = dt.datetime.now()
     MODEL = "NSHM_v1.0.4"
-    res = list(
-        query_fn(
-            location_codes=[loc], vs30s=vs30s, hazard_model=MODEL, imts=imts, aggs=aggs
-        )
-    )
+    res = list(query_fn(location_codes=[loc], vs30s=vs30s, hazard_model=MODEL, imts=imts, aggs=aggs))
     assert len(res) == 80
     print(">>>>>")
     t3 = dt.datetime.now()

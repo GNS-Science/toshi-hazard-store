@@ -13,8 +13,8 @@ import numpy as np
 from pathy import FluidPath, Pathy
 
 from toshi_hazard_store import query
-from toshi_hazard_store.query.models import AggregatedHazard
 from toshi_hazard_store.gridded_hazard import gridded_poe
+from toshi_hazard_store.query.models import AggregatedHazard
 
 log = logging.getLogger(__name__)
 
@@ -86,15 +86,11 @@ def filter_backup_data(output_path, path, search_key, search_value):
                 if filepath.name[-2:] == "gz":
                     # process gzipped archive
                     with gzip.open(fobj) as gzfile:
-                        process_and_write(
-                            gzfile, output_file, filepath, search_key, search_value
-                        )
+                        process_and_write(gzfile, output_file, filepath, search_key, search_value)
 
                 else:
                     # process directly
-                    process_and_write(
-                        fobj, output_file, filepath, search_key, search_value
-                    )
+                    process_and_write(fobj, output_file, filepath, search_key, search_value)
 
             mark_as_processed(file_key)
 
@@ -105,11 +101,7 @@ def compare_values(
     sort_key="-40.100~175.000:400:SA(0.5):0.9:NSHM_v1.0.4",
 ):
     with open(filtered_json_path, "rb") as jsonfile:
-        backup_data = list(
-            process_jsonlines(
-                jsonfile, search_key="sort_key", search_value=dict(S=sort_key)
-            )
-        )
+        backup_data = list(process_jsonlines(jsonfile, search_key="sort_key", search_value=dict(S=sort_key)))
         assert len(backup_data) == 1
         backup_obj = backup_data[0]
 
@@ -123,9 +115,7 @@ def compare_values(
         del backup_obj["lon"]
         del backup_obj["uniq_id"]
         backup_obj["compatable_calc_id"] = "NZSHM22"
-        backup_obj["values"] = [
-            float(x["M"]["val"]["N"]) for x in backup_obj["values"]["L"]
-        ]
+        backup_obj["values"] = [float(x["M"]["val"]["N"]) for x in backup_obj["values"]["L"]]
 
         bk_obj = AggregatedHazard(**backup_obj).to_imt_values()
 
@@ -154,13 +144,9 @@ def compare_values(
 
         print("montonicity")
         print("-----------")
-        _, _A_trimmed = gridded_poe.trim_poes(
-            min_poe=1e-10, max_poe=0.632, ground_accels=range(44), annual_poes=_A
-        )
+        _, _A_trimmed = gridded_poe.trim_poes(min_poe=1e-10, max_poe=0.632, ground_accels=range(44), annual_poes=_A)
         _A_xp = np.flip(np.log(_A_trimmed))
-        _, _B_trimmed = gridded_poe.trim_poes(
-            min_poe=1e-10, max_poe=0.632, ground_accels=range(44), annual_poes=_B
-        )
+        _, _B_trimmed = gridded_poe.trim_poes(min_poe=1e-10, max_poe=0.632, ground_accels=range(44), annual_poes=_B)
         _B_xp = np.flip(np.log(_B_trimmed))
         print("backup", np.all(np.diff(_A_xp) >= 0))
         print("parquet", np.all(np.diff(_B_xp) >= 0))
@@ -187,11 +173,11 @@ def compare_values(
 
 if __name__ == "__main__":
     bucket_name = "ths-table-backup"  # Replace with your S3 bucket name
-    key_prefix = "AWSDynamoDB/01754264207142-e288428c/data"  # Replace with the prefix of your files, e.g., 'path/to/files/'
+    key_prefix = (
+        "AWSDynamoDB/01754264207142-e288428c/data"  # Replace with the prefix of your files, e.g., 'path/to/files/'
+    )
     search_key = "partition_key"  # Replace with the key you want to search for
-    search_value = dict(
-        S="-43.4~172.7"
-    )  # Replace with the value corresponding to that key
+    search_value = dict(S="-43.4~172.7")  # Replace with the value corresponding to that key
 
     output_path = pathlib.Path("./WORKDIR/filtered_json.json")
 

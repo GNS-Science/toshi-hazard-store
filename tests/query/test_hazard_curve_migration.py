@@ -7,11 +7,7 @@ from unittest import mock
 import pytest
 
 from toshi_hazard_store.query import datasets, hazard_query
-from toshi_hazard_store.query.dataset_cache import (
-    get_dataset,
-    get_dataset_vs30,
-    get_dataset_vs30_nloc0,
-)
+from toshi_hazard_store.query.dataset_cache import get_dataset, get_dataset_vs30, get_dataset_vs30_nloc0
 from toshi_hazard_store.query.models import AggregatedHazard
 from toshi_hazard_store.query.query_strategies import (
     get_hazard_curves_by_vs30,
@@ -81,9 +77,7 @@ def hazagg_fixture_fn(json_hazard):
 @pytest.mark.parametrize("vs30", [400, 1500])
 @pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])
 @pytest.mark.parametrize("aggr", ["0.005", "mean"])
-def test_get_hazard_curves_from_dataset(
-    monkeypatch, hazagg_fixture_fn, query_fn, locn, vs30, imt, aggr
-):
+def test_get_hazard_curves_from_dataset(monkeypatch, hazagg_fixture_fn, query_fn, locn, vs30, imt, aggr):
     """Happy case tests covers all 3 query strategies and the wrapper"""
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
@@ -97,9 +91,7 @@ def test_get_hazard_curves_from_dataset(
     # assert expected
     print(expected)
 
-    result = query_fn(
-        location_codes=[locn], vs30s=[vs30], hazard_model=model, imts=[imt], aggs=[aggr]
-    )
+    result = query_fn(location_codes=[locn], vs30s=[vs30], hazard_model=model, imts=[imt], aggs=[aggr])
 
     res = next(result)  # only one curve is returned
 
@@ -127,9 +119,7 @@ def test_get_hazard_curves_from_dataset(
 @pytest.mark.parametrize("vs30", [400, 1500])
 @pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])
 @pytest.mark.parametrize("aggr", ["0.005", "mean"])
-def test_hazard_curve_query_data_missing_for_one_location(
-    monkeypatch, hazagg_fixture_fn, bad_locn, vs30, imt, aggr
-):
+def test_hazard_curve_query_data_missing_for_one_location(monkeypatch, hazagg_fixture_fn, bad_locn, vs30, imt, aggr):
     """Out of bounds location tests covers just `get_hazard_curves_by_vs30_nloc0` query strategy"""
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
@@ -177,9 +167,7 @@ def test_hazard_curve_query_data_missing_for_one_location(
 @pytest.mark.parametrize("bad_vs30", [401, 155])
 @pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])
 @pytest.mark.parametrize("aggr", ["0.005", "mean"])
-def test_hazard_curve_query_data_missing_for_vs30(
-    monkeypatch, hazagg_fixture_fn, query_fn, bad_vs30, imt, aggr
-):
+def test_hazard_curve_query_data_missing_for_vs30(monkeypatch, hazagg_fixture_fn, query_fn, bad_vs30, imt, aggr):
     """Out of bounds (vs30) covers queries using vs30 partioning"""
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
@@ -263,9 +251,7 @@ def test_hazard_curve_query_default_strategy_is_naive(monkeypatch):
         ("", "get_hazard_curves_naive"),
     ],
 )
-def test_hazard_curve_query_strategy_calls_correct_query_fn(
-    monkeypatch, strategy_fn_name
-):
+def test_hazard_curve_query_strategy_calls_correct_query_fn(monkeypatch, strategy_fn_name):
 
     mocked_qry_fn = mock.Mock(return_value=[])
     monkeypatch.setattr(datasets, strategy_fn_name[1], mocked_qry_fn)
