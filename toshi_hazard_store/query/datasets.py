@@ -6,7 +6,6 @@ from typing import Iterator, Optional
 
 import pyarrow.compute as pc
 
-from toshi_hazard_store.config import DATASET_GRIDDED_URI
 from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
 from toshi_hazard_store.query.dataset_cache import get_gridded_dataset
 from toshi_hazard_store.query.models import AggregatedHazard
@@ -96,7 +95,6 @@ def get_gridded_hazard(
 
     log.debug("> get_gridded_hazard")
     t0 = dt.datetime.now()
-    dataset_uri = dataset_uri or DATASET_GRIDDED_URI
 
     gridded_dataset = get_gridded_dataset(dataset_uri)
     flt = (

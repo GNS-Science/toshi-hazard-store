@@ -12,9 +12,7 @@ from nzshm_common.grids import RegionGrid
 from nzshm_common.location import CodedLocation
 
 from toshi_hazard_store import query
-from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import (
-    GriddedHazardPoeLevels,
-)
+from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 
 from .gridded_poe import compute_hazard_at_poe
@@ -24,9 +22,7 @@ INVESTIGATION_TIME = 50
 SPOOF_SAVE = False
 COV_AGG_KEY = "cov"
 
-DEFAULT_GRID_ACCEL_VALUE = (
-    np.nan
-)  # historically was None, but this cannot be serialised by pyarrow
+DEFAULT_GRID_ACCEL_VALUE = np.nan  # historically was None, but this cannot be serialised by pyarrow
 PRODUCE_COV_GRID = True
 
 GridHazTaskArgs = namedtuple(
@@ -62,21 +58,16 @@ def process_gridded_hazard(
     grid = RegionGrid[location_grid_id]
     locations = list(
         map(
-            lambda grd_loc: CodedLocation(
-                grd_loc[0], grd_loc[1], resolution=grid.resolution
-            ),
+            lambda grd_loc: CodedLocation(grd_loc[0], grd_loc[1], resolution=grid.resolution),
             grid.load(),
         )
     )
     location_keys = [loc.resample(0.001).code for loc in locations]
     grid_accel_levels: Dict[float, List] = {
-        poe: [DEFAULT_GRID_ACCEL_VALUE for i in range(len(location_keys))]
-        for poe in poe_levels
+        poe: [DEFAULT_GRID_ACCEL_VALUE for i in range(len(location_keys))] for poe in poe_levels
     }
 
-    for haz in query.get_hazard_curves(
-        location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[agg], strategy="d1"
-    ):
+    for haz in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[agg], strategy="d1"):
         accel_levels = [val.lvl for val in haz.values]
         poe_values = [val.val for val in haz.values]
         index = location_keys.index(haz.nloc_001)
@@ -95,9 +86,7 @@ def process_gridded_hazard(
                 )
                 log.warning(f"index: {index}; ` poe_values`: {poe_values}")
                 continue
-            log.debug(
-                "replaced %s with %s" % (index, grid_accel_levels[poe_lvl][index])
-            )
+            log.debug("replaced %s with %s" % (index, grid_accel_levels[poe_lvl][index]))
 
     # DONE: no evidence now of this problem, that we have validated that the grid_accel_levels values are all floats ...
     # NB this seems to be caused only at loc = -40.100~175.000, and with max_poe = 0.632, where we see the non-monotonic
@@ -113,12 +102,9 @@ def process_gridded_hazard(
 
     if agg == "mean" and PRODUCE_COV_GRID:
         grid_covs: Dict[float, List] = {
-            poe: [DEFAULT_GRID_ACCEL_VALUE for i in range(len(location_keys))]
-            for poe in poe_levels
+            poe: [DEFAULT_GRID_ACCEL_VALUE for i in range(len(location_keys))] for poe in poe_levels
         }
-        for cov in query.get_hazard_curves(
-            location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[COV_AGG_KEY]
-        ):
+        for cov in query.get_hazard_curves(location_keys, [vs30], hazard_model_id, imts=[imt], aggs=[COV_AGG_KEY]):
             cov_values = [val.val for val in cov.values]
             index = location_keys.index(cov.nloc_001)
             for poe_lvl in poe_levels:
@@ -183,9 +169,7 @@ class GriddedHazardWorkerMP(multiprocessing.Process):
                 # assert 0
                 # write the dataset
                 table = pyarrow_dataset.table_from_models(gridded_models)
-                output_folder, filesystem = pyarrow_dataset.configure_output(
-                    nt.output_target
-                )
+                output_folder, filesystem = pyarrow_dataset.configure_output(nt.output_target)
                 pyarrow_dataset.append_models_to_dataset(
                     table,
                     output_folder,
@@ -202,10 +186,7 @@ class GriddedHazardWorkerMP(multiprocessing.Process):
             finally:
                 self.task_queue.task_done()
                 t1 = dt.datetime.now()
-                log.info(
-                    "%s task done in %s seconds, args: `%s`"
-                    % (self.name, (t1 - t0).total_seconds(), nt)
-                )
+                log.info("%s task done in %s seconds, args: `%s`" % (self.name, (t1 - t0).total_seconds(), nt))
 
 
 def calc_gridded_hazard(
@@ -249,9 +230,7 @@ def calc_gridded_hazard(
     for w in workers:
         w.start()
 
-    for hazard_model_id, vs30, imt, agg in itertools.product(
-        hazard_model_ids, vs30s, imts, aggs
-    ):
+    for hazard_model_id, vs30, imt, agg in itertools.product(hazard_model_ids, vs30s, imts, aggs):
         t = GridHazTaskArgs(
             poe_levels,
             location_grid_id,

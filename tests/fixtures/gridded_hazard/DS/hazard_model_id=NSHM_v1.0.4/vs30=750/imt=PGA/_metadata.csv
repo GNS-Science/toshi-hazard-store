@@ -1,0 +1,2 @@
+path,size,format_version,num_columns,num_row_groups,num_rows
+hazard_model_id=NSHM_v1.0.4/vs30=750/imt=PGA/6b284c88-78f2-4f70-9514-019b05cd3bc4-part-0.parquet,2039846,2.6,6,8,90

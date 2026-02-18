@@ -3,10 +3,11 @@
 import datetime as dt
 import logging
 from functools import lru_cache
+from typing import Optional
 
 import pyarrow.dataset as ds
 
-from toshi_hazard_store.config import DATASET_AGGR_URI
+from toshi_hazard_store.config import DATASET_AGGR_URI, DATASET_GRIDDED_URI
 from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
 from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
@@ -42,10 +43,11 @@ def get_dataset() -> ds.Dataset:
 
 
 @lru_cache(maxsize=1)
-def get_gridded_dataset(dataset_uri) -> ds.Dataset:
+def get_gridded_dataset(dataset_uri: Optional[str] = None) -> ds.Dataset:
     start_time = dt.datetime.now()
+    ds_uri = dataset_uri or DATASET_GRIDDED_URI
     try:
-        source_dir, source_filesystem = pyarrow_dataset.configure_output(dataset_uri)
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(str(ds_uri))
         dataset = ds.dataset(
             source_dir,
             filesystem=source_filesystem,
