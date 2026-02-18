@@ -1,15 +1,35 @@
 # Changelog
 
-## [1.4.0-next-release] 2026-01
+## [1.4.0-next-release] 2026-02
 ### Added
- - migrated 'ths_build_grid` script, module and tests from `toshi-hazard-haste` project.
- - DEVELOPMENT.md describes developer environment setup.
- - gridded pydantic model
- - pa schemas built from pydantic model
+- Comprehensive test coverage for `get_gridded_hazard` function with 6 new tests
+- New test module `tests/query/test_gridded_hazard_query.py`
 
 ### Changed
- - set `pyarrow <3` upper bound as the new 3.0.0. version introduces some schema issues.
- - revised tox configuration for proper environment selection
+- Refactored large `datasets.py` module (529 lines) into 4 focused modules:
+  - `models.py` - Data models and constants (110 lines)
+  - `dataset_cache.py` - Dataset caching functionality (115 lines)
+  - `query_strategies.py` - Different query strategies (205 lines)
+  - `datasets.py` - Main query interface (115 lines, reduced from 529)
+- Updated all imports and references to use new module structure
+- Improved code organization and maintainability
+
+### Removed
+- Deprecated PynamoDB model `toshi_hazard_store/model/gridded_hazard.py`
+- Deprecated PynamoDB queries `toshi_hazard_store/query/gridded_hazard_query.py`
+- Unused import of `get_one_gridded_hazard` from `__init__.py`
+- All gridded hazard functionality now uses pyarrow datasets instead of DynamoDB
+
+## [1.4.0-next-release] 2026-01
+### Added
+- migrated 'ths_build_grid` script, module and tests from `toshi-hazard-haste` project.
+- DEVELOPMENT.md describes developer environment setup.
+- gridded pydantic model
+- pa schemas built from pydantic model
+
+### Changed
+- set `pyarrow <3` upper bound as the new 3.0.0. version introduces some schema issues.
+- revised tox configuration for proper environment selection
 
 ## [1.3.1] 2026-01-20
 ### Changed
