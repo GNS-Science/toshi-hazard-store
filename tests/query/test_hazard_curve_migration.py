@@ -88,7 +88,9 @@ def test_get_hazard_curves_from_dataset(
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
 
-    monkeypatch.setattr(datasets, "DATASET_AGGR_URI", str(dspath))
+    from toshi_hazard_store.query import dataset_cache
+
+    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(dspath))
 
     model = "NSHM_v1.0.4"
     expected = next(hazagg_fixture_fn(model, imt, locn, aggr, vs30))
@@ -132,7 +134,9 @@ def test_hazard_curve_query_data_missing_for_one_location(
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
 
-    monkeypatch.setattr(datasets, "DATASET_AGGR_URI", str(dspath))
+    from toshi_hazard_store.query import dataset_cache
+
+    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(dspath))
 
     model = "NSHM_v1.0.4"
     good_locn = "-41.300~174.800"
@@ -180,7 +184,9 @@ def test_hazard_curve_query_data_missing_for_vs30(
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
 
-    monkeypatch.setattr(datasets, "DATASET_AGGR_URI", str(dspath))
+    from toshi_hazard_store.query import dataset_cache
+
+    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(dspath))
 
     model = "NSHM_v1.0.4"
     good_locn = "-41.300~174.800"
@@ -299,7 +305,9 @@ def test_hazard_curve_query_strategy_unmocked(monkeypatch, strategy):
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
 
-    monkeypatch.setattr(datasets, "DATASET_AGGR_URI", str(dspath))
+    from toshi_hazard_store.query import dataset_cache
+
+    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(dspath))
 
     model = "NSHM_v1.0.4"
     good_locn = "-41.300~174.800"
