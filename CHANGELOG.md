@@ -4,6 +4,16 @@
 ### Added
 - Comprehensive test coverage for `get_gridded_hazard` function with 6 new tests
 - New test module `tests/query/test_gridded_hazard_query.py`
+- Comprehensive test coverage for all CLI scripts (26 new tests):
+  - `test_ths_build_gridded.py` - build and geojson subcommands
+  - `test_ths_compat.py` - add, delete, ls, update subcommands
+  - `test_ths_ds_check.py` - aggs and rlzs subcommands
+  - `test_ths_ds_defrag.py` - main command
+  - `test_ths_ds_filter.py` - main command
+  - `test_ths_ds_sanity.py` - count-rlz subcommand
+  - `test_ths_grid_sanity.py` - diff, iterate, report subcommands
+  - `test_ths_import.py` - extract, producers, store-hazard subcommands
+  - `test_ths_json_backup.py` - function testing
 
 ### Changed
 - Refactored large `datasets.py` module (529 lines) into 4 focused modules:
@@ -13,12 +23,19 @@
   - `datasets.py` - Main query interface (115 lines, reduced from 529)
 - Updated all imports and references to use new module structure
 - Improved code organization and maintainability
+- Removed all unused imports from script test files
+- Updated API documentation to remove references to removed modules
 
 ### Removed
 - Deprecated PynamoDB model `toshi_hazard_store/model/gridded_hazard.py`
 - Deprecated PynamoDB queries `toshi_hazard_store/query/gridded_hazard_query.py`
 - Unused import of `get_one_gridded_hazard` from `__init__.py`
+- Obsolete documentation file `docs/gridded_hazard_query_api.md`
 - All gridded hazard functionality now uses pyarrow datasets instead of DynamoDB
+
+### Fixed
+- MkDocs build error caused by references to removed `gridded_hazard_query` module
+- All documentation now builds successfully
 
 ## [1.4.0-next-release] 2026-01
 ### Added
