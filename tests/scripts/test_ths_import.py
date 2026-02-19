@@ -1,5 +1,5 @@
+
 import pytest  # noqa
-from unittest.mock import patch
 from click.testing import CliRunner
 
 from toshi_hazard_store.scripts import ths_import  # module reference for patching

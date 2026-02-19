@@ -2,8 +2,6 @@
 
 from click.testing import CliRunner
 
-import pytest
-
 from toshi_hazard_store.scripts import ths_build_gridded
 
 
