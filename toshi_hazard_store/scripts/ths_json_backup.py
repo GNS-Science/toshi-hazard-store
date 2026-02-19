@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 # Optional caching configuration
 # USE_CACHE = True  # Set this flag based on whether you want caching enabled or not
 # LOCAL_CACHE_DIR = './local_cache'
-LOG_FILE_PATH = "./WORKDIR/processed_files.log"
+LOG_FILE_PATH = "./processed.log"
 
 
 def get_local_file_path(bucket_name, key):
