@@ -16,6 +16,15 @@ def test_cli_help():
     assert "build" in result.output
 
 
+def test_cli_build_help():
+    """Test build subcommand help."""
+    runner = CliRunner()
+    result = runner.invoke(ths_build_gridded.main, ["build", "--help"])
+    assert result.exit_code == 0
+    assert "Usage" in result.output
+    assert "build" in result.output
+
+
 def test_cli_geojson_help():
     """Test geojson subcommand help."""
     runner = CliRunner()

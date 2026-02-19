@@ -14,3 +14,12 @@ def test_cli_help():
     assert result.exit_code == 0
     assert "Usage" in result.output
     assert "Import NSHM Model hazard curves" in result.output
+
+
+def test_cli_count_rlz_help():
+    """Test count-rlz subcommand help."""
+    runner = CliRunner()
+    result = runner.invoke(ths_ds_sanity.main, ["count-rlz", "--help"])
+    assert result.exit_code == 0
+    assert "Usage" in result.output
+    assert "count-rlz" in result.output

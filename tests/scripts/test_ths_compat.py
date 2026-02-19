@@ -16,6 +16,24 @@ def test_cli_help():
     assert "compat" in result.output
 
 
+def test_cli_add_help():
+    """Test add subcommand help."""
+    runner = CliRunner()
+    result = runner.invoke(ths_compat.main, ["add", "--help"])
+    assert result.exit_code == 0
+    assert "Usage" in result.output
+    assert "add" in result.output
+
+
+def test_cli_delete_help():
+    """Test delete subcommand help."""
+    runner = CliRunner()
+    result = runner.invoke(ths_compat.main, ["delete", "--help"])
+    assert result.exit_code == 0
+    assert "Usage" in result.output
+    assert "delete" in result.output
+
+
 def test_cli_ls_help():
     """Test ls subcommand help."""
     runner = CliRunner()
@@ -24,3 +42,12 @@ def test_cli_ls_help():
     assert result.exit_code == 0
     assert "Usage" in result.output
     assert "ls" in result.output
+
+
+def test_cli_update_help():
+    """Test update subcommand help."""
+    runner = CliRunner()
+    result = runner.invoke(ths_compat.main, ["update", "--help"])
+    assert result.exit_code == 0
+    assert "Usage" in result.output
+    assert "update" in result.output
