@@ -1,4 +1,5 @@
 import pytest  # noqa
+from unittest.mock import patch
 from click.testing import CliRunner
 
 from toshi_hazard_store.scripts import ths_import  # module reference for patching
@@ -87,14 +88,3 @@ def test_cli_store_hazard_help(options):
 
 #     mocked_read_version_list.assert_called_once()
 #     mocked_vi_collect.assert_called_once()
-#     mocked_write_version_list.assert_called_once_with([vi_og, vi_new])
-
-#     print(result.output)
-
-#     if options and "--verbose" in options:
-#         assert vi_new.version_id in result.output
-#         assert vi_new.nzshm_model_version in result.output
-#         assert vi_new.description in result.output
-
-#     if options and "--verbose" in options and "--merge" not in options:
-#         assert "Wrote new version" in result.output
