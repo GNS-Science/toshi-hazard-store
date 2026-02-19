@@ -1,4 +1,3 @@
-
 import pytest  # noqa
 from click.testing import CliRunner
 
