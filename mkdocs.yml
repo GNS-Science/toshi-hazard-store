@@ -27,19 +27,26 @@ nav:
       - ths_build_grid: cli/ths_build_grid.md
   - API:
     - api/index.md
-    - query: 
+    - Hazard query: hazard_query_api.md
+    - query:
       - datasets: api/query/datasets.md
     - oq_import:
       - oq config: api/oq_import/oq_config.md
+  - Datasets:
+      - Performance:
+        - Iceberg spike: datasets/performance/iceberg_spike.md
+        - PyArrow 15 to 19: datasets/performance/pyarrow_15_to_19.md
   - Legacy Migrations:
       # - Overview: migration_overview.md
       - Hazard dataset May-2024: migration/hazard_import_processing-may-2024.md
       - Arrow sanity tests: migration/arrow_sanity_testing.md
       - Rev4 migration testing: migration/revision_4_migration_testing.md
       - Rev4 disagg testing: migration/revision_4_disagg_testing.md
-  - Query API:
-      - Hazard: hazard_query_api.md
-      - Gridded Hazard: gridded_hazard_query_api.md
+      - Dataset build Jun-2024: migration/2024-06-27_dataset_build.md
+      - Grid migration: migration/datasets/gridded_hazard/grid_migration.md
+      - Hawkes Bay validation: migration/datasets/hawkes_bay/aggs_exist.md
+      - Hawkes Bay raw aggs: migration/datasets/hawkes_bay/aggs_raw_exist.md
+      - Instance timings: migration/datasets/timings.md
   - Database Models:
       - New Hazard: domain_model/proposed_hazard_models.md
       - Hazard: domain_model/openquake_models.md
