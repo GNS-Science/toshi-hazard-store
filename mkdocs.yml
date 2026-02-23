@@ -16,15 +16,21 @@ nav:
       # - Parquet: TODO.md
   - CLI tools: 
       - cli/index.md
-      - Hazard Dataset overview: cli/hazard_dataset_overview.md
       - usage: cli/usage.md
       - ths_compat: cli/ths_compat.md
+      - ths_ds_check: cli/ths_ds_check.md
+      - ths_ds_defrag: cli/ths_ds_defrag.md
+      - ths_ds_filter: cli/ths_ds_filter.md
+      - ths_grid_build: cli/ths_grid_build.md
+      - ths_grid_sanity: cli/ths_grid_sanity.md
       - ths_rlz_import: cli/ths_rlz_import.md
       - ths_rlz_sanity: cli/ths_rlz_sanity.md
-      - ths_defrag: cli/ths_ds_defrag.md
-      - ths_check: cli/ths_ds_check.md
-      - ths_filter: cli/ths_ds_filter.md
-      - ths_grid_build: cli/ths_grid_build.md
+  - Data Models:
+      - Hazard Dataset overview: cli/hazard_dataset_overview.md  
+      - New Hazard: domain_model/proposed_hazard_models.md
+      - Hazard: domain_model/openquake_models.md
+      - Gridded Hazard: domain_model/gridded_hazard_models.md
+      - Hazard Disaggregation: domain_model/disaggregation_models.md      
   - API:
     - api/index.md
     - Hazard query: hazard_query_api.md
@@ -33,11 +39,10 @@ nav:
     - oq_import:
       - oq config: api/oq_import/oq_config.md
   - Datasets:
-      - Performance:
-        - Iceberg spike: datasets/performance/iceberg_spike.md
-        - PyArrow 15 to 19: datasets/performance/pyarrow_15_to_19.md
-  - Legacy Migrations:
-      # - Overview: migration_overview.md
+    - Performance:
+      - Iceberg spike: datasets/performance/iceberg_spike.md
+      - PyArrow 15 to 19: datasets/performance/pyarrow_15_to_19.md
+    - Legacy Migrations:
       - Hazard dataset May-2024: migration/hazard_import_processing-may-2024.md
       - Arrow sanity tests: migration/arrow_sanity_testing.md
       - Rev4 migration testing: migration/revision_4_migration_testing.md
@@ -47,11 +52,6 @@ nav:
       - Hawkes Bay validation: migration/datasets/hawkes_bay/aggs_exist.md
       - Hawkes Bay raw aggs: migration/datasets/hawkes_bay/aggs_raw_exist.md
       - Instance timings: migration/datasets/timings.md
-  - Database Models:
-      - New Hazard: domain_model/proposed_hazard_models.md
-      - Hazard: domain_model/openquake_models.md
-      - Gridded Hazard: domain_model/gridded_hazard_models.md
-      - Hazard Disaggregation: domain_model/disaggregation_models.md
   - Contributing: contributing.md
   - Changelog: changelog.md
 
