@@ -34,7 +34,7 @@ Now we need to find the **General Task (GT)** Identifier from Toshi API, which i
 The General Task ID below is `R2VuZXJhbFRhc2s6NjkzMTg5Mg==` [see in Weka](http://nzshm22-weka-ui-test.s3-website-ap-southeast-2.amazonaws.com/GeneralTask/R2VuZXJhbFRhc2s6NjkzMTg5Mg==).
 
 ```bash
-$ AWS_PROFILE=chrisbc poetry run ths_import producers R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/
+$ AWS_PROFILE=chrisbc poetry run ths_rlz_import producers R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/
 ...
 ```
 
@@ -44,13 +44,13 @@ $ AWS_PROFILE=chrisbc poetry run ths_import producers R2VuZXJhbFRhc2s6NjkzMTg5Mg
 #### Either A, with location partitioning
 
 ```bash
-AWS_PROFILE=chrisbc poetry run ths_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS1 -v
+AWS_PROFILE=chrisbc poetry run ths_rlz_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS1 -v
 ```
 
 #### OR B, with calculation_id partitioning
 
 ```bash
-AWS_PROFILE=chrisbc poetry run ths_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS2 -v -CID
+AWS_PROFILE=chrisbc poetry run ths_rlz_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DS2 -v -CID
 ```
 
 ### Step 3. Sanity checks
@@ -58,7 +58,7 @@ AWS_PROFILE=chrisbc poetry run ths_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== N
 #### Check count integrity, ensuring that the number of realisations is consistent
 
 ```bash
- poetry run ths_ds_sanity count-rlz ./WORKING/ARROW/DS1 -x
+ poetry run ths_rlz_sanity count-rlz ./WORKING/ARROW/DS1 -x
 ```
 
 #### Check random realisations vs DynamoDB (for existing calcs only)
@@ -75,7 +75,7 @@ poetry run ths_ds_defrag ./WORKING/ARROW/DS1 ./WORKING/ARROW/DS1_DFG -p 'vs30,nl
 #### check count integrity, ensure the number of realisations is consistent
 
 ```bash
-poetry run ths_ds_sanity count-rlz ./WORKING/ARROW/DS1_DFG -x -v
+poetry run ths_rlz_sanity count-rlz ./WORKING/ARROW/DS1_DFG -x -v
 ```
 
 ### Step 5. Dataset comparison
@@ -102,13 +102,13 @@ For target paths, the folder/prefix will be created if it doesn't already exist.
 
 ## Prep the producer
 
-`AWS_PROFILE=chrisbc poetry run ths_import producers R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -v`
+`AWS_PROFILE=chrisbc poetry run ths_rlz_import producers R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -v`
 
 ## A Runzi workflow example
 
 This is what happens automated in hazard task logic.
 
-`poetry run ths_import store-hazard ./WORKING/runzi/calc_2.hdf5 ./WORKING/runzi/oq_config.json NZSHM22 calcS_T "sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6"  ./WORKING/ARROW/DSR`
+`poetry run ths_rlz_import store-hazard ./WORKING/runzi/calc_2.hdf5 ./WORKING/runzi/oq_config.json NZSHM22 calcS_T "sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6"  ./WORKING/ARROW/DSR`
 
 The DSR dataset produced will by partioned by the Toshi ID for the Hazard task, ensuring no dataset collisions
 
@@ -116,9 +116,9 @@ The DSR dataset produced will by partioned by the Toshi ID for the Hazard task, 
 
 Here we're processing existing hazard task outputs from the given GeneralTask (GT) to build our parquet dataset.
 
-`AWS_PROFILE=chrisbc poetry run ths_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DST -v`
+`AWS_PROFILE=chrisbc poetry run ths_rlz_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DST -v`
 
-`poetry run ths_ds_sanity count-rlz ./WORKING/ARROW/DST -x -v`
+`poetry run ths_rlz_sanity count-rlz ./WORKING/ARROW/DST -x -v`
 
 ## Compact / conform workflows
 
@@ -129,16 +129,16 @@ Here we're processing existing hazard task outputs from the given GeneralTask (G
 ### NOW a full size GT
 
 1) check/update the producers ....
-`poetry run ths_import producers R2VuZXJhbFRhc2s6MTMyODQxNA== NZSHM22 -v -W ./WORKING`
+`poetry run ths_rlz_import producers R2VuZXJhbFRhc2s6MTMyODQxNA== NZSHM22 -v -W ./WORKING`
 
 2) extract rlz ...
-`poetry run ths_import extract R2VuZXJhbFRhc2s6MTMyODQxNA== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==`
+`poetry run ths_rlz_import extract R2VuZXJhbFRhc2s6MTMyODQxNA== NZSHM22 -W ./WORKING/ -O ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==`
 
 3) Defrag ...
 `poetry run ths_ds_defrag ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA== ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==_DFG`
 
 4) Check total realizations ...
-`poetry run ths_ds_sanity count-rlz ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==_DFG -x -v`
+`poetry run ths_rlz_sanity count-rlz ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==_DFG -x -v`
 
 5) Random rlz curve comparisons to Dynamodb store ...
-`poetry run ths_ds_sanity random-rlz-new ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==_DFG -v -df`
+`poetry run ths_rlz_sanity random-rlz-new ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==_DFG -v -df`

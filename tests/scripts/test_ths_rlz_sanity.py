@@ -1,14 +1,14 @@
-"""Tests for ths_ds_sanity script."""
+"""Tests for ths_rlz_sanity script."""
 
 from click.testing import CliRunner
 
-from toshi_hazard_store.scripts import ths_ds_sanity
+from toshi_hazard_store.scripts import ths_rlz_sanity
 
 
 def test_cli_help():
     """Test main help command."""
     runner = CliRunner()
-    result = runner.invoke(ths_ds_sanity.main, ["--help"])
+    result = runner.invoke(ths_rlz_sanity.main, ["--help"])
     assert result.exit_code == 0
     assert "Usage" in result.output
     assert "Import NSHM Model hazard curves" in result.output
@@ -17,7 +17,7 @@ def test_cli_help():
 def test_cli_count_rlz_help():
     """Test count-rlz subcommand help."""
     runner = CliRunner()
-    result = runner.invoke(ths_ds_sanity.main, ["count-rlz", "--help"])
+    result = runner.invoke(ths_rlz_sanity.main, ["count-rlz", "--help"])
     assert result.exit_code == 0
     assert "Usage" in result.output
     assert "count-rlz" in result.output

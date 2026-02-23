@@ -1,7 +1,7 @@
 import pytest  # noqa
 from click.testing import CliRunner
 
-from toshi_hazard_store.scripts import ths_import  # module reference for patching
+from toshi_hazard_store.scripts import ths_rlz_import  # module reference for patching
 
 # from nzssdt_2023.scripts.pipeline_cli import cli
 # from nzssdt_2023.versioning import VersionInfo
@@ -10,7 +10,7 @@ from toshi_hazard_store.scripts import ths_import  # module reference for patchi
 def test_cli_help():
     runner = CliRunner()
     cmdline = ["--help"]
-    result = runner.invoke(ths_import.main, cmdline)
+    result = runner.invoke(ths_rlz_import.main, cmdline)
     assert result.exit_code == 0
     assert "Usage" in result.output
 
@@ -21,7 +21,7 @@ def test_cli_help():
 def test_cli_producers_help():
     runner = CliRunner()
     cmdline = ["producers", "--help"]
-    result = runner.invoke(ths_import.main, cmdline)
+    result = runner.invoke(ths_rlz_import.main, cmdline)
     assert result.exit_code == 0
     assert "Usage" in result.output
 
@@ -32,7 +32,7 @@ def test_cli_rlzs_help(options):
     cmdline = ["extract", "--help"]
     if options:
         cmdline += options.split(" ")
-    result = runner.invoke(ths_import.main, cmdline)
+    result = runner.invoke(ths_rlz_import.main, cmdline)
     assert result.exit_code == 0
     assert "Usage" in result.output
 
@@ -48,7 +48,7 @@ def test_cli_store_hazard_help(options):
     cmdline = ["store-hazard", "--help"]
     if options:
         cmdline += options.split(" ")
-    result = runner.invoke(ths_import.main, cmdline)
+    result = runner.invoke(ths_rlz_import.main, cmdline)
     assert result.exit_code == 0
     assert "Usage" in result.output
 

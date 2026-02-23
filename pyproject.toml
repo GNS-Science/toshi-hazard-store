@@ -45,10 +45,10 @@ dependencies = [
 
 [project.scripts]
 ths_compat = 'toshi_hazard_store.scripts.ths_compat:main'
-ths_import = 'toshi_hazard_store.scripts.ths_import:main'
-ths_build_grid = 'toshi_hazard_store.scripts.ths_build_gridded:main'
+ths_rlz_import = 'toshi_hazard_store.scripts.ths_rlz_import:main'
+ths_grid_build = 'toshi_hazard_store.scripts.ths_grid_build:main'
 ths_ds_check = 'toshi_hazard_store.scripts.ths_ds_check:main'
-ths_ds_sanity = 'toshi_hazard_store.scripts.ths_ds_sanity:main'
+ths_rlz_sanity = 'toshi_hazard_store.scripts.ths_rlz_sanity:main'
 ths_ds_defrag = 'toshi_hazard_store.scripts.ths_ds_defrag:main'
 ths_ds_filter = 'toshi_hazard_store.scripts.ths_ds_filter:main'
 ths_grid_sanity = 'toshi_hazard_store.scripts.ths_grid_sanity:main'
