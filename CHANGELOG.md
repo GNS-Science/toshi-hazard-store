@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.4.0-next-release] 2026-02
+## [1.4.0] 2026-02-24
 ### Added
 - `dataset_uri` parameter to `get_hazard_curves` and all query strategy functions, allowing
   users to specify non-default dataset locations without changing environment variables
