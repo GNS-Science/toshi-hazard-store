@@ -121,3 +121,6 @@ WORKDIR
 # audit
 audit.txt
 .safety-project.ini
+
+# LLM session state
+.llm/.session
