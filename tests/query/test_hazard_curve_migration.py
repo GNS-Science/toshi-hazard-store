@@ -239,6 +239,7 @@ def test_hazard_curve_query_default_strategy_is_naive(monkeypatch):
         model,
         [imt],
         [aggr],
+        None,
     )
 
 
@@ -282,6 +283,7 @@ def test_hazard_curve_query_strategy_calls_correct_query_fn(monkeypatch, strateg
         model,
         [imt],
         [aggr],
+        None,
     )
 
 

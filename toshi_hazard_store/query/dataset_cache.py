@@ -19,16 +19,20 @@ GB = 1024**3
 
 
 @lru_cache(maxsize=1)
-def get_dataset() -> ds.Dataset:
+def get_dataset(dataset_uri: Optional[str] = None) -> ds.Dataset:
     """
     Cache the dataset.
+
+    Args:
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_AGGR_URI env var.
 
     Returns:
       A pyarrow.dataset.Dataset object.
     """
     start_time = dt.datetime.now()
+    ds_uri = dataset_uri or DATASET_AGGR_URI
     try:
-        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_AGGR_URI)
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(ds_uri)
         dataset = ds.dataset(
             source_dir,
             filesystem=source_filesystem,
@@ -62,16 +66,21 @@ def get_gridded_dataset(dataset_uri: Optional[str] = None) -> ds.Dataset:
 
 
 @lru_cache(maxsize=3)
-def get_dataset_vs30(vs30: int) -> ds.Dataset:
+def get_dataset_vs30(vs30: int, dataset_uri: Optional[str] = None) -> ds.Dataset:
     """
     Cache the dataset for a given vs30.
+
+    Args:
+      vs30: the VS30 value to partition on.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_AGGR_URI env var.
 
     Returns:
       A pyarrow.dataset.Dataset object.
     """
     start_time = dt.datetime.now()
+    ds_uri = dataset_uri or DATASET_AGGR_URI
     try:
-        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_AGGR_URI)
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(ds_uri)
         dspath = f"{source_dir}/vs30={vs30}"
         dataset = ds.dataset(
             dspath,
@@ -87,16 +96,22 @@ def get_dataset_vs30(vs30: int) -> ds.Dataset:
 
 
 @lru_cache(maxsize=32)
-def get_dataset_vs30_nloc0(vs30: int, nloc: str) -> ds.Dataset:
+def get_dataset_vs30_nloc0(vs30: int, nloc: str, dataset_uri: Optional[str] = None) -> ds.Dataset:
     """
     Cache the dataset for a given vs30 and nloc_0.
+
+    Args:
+      vs30: the VS30 value to partition on.
+      nloc: the nloc_0 location code to partition on.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_AGGR_URI env var.
 
     Returns:
       A pyarrow.dataset.Dataset object.
     """
     start_time = dt.datetime.now()
+    ds_uri = dataset_uri or DATASET_AGGR_URI
     try:
-        source_dir, source_filesystem = pyarrow_dataset.configure_output(DATASET_AGGR_URI)
+        source_dir, source_filesystem = pyarrow_dataset.configure_output(ds_uri)
         log.debug(f"source_dir:`{source_dir}`, filesystem: `{source_filesystem}`")
         dspath = f"{source_dir}/vs30={vs30}/nloc_0={downsample_code(nloc, 1.0)}"
         log.debug(f"Opening dspath :`{dspath}`")

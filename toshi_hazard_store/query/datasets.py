@@ -25,6 +25,7 @@ def get_hazard_curves(
     imts: list[str],
     aggs: list[str],
     strategy: str = "naive",
+    dataset_uri: Optional[str] = None,
 ) -> Iterator[AggregatedHazard]:
     """
     Retrieves aggregated hazard curves from the dataset.
@@ -34,16 +35,18 @@ def get_hazard_curves(
      - 'd1' assumes the dataset is partitioned on `vs30`, generating multiple pyarrow queries from the user args.
      - 'd2' assumes the dataset is partitioned on `vs30, nloc_0` and acts accordingly.
 
-    These overriding  strategies alow the user to tune the query to suit the size of the datasets and the
+    These overriding strategies allow the user to tune the query to suit the size of the datasets and the
     compute resources available. e.g. for the full NSHM, with an AWS lambda function, the `d2` option is optimal.
 
     Args:
       location_codes (list): List of location codes.
       vs30s (list): List of VS30 values.
       hazard_model: the hazard model id.
+      imts (list): List of intensity measure types (e.g. 'PGA', 'SA(5.0)').
       aggs (list): List of aggregation types.
       strategy: which query strategy to use (options are `d1`, `d2`, `naive`).
           Other values will use the `naive` strategy.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_AGGR_URI env var.
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
@@ -64,7 +67,7 @@ def get_hazard_curves(
 
     deferred_warning = None
     try:
-        for obj in qfn(location_codes, vs30s, hazard_model, imts, aggs):  # pragma: no branch
+        for obj in qfn(location_codes, vs30s, hazard_model, imts, aggs, dataset_uri):  # pragma: no branch
             count += 1
             yield obj
     except RuntimeWarning as err:
@@ -91,6 +94,18 @@ def get_gridded_hazard(
 ) -> Iterator[GriddedHazardPoeLevels]:
     """
     Retrieves gridded hazard from the parquet dataset.
+
+    Args:
+      location_grid_id: the grid identifier to query.
+      hazard_model_ids (list): List of hazard model identifiers.
+      vs30s (list): List of VS30 values.
+      imts (list): List of intensity measure types (e.g. 'PGA', 'SA(5.0)').
+      aggs (list): List of aggregation types.
+      poes (list): List of probability of exceedance values.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_GRIDDED_URI env var.
+
+    Yields:
+      GriddedHazardPoeLevels: An object containing the gridded hazard data.
     """
 
     log.debug("> get_gridded_hazard")

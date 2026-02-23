@@ -3,7 +3,7 @@
 import datetime as dt
 import itertools
 import logging
-from typing import Iterator
+from typing import Iterator, Optional
 
 import pyarrow.compute as pc
 
@@ -20,6 +20,7 @@ def get_hazard_curves_naive(
     hazard_model: str,
     imts: list[str],
     aggs: list[str],
+    dataset_uri: Optional[str] = None,
 ) -> Iterator[AggregatedHazard]:
     """
     Retrieves aggregated hazard curves from the dataset.
@@ -30,6 +31,7 @@ def get_hazard_curves_naive(
       hazard_model: the hazard model id.
       imts (list): List of intensity measure types (e.g. 'PGA', 'SA(5.0)').
       aggs (list): List of aggregation types.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_AGGR_URI env var.
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
@@ -37,7 +39,7 @@ def get_hazard_curves_naive(
     log.debug(f"> get_hazard_curves_naive() location_codes: {location_codes}")
     t0 = dt.datetime.now()
 
-    dataset = get_dataset()
+    dataset = get_dataset(dataset_uri)
     nloc_001_locs = [downsample_code(loc, 0.001) for loc in location_codes]
     flt = (
         (pc.field("aggr").isin(aggs))
@@ -77,11 +79,12 @@ def get_hazard_curves_by_vs30(
     hazard_model: str,
     imts: list[str],
     aggs: list[str],
+    dataset_uri: Optional[str] = None,
 ) -> Iterator[AggregatedHazard]:
     """
     Retrieves aggregated hazard curves from the dataset.
 
-    Subdivides the dataset using partitioning to reduce IO and memory demand.
+    Subdivides the dataset using vs30 partitioning to reduce IO and memory demand.
 
     Args:
       location_codes (list): List of location codes.
@@ -89,6 +92,7 @@ def get_hazard_curves_by_vs30(
       hazard_model: the hazard model id.
       imts (list): List of intensity measure types (e.g. 'PGA', 'SA(5.0)').
       aggs (list): List of aggregation types.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_AGGR_URI env var.
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
@@ -105,7 +109,7 @@ def get_hazard_curves_by_vs30(
     for vs30 in vs30s:  # pragma: no branch
         count = 0
         try:
-            dataset = get_dataset_vs30(vs30)
+            dataset = get_dataset_vs30(vs30, dataset_uri)
         except Exception:
             dataset_exceptions.append(f"Failed to open dataset for vs30={vs30}")
             continue
@@ -146,11 +150,12 @@ def get_hazard_curves_by_vs30_nloc0(
     hazard_model: str,
     imts: list[str],
     aggs: list[str],
+    dataset_uri: Optional[str] = None,
 ) -> Iterator[AggregatedHazard]:
     """
     Retrieves aggregated hazard curves from the dataset.
 
-    Subdivides the dataset using partitioning to reduce IO and memory demand.
+    Subdivides the dataset using vs30 and nloc_0 partitioning to reduce IO and memory demand.
 
     Args:
       location_codes (list): List of location codes.
@@ -158,6 +163,7 @@ def get_hazard_curves_by_vs30_nloc0(
       hazard_model: the hazard model id.
       imts (list): List of intensity measure types (e.g. 'PGA', 'SA(5.0)').
       aggs (list): List of aggregation types.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_AGGR_URI env var.
 
     Yields:
       AggregatedHazard: An object containing the aggregated hazard curve data.
@@ -184,7 +190,7 @@ def get_hazard_curves_by_vs30_nloc0(
 
         for hloc, vs30 in itertools.product(hash_locs, vs30s):
             try:
-                dataset = get_dataset_vs30_nloc0(vs30, hloc)
+                dataset = get_dataset_vs30_nloc0(vs30, hloc, dataset_uri)
             except Exception as exc:
                 dataset_exceptions.append(str(exc))
                 continue
