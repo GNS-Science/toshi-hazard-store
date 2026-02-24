@@ -14,7 +14,7 @@ from pathy import FluidPath, Pathy
 
 from toshi_hazard_store import query
 from toshi_hazard_store.gridded_hazard import gridded_poe
-from toshi_hazard_store.query.models import AggregatedHazard
+from toshi_hazard_store.query import AggregatedHazard
 
 log = logging.getLogger(__name__)
 

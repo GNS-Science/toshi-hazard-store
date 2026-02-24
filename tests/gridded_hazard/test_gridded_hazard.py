@@ -8,8 +8,10 @@ import pytest
 
 from toshi_hazard_store import gridded_hazard
 from toshi_hazard_store.model.gridded import gridded_hazard_pydantic
-from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
-from toshi_hazard_store.query import dataset_cache
+from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import (
+    GriddedHazardPoeLevels,
+)
+from toshi_hazard_store import query
 
 
 def test_get_one_degree_df(one_degree_hazard_sample_dataframe):
@@ -37,9 +39,13 @@ def test_get_one_degree_grid(get_one_degree_region_grid_fixture):
 
 def test_process_gridded_hazard_basic(monkeypatch):
 
-    folder = Path(Path(os.path.realpath(__file__)).parent.parent, "fixtures", "aggregate_hazard")
-    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(folder.absolute()))
-    monkeypatch.setattr(gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True)
+    folder = Path(
+        Path(os.path.realpath(__file__)).parent.parent, "fixtures", "aggregate_hazard"
+    )
+    monkeypatch.setattr("toshi_hazard_store.query.dataset_cache.DATASET_AGGR_URI", str(folder.absolute()))
+    monkeypatch.setattr(
+        gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True
+    )
 
     gridded = []
     for record in gridded_hazard.process_gridded_hazard(
@@ -80,8 +86,10 @@ def test_process_gridded_hazard_basic(monkeypatch):
 )
 def test_gridded_hazard_poe_model_validations(monkeypatch, kwargs, message):
 
-    folder = Path(Path(os.path.realpath(__file__)).parent.parent, "fixtures", "aggregate_hazard")
-    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(folder.absolute()))
+    folder = Path(
+        Path(os.path.realpath(__file__)).parent.parent, "fixtures", "aggregate_hazard"
+    )
+    monkeypatch.setattr("toshi_hazard_store.query.dataset_cache.DATASET_AGGR_URI", str(folder.absolute()))
     monkeypatch.setattr(
         gridded_hazard_pydantic,
         "DISABLE_GRIDDED_MODEL_VALIDATOR",

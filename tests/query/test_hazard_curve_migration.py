@@ -6,8 +6,13 @@ from unittest import mock
 
 import pytest
 
-from toshi_hazard_store.query import datasets, hazard_query
-from toshi_hazard_store.query.dataset_cache import get_dataset, get_dataset_vs30, get_dataset_vs30_nloc0
+from toshi_hazard_store import query
+from toshi_hazard_store.query import datasets  # For internal mocking
+from toshi_hazard_store.query.dataset_cache import (
+    get_dataset,
+    get_dataset_vs30,
+    get_dataset_vs30_nloc0,
+)
 from toshi_hazard_store.query.models import AggregatedHazard
 from toshi_hazard_store.query.query_strategies import (
     get_hazard_curves_by_vs30,
@@ -40,7 +45,7 @@ def hazagg_fixture_fn(json_hazard):
     def fn(hazard_model, imt, nloc_001, agg, vs30):
         curves = json_hazard["data"]["hazard_curves"]["curves"]
         """A test helper function"""
-        nloc_0 = hazard_query.downsample_code(nloc_001, 0.1)
+        nloc_0 = query.downsample_code(nloc_001, 0.1)
         for curve in curves:
             if (
                 curve["hazard_model"] == hazard_model
@@ -70,28 +75,34 @@ def hazagg_fixture_fn(json_hazard):
         get_hazard_curves_naive,
         get_hazard_curves_by_vs30,
         get_hazard_curves_by_vs30_nloc0,
-        datasets.get_hazard_curves,
+        query.get_hazard_curves,
     ],
 )
 @pytest.mark.parametrize("locn", ["-41.300~174.800", "-36.900~174.800"])
 @pytest.mark.parametrize("vs30", [400, 1500])
 @pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])
 @pytest.mark.parametrize("aggr", ["0.005", "mean"])
-def test_get_hazard_curves_from_dataset(monkeypatch, hazagg_fixture_fn, query_fn, locn, vs30, imt, aggr):
+def test_get_hazard_curves_from_dataset(
+    monkeypatch, hazagg_fixture_fn, query_fn, locn, vs30, imt, aggr
+):
     """Happy case tests covers all 3 query strategies and the wrapper"""
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
 
-    from toshi_hazard_store.query import dataset_cache
+    from toshi_hazard_store import query
 
-    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(dspath))
+    monkeypatch.setattr(
+        "toshi_hazard_store.query.dataset_cache.DATASET_AGGR_URI", str(dspath)
+    )
 
     model = "NSHM_v1.0.4"
     expected = next(hazagg_fixture_fn(model, imt, locn, aggr, vs30))
     # assert expected
     print(expected)
 
-    result = query_fn(location_codes=[locn], vs30s=[vs30], hazard_model=model, imts=[imt], aggs=[aggr])
+    result = query_fn(
+        location_codes=[locn], vs30s=[vs30], hazard_model=model, imts=[imt], aggs=[aggr]
+    )
 
     res = next(result)  # only one curve is returned
 
@@ -119,14 +130,18 @@ def test_get_hazard_curves_from_dataset(monkeypatch, hazagg_fixture_fn, query_fn
 @pytest.mark.parametrize("vs30", [400, 1500])
 @pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])
 @pytest.mark.parametrize("aggr", ["0.005", "mean"])
-def test_hazard_curve_query_data_missing_for_one_location(monkeypatch, hazagg_fixture_fn, bad_locn, vs30, imt, aggr):
+def test_hazard_curve_query_data_missing_for_one_location(
+    monkeypatch, hazagg_fixture_fn, bad_locn, vs30, imt, aggr
+):
     """Out of bounds location tests covers just `get_hazard_curves_by_vs30_nloc0` query strategy"""
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
 
-    from toshi_hazard_store.query import dataset_cache
+    from toshi_hazard_store import query
 
-    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(dspath))
+    monkeypatch.setattr(
+        "toshi_hazard_store.query.dataset_cache.DATASET_AGGR_URI", str(dspath)
+    )
 
     model = "NSHM_v1.0.4"
     good_locn = "-41.300~174.800"
@@ -167,14 +182,18 @@ def test_hazard_curve_query_data_missing_for_one_location(monkeypatch, hazagg_fi
 @pytest.mark.parametrize("bad_vs30", [401, 155])
 @pytest.mark.parametrize("imt", ["PGA", "SA(0.5)"])
 @pytest.mark.parametrize("aggr", ["0.005", "mean"])
-def test_hazard_curve_query_data_missing_for_vs30(monkeypatch, hazagg_fixture_fn, query_fn, bad_vs30, imt, aggr):
+def test_hazard_curve_query_data_missing_for_vs30(
+    monkeypatch, hazagg_fixture_fn, query_fn, bad_vs30, imt, aggr
+):
     """Out of bounds (vs30) covers queries using vs30 partioning"""
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
 
-    from toshi_hazard_store.query import dataset_cache
+    from toshi_hazard_store import query
 
-    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(dspath))
+    monkeypatch.setattr(
+        "toshi_hazard_store.query.dataset_cache.DATASET_AGGR_URI", str(dspath)
+    )
 
     model = "NSHM_v1.0.4"
     good_locn = "-41.300~174.800"
@@ -212,7 +231,9 @@ def test_hazard_curve_query_data_missing_for_vs30(monkeypatch, hazagg_fixture_fn
 def test_hazard_curve_query_default_strategy_is_naive(monkeypatch):
 
     mocked_qry_fn = mock.Mock(return_value=[])
-    monkeypatch.setattr(datasets, "get_hazard_curves_naive", mocked_qry_fn)
+    monkeypatch.setattr(
+        "toshi_hazard_store.query.datasets.get_hazard_curves_naive", mocked_qry_fn
+    )
 
     model = "NSHM_v1.0.4"
     good_locn = "-41.300~174.800"
@@ -221,7 +242,7 @@ def test_hazard_curve_query_default_strategy_is_naive(monkeypatch):
     aggr = "mean"
     vs30 = 400
 
-    result = datasets.get_hazard_curves(
+    result = query.get_hazard_curves(
         location_codes=locations,
         vs30s=[vs30],
         hazard_model=model,
@@ -252,7 +273,9 @@ def test_hazard_curve_query_default_strategy_is_naive(monkeypatch):
         ("", "get_hazard_curves_naive"),
     ],
 )
-def test_hazard_curve_query_strategy_calls_correct_query_fn(monkeypatch, strategy_fn_name):
+def test_hazard_curve_query_strategy_calls_correct_query_fn(
+    monkeypatch, strategy_fn_name
+):
 
     mocked_qry_fn = mock.Mock(return_value=[])
     monkeypatch.setattr(datasets, strategy_fn_name[1], mocked_qry_fn)
@@ -264,7 +287,7 @@ def test_hazard_curve_query_strategy_calls_correct_query_fn(monkeypatch, strateg
     aggr = "mean"
     vs30 = 400
 
-    result = datasets.get_hazard_curves(
+    result = query.get_hazard_curves(
         location_codes=locations,
         vs30s=[vs30],
         hazard_model=model,
@@ -293,9 +316,11 @@ def test_hazard_curve_query_strategy_unmocked(monkeypatch, strategy):
     dspath = fixture_path / "HAZAGG_SMALL"
     assert dspath.exists()
 
-    from toshi_hazard_store.query import dataset_cache
+    from toshi_hazard_store import query
 
-    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(dspath))
+    monkeypatch.setattr(
+        "toshi_hazard_store.query.dataset_cache.DATASET_AGGR_URI", str(dspath)
+    )
 
     model = "NSHM_v1.0.4"
     good_locn = "-41.300~174.800"
@@ -304,7 +329,7 @@ def test_hazard_curve_query_strategy_unmocked(monkeypatch, strategy):
     aggr = "mean"
     vs30 = 401
 
-    result = datasets.get_hazard_curves(
+    result = query.get_hazard_curves(
         location_codes=locations,
         vs30s=[vs30],
         hazard_model=model,

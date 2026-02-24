@@ -13,13 +13,13 @@ import random
 from nzshm_common.location import get_locations
 from pyarrow import fs
 
-from toshi_hazard_store.query import datasets
+from toshi_hazard_store.query import get_hazard_curves
 
 log = logging.getLogger(__name__)
 
-nz1_grid = [loc.code for loc in get_locations(['NZ_0_1_NB_1_1'])]
-city_locs = [loc.code for loc in get_locations(['NZ'])]
-srwg_locs = [loc.code for loc in get_locations(['SRWG214'])]
+nz1_grid = [loc.code for loc in get_locations(["NZ_0_1_NB_1_1"])]
+city_locs = [loc.code for loc in get_locations(["NZ"])]
+srwg_locs = [loc.code for loc in get_locations(["SRWG214"])]
 
 vs30s = [400, 1000, 1500]
 vs30s += [375, 450, 500, 525, 600, 750, 900]
@@ -29,7 +29,7 @@ vs30s += [150, 175, 200, 225, 250, 275, 300, 350]
 def check(get_locations_fn, test_label="NZ cities"):
     """Check that the correct number of curves are returned"""
 
-    print(f'check {test_label}')
+    print(f"check {test_label}")
     model = "NSHM_v1.0.4"
     imt = "PGA"
     aggr = "mean"
@@ -41,8 +41,13 @@ def check(get_locations_fn, test_label="NZ cities"):
 
         for loc in locations:
             res = list(
-                datasets.get_hazard_curves(
-                    location_codes=[loc], vs30s=[vs30], hazard_model=model, imts=[imt], aggs=[aggr], strategy='d1'
+                get_hazard_curves(
+                    location_codes=[loc],
+                    vs30s=[vs30],
+                    hazard_model=model,
+                    imts=[imt],
+                    aggs=[aggr],
+                    strategy="d1",
                 )
             )
 
@@ -57,11 +62,12 @@ def check(get_locations_fn, test_label="NZ cities"):
             print(f"{test_label} OK for vs30: {vs30}")
         else:
             print(f"expected data for locations: {locations}")
-            print(f"Missing {test_label}for vs30 {vs30}: {set(locations).difference(set(found_locs))}")
+            print(
+                f"Missing {test_label}for vs30 {vs30}: {set(locations).difference(set(found_locs))}"
+            )
 
 
 if __name__ == "__main__":
-
     logging.basicConfig(level=logging.WARNING)
 
     # # GRID test

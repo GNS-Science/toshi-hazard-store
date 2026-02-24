@@ -6,17 +6,26 @@ from pathlib import Path
 import pytest
 
 from toshi_hazard_store.model.gridded import gridded_hazard_pydantic
-from toshi_hazard_store.query import dataset_cache, datasets
+from toshi_hazard_store import query
 
 
 @pytest.mark.parametrize("use64bit", [True, False])
-def test_get_gridded_hazard_basic(get_one_degree_region_grid_fixture, monkeypatch, use64bit):
+def test_get_gridded_hazard_basic(
+    get_one_degree_region_grid_fixture, monkeypatch, use64bit
+):
     """Test basic functionality of get_gridded_hazard function."""
     # Setup test fixtures
-    dataset_folder = Path(Path(os.path.realpath(__file__)).parent.parent, "fixtures", "gridded_hazard", "DS")
+    dataset_folder = Path(
+        Path(os.path.realpath(__file__)).parent.parent,
+        "fixtures",
+        "gridded_hazard",
+        "DS",
+    )
 
-    monkeypatch.setattr(dataset_cache, "DATASET_GRIDDED_URI", str(dataset_folder.absolute()))
-    monkeypatch.setattr(gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True)
+    monkeypatch.setattr("toshi_hazard_store.query.dataset_cache.DATASET_GRIDDED_URI", str(dataset_folder.absolute()))
+    monkeypatch.setattr(
+        gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True
+    )
     monkeypatch.setattr(gridded_hazard_pydantic, "USE_64BIT_VALUES", use64bit)
 
     # Test parameters
@@ -29,7 +38,7 @@ def test_get_gridded_hazard_basic(get_one_degree_region_grid_fixture, monkeypatc
 
     # Call the function under test
     gridded_hazards = list(
-        datasets.get_gridded_hazard(
+        query.get_gridded_hazard(
             location_grid_id=location_grid_id,
             hazard_model_ids=hazard_model_ids,
             vs30s=vs30s,
@@ -63,13 +72,22 @@ def test_get_gridded_hazard_basic(get_one_degree_region_grid_fixture, monkeypatc
 
 
 @pytest.mark.parametrize("use64bit", [True, False])
-def test_get_gridded_hazard_multiple_parameters(get_one_degree_region_grid_fixture, monkeypatch, use64bit):
+def test_get_gridded_hazard_multiple_parameters(
+    get_one_degree_region_grid_fixture, monkeypatch, use64bit
+):
     """Test get_gridded_hazard with multiple parameter values."""
     # Setup test fixtures
-    dataset_folder = Path(Path(os.path.realpath(__file__)).parent.parent, "fixtures", "gridded_hazard", "DS")
+    dataset_folder = Path(
+        Path(os.path.realpath(__file__)).parent.parent,
+        "fixtures",
+        "gridded_hazard",
+        "DS",
+    )
 
-    monkeypatch.setattr(dataset_cache, "DATASET_GRIDDED_URI", str(dataset_folder.absolute()))
-    monkeypatch.setattr(gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True)
+    monkeypatch.setattr("toshi_hazard_store.query.dataset_cache.DATASET_GRIDDED_URI", str(dataset_folder.absolute()))
+    monkeypatch.setattr(
+        gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True
+    )
     monkeypatch.setattr(gridded_hazard_pydantic, "USE_64BIT_VALUES", use64bit)
 
     # Test parameters with multiple values
@@ -82,7 +100,7 @@ def test_get_gridded_hazard_multiple_parameters(get_one_degree_region_grid_fixtu
 
     # Call the function under test
     gridded_hazards = list(
-        datasets.get_gridded_hazard(
+        query.get_gridded_hazard(
             location_grid_id=location_grid_id,
             hazard_model_ids=hazard_model_ids,
             vs30s=vs30s,
@@ -114,13 +132,19 @@ def test_get_gridded_hazard_multiple_parameters(get_one_degree_region_grid_fixtu
 
 
 @pytest.mark.parametrize("use64bit", [True, False])
-def test_get_gridded_hazard_empty_results(get_one_degree_region_grid_fixture, monkeypatch, use64bit):
+def test_get_gridded_hazard_empty_results(
+    get_one_degree_region_grid_fixture, monkeypatch, use64bit
+):
     """Test get_gridded_hazard with parameters that should return no results."""
     # Setup test fixtures
-    aggr_folder = Path(Path(os.path.realpath(__file__)).parent.parent, "fixtures", "aggregate_hazard")
+    aggr_folder = Path(
+        Path(os.path.realpath(__file__)).parent.parent, "fixtures", "aggregate_hazard"
+    )
 
-    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(aggr_folder.absolute()))
-    monkeypatch.setattr(gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True)
+    monkeypatch.setattr("toshi_hazard_store.query.dataset_cache.DATASET_AGGR_URI", str(aggr_folder.absolute()))
+    monkeypatch.setattr(
+        gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", True
+    )
     monkeypatch.setattr(gridded_hazard_pydantic, "USE_64BIT_VALUES", use64bit)
 
     # Use parameters that shouldn't match any data
@@ -133,7 +157,7 @@ def test_get_gridded_hazard_empty_results(get_one_degree_region_grid_fixture, mo
 
     # Call the function under test
     gridded_hazards = list(
-        datasets.get_gridded_hazard(
+        query.get_gridded_hazard(
             location_grid_id=location_grid_id,
             hazard_model_ids=hazard_model_ids,
             vs30s=vs30s,
@@ -144,4 +168,6 @@ def test_get_gridded_hazard_empty_results(get_one_degree_region_grid_fixture, mo
     )
 
     # Should return empty list for non-existent location
-    assert len(gridded_hazards) == 0, "Should return empty list for non-existent location grid"
+    assert len(gridded_hazards) == 0, (
+        "Should return empty list for non-existent location grid"
+    )

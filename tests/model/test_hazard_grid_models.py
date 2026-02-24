@@ -16,7 +16,7 @@ from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import (
     GriddedHazardPoeLevels,
 )
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
-from toshi_hazard_store.query import dataset_cache
+from toshi_hazard_store import query
 
 
 @pytest.mark.parametrize("use64bit", [True, False])
@@ -33,7 +33,7 @@ def test_build_and_roundtrip_gridded_dataset(
         Path(os.path.realpath(__file__)).parent.parent, "fixtures", "aggregate_hazard"
     )
 
-    monkeypatch.setattr(dataset_cache, "DATASET_AGGR_URI", str(aggr_folder.absolute()))
+    monkeypatch.setattr("toshi_hazard_store.query.dataset_cache.DATASET_AGGR_URI", str(aggr_folder.absolute()))
     monkeypatch.setattr(
         gridded_hazard_pydantic, "DISABLE_GRIDDED_MODEL_VALIDATOR", not validate_model
     )

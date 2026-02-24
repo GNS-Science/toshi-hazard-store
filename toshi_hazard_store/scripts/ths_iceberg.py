@@ -22,7 +22,7 @@ from pyiceberg.catalog import load_catalog
 from pyiceberg.expressions import EqualTo, In
 
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
-from toshi_hazard_store.query.hazard_query import downsample_code
+from toshi_hazard_store.query import downsample_code
 from toshi_hazard_store.query.query_strategies import (
     get_hazard_curves_by_vs30,
     get_hazard_curves_by_vs30_nloc0,
