@@ -173,9 +173,7 @@ def compare_values(
 
 if __name__ == "__main__":
     bucket_name = "ths-table-backup"  # Replace with your S3 bucket name
-    key_prefix = (
-        "AWSDynamoDB/01754264207142-e288428c/data"  # Replace with the prefix of your files, e.g., 'path/to/files/'
-    )
+    key_prefix = "AWSDynamoDB/01754264207142-e288428c/data"  # Historical backup data prefix
     search_key = "partition_key"  # Replace with the key you want to search for
     search_value = dict(S="-43.4~172.7")  # Replace with the value corresponding to that key
 

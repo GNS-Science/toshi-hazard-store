@@ -6,10 +6,8 @@ NB maybe this belongs in the nzshm_model.psha_adapter.openquake package ??
 
 import collections
 import logging
-from typing import TYPE_CHECKING
-
-from nzshm_model import branch_registry
-from nzshm_model.psha_adapter.openquake import gmcm_branch_from_element_text
+from functools import lru_cache
+from typing import TYPE_CHECKING, Any
 
 from .transform import Realization, parse_logic_tree_branches
 
@@ -19,12 +17,25 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-registry = branch_registry.Registry()
-
-RealizationRecord = collections.namedtuple('RealizationRecord', 'idx, path, sources, gmms')
+RealizationRecord = collections.namedtuple("RealizationRecord", "idx, path, sources, gmms")
 
 
-def build_rlz_mapper(extractor: 'Extractor') -> dict[int, RealizationRecord]:
+@lru_cache(maxsize=1)
+def _get_registry():
+    """Lazy initialization of the branch registry to avoid AWS calls at import time."""
+    from nzshm_model import branch_registry
+
+    return branch_registry.Registry()
+
+
+def _get_gmcm_branch_from_element_text(gsim):
+    """Lazy import to avoid AWS calls at import time."""
+    from nzshm_model.psha_adapter.openquake import gmcm_branch_from_element_text
+
+    return gmcm_branch_from_element_text(gsim)
+
+
+def build_rlz_mapper(extractor: "Extractor") -> dict[int, RealizationRecord]:
     """Builds a realization mapper from an extractor.
 
     Args:
@@ -40,7 +51,9 @@ def build_rlz_mapper(extractor: 'Extractor') -> dict[int, RealizationRecord]:
     return rlz_map
 
 
-def build_rlz_gmm_map(gsim_branches: dict[str, str]) -> dict[str, branch_registry.BranchRegistryEntry]:
+def build_rlz_gmm_map(
+    gsim_branches: dict[str, str],
+) -> dict[str, Any]:
     """Build a map of realizations to GMMs.
 
     Args:
@@ -49,16 +62,19 @@ def build_rlz_gmm_map(gsim_branches: dict[str, str]) -> dict[str, branch_registr
     Returns:
         A dictionary mapping realization IDs to branch registry entries.
     """
+    registry = _get_registry()
     rlz_gmm_map = {}
     for gsim_id, gsim in gsim_branches.items():
         log.debug(f"build_rlz_gmm_map(gsim_lt): {gsim_id} {gsim}")
-        branch = gmcm_branch_from_element_text(gsim)
+        branch = _get_gmcm_branch_from_element_text(gsim)
         entry = registry.gmm_registry.get_by_identity(branch.registry_identity)
         rlz_gmm_map[gsim_id] = entry
     return rlz_gmm_map
 
 
-def build_rlz_source_map(source_branches: dict[str, str]) -> dict[str, branch_registry.BranchRegistryEntry]:
+def build_rlz_source_map(
+    source_branches: dict[str, str],
+) -> dict[str, Any]:
     """Build a map of realizations to sources.
 
     Args:
@@ -67,6 +83,7 @@ def build_rlz_source_map(source_branches: dict[str, str]) -> dict[str, branch_re
     Returns:
         A dictionary mapping realization IDs to branch registry entries.
     """
+    registry = _get_registry()
     rlz_source_map = dict()
     for source_str in source_branches.values():
         log.debug(f"build_rlz_source_map(source_lt): {source_str}")
@@ -74,15 +91,15 @@ def build_rlz_source_map(source_branches: dict[str, str]) -> dict[str, branch_re
         # handle special case found in
         # INFO:scripts.ths_r4_migrate:task: T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NTA0 hash: bdc5476361cd
         # gt: R2VuZXJhbFRhc2s6MTMyODQxNA==  hazard_id: T3BlbnF1YWtlSGF6YXJkU29sdXRpb246MTMyODU2MA==
-        if source_str[0] == '|':
+        if source_str[0] == "|":
             source_str = source_str[1:]
 
         # handle special case where tag was stored in calc instead of toshi_ids
         # e.g. T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz
-        if source_str[0] == '[' and source_str[-1] == ']':
+        if source_str[0] == "[" and source_str[-1] == "]":
             entry = registry.source_registry.get_by_extra(source_str)
         else:
-            sources = "|".join(sorted(source_str.split('|')))
+            sources = "|".join(sorted(source_str.split("|")))
             entry = registry.source_registry.get_by_identity(sources)
 
         rlz_source_map[source_str] = entry
@@ -91,8 +108,8 @@ def build_rlz_source_map(source_branches: dict[str, str]) -> dict[str, branch_re
 
 def build_rlz_map(
     realizations: list[Realization],
-    source_map: dict[str, branch_registry.BranchRegistryEntry],
-    gmm_map: dict[str, branch_registry.BranchRegistryEntry],
+    source_map: dict[str, Any],
+    gmm_map: dict[str, Any],
 ) -> dict[int, RealizationRecord]:
     """Builds a dictionary mapping realization indices to their corresponding RealizationRecord objects.
 
@@ -113,7 +130,7 @@ def build_rlz_map(
 
         # this nolonger mirrors the OpenQuake path (e.g. 'AA~A') becasue we are using the full source name
         # and the full gsim id.
-        path = '~'.join((rlz.source_path[0], rlz.gsim_path[0]))
+        path = "~".join((rlz.source_path[0], rlz.gsim_path[0]))
         sources = source_map[rlz.source_path[0]]
         gmms = gmm_map[rlz.gsim_path[0]]
         rlz_map[idx] = RealizationRecord(idx=idx, path=path, sources=sources, gmms=gmms)

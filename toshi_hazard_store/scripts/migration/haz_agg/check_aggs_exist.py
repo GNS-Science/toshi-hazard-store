@@ -62,9 +62,7 @@ def check(get_locations_fn, test_label="NZ cities"):
             print(f"{test_label} OK for vs30: {vs30}")
         else:
             print(f"expected data for locations: {locations}")
-            print(
-                f"Missing {test_label}for vs30 {vs30}: {set(locations).difference(set(found_locs))}"
-            )
+            print(f"Missing {test_label}for vs30 {vs30}: {set(locations).difference(set(found_locs))}")
 
 
 if __name__ == "__main__":

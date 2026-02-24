@@ -20,7 +20,6 @@ process models based on, or similar in scale to the NZSHM 22.
 
 * Extract realisations from PSHA (openquake) hazard calcs and store these in Parquet datasets.
 * CLI tools for end users
-* **Deprecated** Manage Openquake hazard results in AWS DynamodDB tables (currently used by NSHM project).
 
 ## Credits
 

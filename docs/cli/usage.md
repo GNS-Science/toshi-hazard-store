@@ -61,7 +61,7 @@ AWS_PROFILE=chrisbc poetry run ths_rlz_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg
  poetry run ths_rlz_sanity count-rlz ./WORKING/ARROW/DS1 -x
 ```
 
-#### Check random realisations vs DynamoDB (for existing calcs only)
+#### Check random realisations
 
 This needs work, as currently the GT is not configurable, and it is needed to extract the correct metadata from the API for 
 building the random queries.
@@ -80,8 +80,8 @@ poetry run ths_rlz_sanity count-rlz ./WORKING/ARROW/DS1_DFG -x -v
 
 ### Step 5. Dataset comparison
 
- - similar to ths_sanity but dataset vs dataset, instead of dataset vs dynamodb.
- - useful if you have two defragged datasets and want to check that they contain the same  data
+ - similar to ths_sanity but dataset vs dataset.
+ - useful if you have two defragged datasets and want to check that they contain the same data
  - NB currently this just does random tests, you can set how many
 
 ```bash
@@ -140,5 +140,5 @@ Here we're processing existing hazard task outputs from the given GeneralTask (G
 4) Check total realizations ...
 `poetry run ths_rlz_sanity count-rlz ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==_DFG -x -v`
 
-5) Random rlz curve comparisons to Dynamodb store ...
+5) Random rlz curve comparisons ...
 `poetry run ths_rlz_sanity random-rlz-new ./WORKING/ARROW/DST-R2VuZXJhbFRhc2s6MTMyODQxNA==_DFG -v -df`

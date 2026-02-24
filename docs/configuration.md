@@ -1,8 +1,7 @@
 # Configuration
 
 
-The toshi_hazard_store project was originally designed to support the AWS Dynamodb database service. It now provides an option
-to use a local sqlite3 store as an alternative.
+The toshi_hazard_store project provides storage options for hazard data using local sqlite3 or parquet datasets.
 
  Caveats for local storage:
 

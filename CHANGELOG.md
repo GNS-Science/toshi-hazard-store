@@ -1,5 +1,43 @@
 # Changelog
 
+## [1.4.1] 2026-02-24
+
+### Removed
+- **Complete removal of DynamoDB/PynamoDB dependencies**:
+  - Removed `pynamodb` and `pynamodb-attributes` from dependencies in `pyproject.toml`
+  - Deleted `toshi_hazard_store/pynamodb_settings.py` (PynamoDB configuration)
+  - Deleted entire `toshi_hazard_store/model/attributes/` module (4 files):
+    - `__init__.py`, `attributes.py`, `enum_attribute.py`, `enum_constrained_attribute.py`
+  - Deleted test files that tested only PynamoDB/DynamoDB functionality:
+    - `tests/test_attributes.py`
+    - `tests/gridded_hazard/features/test_main_features.py`
+- Removed pynamodb-specific logging from `ths_rlz_import.py` and `ths_grid_build.py`
+
+### Changed
+- Updated docstrings and documentation to remove DynamoDB references:
+  - `ths_grid_sanity.py`: Updated module and function docstrings
+  - `ths_agg_backup.py`: Updated comment on legacy S3 path
+  - `README.md`: Removed deprecated DynamoDB feature line
+  - `LICENSE`: Updated description to reference parquet datasets instead of DynamoDB
+  - `docs/configuration.md`: Removed AWS DynamoDB references
+  - `docs/cli/index.md` and `docs/cli/usage.md`: Updated migration workflow descriptions
+  - `tests/query/test_hazard_curve_migration.py`: Updated docstring and comments
+  - `tests/scripts/test_ths_grid_sanity.py`: Updated test assertion text
+
+### Fixed
+- Made `nzshm_model` imports lazy in `parse_oq_realizations.py` to prevent AWS secret
+  fetching at module import time (was causing test failures without AWS credentials)
+- Added global AWS mocking in `tests/conftest.py` using `pytest_configure()` hook:
+  - Mocks AWS Secrets Manager with dummy secrets for `nzshm_model` dependency
+  - Ensures tests never use real AWS services, even when credentials are present
+  - Prevents `AttributeError: 'NoneType' object has no attribute 'get'` when AWS
+    secrets cannot be fetched
+
+### Notes
+- This release completes the migration away from DynamoDB started in v1.4.0
+- The codebase now exclusively uses pyarrow datasets for all hazard data storage
+- Historical migration documentation in `docs/migration/` is preserved for reference
+
 ## [1.4.0] 2026-02-24
 ### Added
 - `dataset_uri` parameter to `get_hazard_curves` and all query strategy functions, allowing

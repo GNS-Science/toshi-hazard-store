@@ -22,18 +22,17 @@ from toshi_hazard_store.gridded_hazard import calc_gridded_hazard
 
 log = logging.getLogger()
 logging.basicConfig(level=logging.DEBUG)
-logging.getLogger('nshm_toshi_client.toshi_client_base').setLevel(logging.INFO)
-logging.getLogger('urllib3').setLevel(logging.INFO)
-logging.getLogger('botocore').setLevel(logging.INFO)
-logging.getLogger('pynamodb').setLevel(logging.INFO)
+logging.getLogger("nshm_toshi_client.toshi_client_base").setLevel(logging.INFO)
+logging.getLogger("urllib3").setLevel(logging.INFO)
+logging.getLogger("botocore").setLevel(logging.INFO)
 # logging.getLogger('toshi_hazard_haste').setLevel(logging.INFO)
-logging.getLogger('toshi_hazard_store').setLevel(logging.INFO)
-logging.getLogger('gql.transport.requests').setLevel(logging.WARN)
+logging.getLogger("toshi_hazard_store").setLevel(logging.INFO)
+logging.getLogger("gql.transport.requests").setLevel(logging.WARN)
 
-formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+formatter = logging.Formatter(fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 screen_handler = logging.StreamHandler(stream=sys.stdout)
 screen_handler.setFormatter(formatter)
-file_handler = logging.FileHandler('ths_build.log')
+file_handler = logging.FileHandler("ths_build.log")
 file_handler.setLevel(logging.WARNING)
 file_handler.setFormatter(formatter)
 log.addHandler(screen_handler)
@@ -50,14 +49,14 @@ def main():
     """Console script for building/reading NSHM hazard grid tables in parquet dataset format."""
 
 
-@main.command(name='geojson')
-@click.option('-H', '--hazard_model_ids', help='comma-delimted list of hazard model ids.')
-@click.option('-L', '--site-list', help='A site list ENUM.')
-@click.option('-I', '--imts', help='comma-delimited list of imts.')
-@click.option('-A', '--aggs', help='comma-delimited list of aggs.')
-@click.option('-V', '--vs30s', help='comma-delimited list of vs30s.')
-@click.option('-P', '--poes', help='comma-delimited list of poe_levels.')
-@click.option('-c', '--config', type=click.Path(exists=True))  # help="path to a valid THU configuration file."
+@main.command(name="geojson")
+@click.option("-H", "--hazard_model_ids", help="comma-delimted list of hazard model ids.")
+@click.option("-L", "--site-list", help="A site list ENUM.")
+@click.option("-I", "--imts", help="comma-delimited list of imts.")
+@click.option("-A", "--aggs", help="comma-delimited list of aggs.")
+@click.option("-V", "--vs30s", help="comma-delimited list of vs30s.")
+@click.option("-P", "--poes", help="comma-delimited list of poe_levels.")
+@click.option("-c", "--config", type=click.Path(exists=True))  # help="path to a valid THU configuration file."
 def cli_geojson(
     hazard_model_ids,
     site_list,
@@ -69,21 +68,21 @@ def cli_geojson(
 ):
     """Query gridded hazard and build geojson."""
 
-    hazard_model_ids = hazard_model_ids.split(',') if hazard_model_ids else None
-    imts = imts.split(',') if imts else None
-    vs30s = [int(v) for v in vs30s.split(',')] if vs30s else None
-    aggs = aggs.split(',') if aggs else None
-    poes = [float(v) for v in poes.split(',')] if poes else None
+    hazard_model_ids = hazard_model_ids.split(",") if hazard_model_ids else None
+    imts = imts.split(",") if imts else None
+    vs30s = [int(v) for v in vs30s.split(",")] if vs30s else None
+    aggs = aggs.split(",") if aggs else None
+    poes = [float(v) for v in poes.split(",")] if poes else None
 
     if config:
         conf = toml.load(config)
 
-        site_list = site_list or conf.get('site_list')
-        hazard_model_ids = hazard_model_ids or conf.get('hazard_model_ids')
-        imts = imts or conf.get('imts')
-        vs30s = vs30s or conf.get('vs30s')
-        aggs = aggs or conf.get('aggs')
-        poes = poes or conf.get('poes')
+        site_list = site_list or conf.get("site_list")
+        hazard_model_ids = hazard_model_ids or conf.get("hazard_model_ids")
+        imts = imts or conf.get("imts")
+        vs30s = vs30s or conf.get("vs30s")
+        aggs = aggs or conf.get("aggs")
+        poes = poes or conf.get("poes")
 
     region_grid = RegionGrid[site_list]
     grid = region_grid.load()
@@ -98,7 +97,7 @@ def cli_geojson(
     def fix_nan(poes):
         for i in range(len(poes)):
             if poes[i] is None:
-                log.warning('Nan at %s' % i)
+                log.warning("Nan at %s" % i)
                 poes[i] = 0.0
         return poes
 
@@ -123,20 +122,29 @@ def cli_geojson(
             )
         )
         gdf = gdf.rename(
-            columns={'fill_opacity': 'fill-opacity', 'stroke_width': 'stroke-width', 'stroke_opacity': 'stroke-opacity'}
+            columns={
+                "fill_opacity": "fill-opacity",
+                "stroke_width": "stroke-width",
+                "stroke_opacity": "stroke-opacity",
+            }
         )
-        with open(f'test_{count}.json', 'w') as output:
+        with open(f"test_{count}.json", "w") as output:
             output.write(gdf.to_json())
 
-    click.echo('table scan produced %s gridded_hazard rows and %s poe levels' % (count, poe_count))
+    click.echo("table scan produced %s gridded_hazard rows and %s poe levels" % (count, poe_count))
 
 
-@main.command(name='build')
-@click.argument('CONFIG', type=click.Path(exists=True))  # help="path to a valid configuration file."
-@click.argument('OUTPUT_TARGET')
-@click.option('-lsl', '--list-site-lists', help='print the list of sites list ENUMs and exit', is_flag=True)
-@click.option('-v', '--verbose', is_flag=True)
-@click.option('-w', '--num-workers', default=4, show_default=True)
+@main.command(name="build")
+@click.argument("CONFIG", type=click.Path(exists=True))  # help="path to a valid configuration file."
+@click.argument("OUTPUT_TARGET")
+@click.option(
+    "-lsl",
+    "--list-site-lists",
+    help="print the list of sites list ENUMs and exit",
+    is_flag=True,
+)
+@click.option("-v", "--verbose", is_flag=True)
+@click.option("-w", "--num-workers", default=4, show_default=True)
 def cli_gridded_hazard(
     output_target,
     config,
@@ -158,13 +166,13 @@ def cli_gridded_hazard(
         if verbose:
             click.echo(f"using settings in {config} for export")
 
-        site_list = conf.get('site_list')
-        hazard_model_ids = conf.get('hazard_model_ids')
-        imts = conf.get('imts')
-        vs30s = conf.get('vs30s')
-        aggs = conf.get('aggs')
-        poes = conf.get('poes')
-        filter_sites = conf.get('filter_sites')
+        site_list = conf.get("site_list")
+        hazard_model_ids = conf.get("hazard_model_ids")
+        imts = conf.get("imts")
+        vs30s = conf.get("vs30s")
+        aggs = conf.get("aggs")
+        poes = conf.get("poes")
+        filter_sites = conf.get("filter_sites")
 
     if verbose:
         click.echo(f"{hazard_model_ids} {imts} {vs30s}")
@@ -172,7 +180,7 @@ def cli_gridded_hazard(
     try:
         click.echo(filter_sites)
         filter_locations = (
-            [CodedLocation(*[float(s) for s in site.split('~')], resolution=0.2) for site in filter_sites.split('')]
+            [CodedLocation(*[float(s) for s in site.split("~")], resolution=0.2) for site in filter_sites.split("")]
             if filter_sites
             else []
         )
@@ -190,9 +198,9 @@ def cli_gridded_hazard(
         )
     except Exception as err:
         click.echo(err)
-        raise click.UsageError('An error occurred, pls check usage.')
+        raise click.UsageError("An error occurred, pls check usage.")
 
-    click.echo('Done!')
+    click.echo("Done!")
 
 
 if __name__ == "__main__":
