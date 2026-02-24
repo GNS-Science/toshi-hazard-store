@@ -1,8 +1,6 @@
 import os
 from pathlib import Path
 
-# import json
-# import pytest
 from pydantic_core import from_json
 
 from toshi_hazard_store.model.gridded import grid_analysis

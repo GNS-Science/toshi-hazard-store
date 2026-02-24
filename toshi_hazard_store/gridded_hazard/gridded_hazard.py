@@ -41,8 +41,9 @@ def process_gridded_hazard(
     agg: str,
 ) -> Iterable[GriddedHazardPoeLevels]:
     """
-    Compute and yield GriddedHazardPoeLevels for the given ... POE levels, and hazard model.
+    Compute and yield GriddedHazardPoeLevels for the given arguments.
 
+    Args:
         poe_levels (List[float]): POE levels to compute for.
         location_grid_id (str): ID of the region grid.
         compatible_calc_id (str): ID of the compatible calculation.
@@ -52,7 +53,7 @@ def process_gridded_hazard(
         agg (str): Aggregation method (e.g. mean, max).
 
     Yields:
-        GriddedHazardPoeLevels: Computed GriddedHazardPoeLevels for the given location keys and POE level.
+        GriddedHazardPoeLevels: Computed GriddedHazardPoeLevels.
     """
     log.debug(f">>> process_gridded_hazard() poe_levels: {poe_levels}")
     grid = RegionGrid[location_grid_id]

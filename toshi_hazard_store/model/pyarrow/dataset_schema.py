@@ -4,10 +4,6 @@ Define the standard schema used with pyarrow datasets.
 
 import pyarrow as pa
 
-# from lancedb.pydantic import pydantic_to_schema
-
-# from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
-
 USE_64BIT_VALUES_DEFAULT = False
 
 

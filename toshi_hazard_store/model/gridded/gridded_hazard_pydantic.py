@@ -21,7 +21,7 @@ class GriddedHazardPoeLevels(BaseModel):
 
     NB the validator methods on this model are 'rigorous and slow', for use when creating new model instances.
     If models that are being rehydrated from trusted source can use the pydantic use the `model_construct` method
-    to avoid the validatoin overhead.
+    to avoid the validation overhead.
 
     Attributes:
         compatible_calc_id: for hazard-calc equivalence.

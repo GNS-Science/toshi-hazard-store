@@ -1,7 +1,5 @@
-"""pydantic modles helpers for analysis of gridded datasets"""
+"""pydantic model helpers for analysis of gridded datasets"""
 
-# import json
-# import logging
 from typing import Optional, Tuple, Union
 
 import numpy as np
@@ -112,12 +110,9 @@ class GridDiffDiagnostic(BaseModel):
 
     def check_diff(self, diff: GridDiff) -> Optional[str]:
         self.checked_grid_entries += 1
-        # numeric_diff = diff.numeric_difference(rtol=self.rtol, atol=self.atol)
-        # if numeric_diff is not None:
         errors = np.where(diff.isclose(rtol=self.rtol, atol=self.atol) == False)[0].tolist()  # noqa: E712
         if len(errors):
             self.failed_grid_entries += 1
-            # print(errors)
             for idx in errors:
                 location = self.location_codes[idx]
                 location_diff = LocationDiff(l_value=diff.l_values.tolist()[idx], r_value=diff.r_values.tolist()[idx])
