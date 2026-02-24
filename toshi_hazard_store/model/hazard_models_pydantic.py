@@ -30,19 +30,28 @@ class CompatibleHazardCalculation(BaseModel):
 
 
 class HazardCurveProducerConfig(BaseModel):
-    """Records characteristics of Hazard Curve producers/engines for compatibility and reproducablity.
+    """Records characteristics of Hazard Curve producers/engines for compatibility and reproducibility.
 
-    for hazard curve compatability, we use both:
+    For hazard curve compatibility, we use both:
         - compatible_calc_fk: curves sharing this fk are `compatible` because the software/science is compatible.
-        - configuration_hash: the config hash tells us the the PSHA software configuration is compatible.
-          (see nzshm-model for details)
+        - config_digest: the config digest tells us the PSHA software configuration is compatible
+          (see nzshm-model for details).
 
-    for hazard curve reproducability, use both:
-         - ecr_image_digest: a hexdigest from the ecr_image (this is stored in the dataset)
-         - ecr_image: we can run the same inputs against this docker image to reproduce the outputs AND
+    For hazard curve reproducibility, use both:
+        - ecr_image_digest: a hexdigest from the ecr_image (this is stored in the dataset).
+        - ecr_image: we can run the same inputs against this Docker image to reproduce the outputs.
+
+    Attributes:
+        compatible_calc_fk: Foreign key to a CompatibleHazardCalculation (must map to a valid unique_id).
+        ecr_image_digest: Docker image digest (sha256:...).
+        config_digest: Configuration digest.
+        created_at: The date and time this record was created. Defaults to utcnow.
+        updated_at: The date and time this record was last updated. Defaults to utcnow.
+        ecr_image: Optional AwsEcrImage for reproducibility.
+        notes: Optional additional information.
 
     POSSIBLE in future:
-     - if necessary we can extend this with a GithubRef / DockerImage alternative to AwsEcrImage
+        - if necessary we can extend this with a GithubRef / DockerImage alternative to AwsEcrImage.
     """
 
     compatible_calc_fk: str  # must map to a valid CompatibleHazardCalculation.unique_id
@@ -85,11 +94,11 @@ class HazardAggregateCurve(BaseModel):
     aggr: str
     values: List[float]
 
-    @field_validator('values', mode='before')
+    @field_validator("values", mode="before")
     @classmethod
     def validate_len_values(cls, value: List) -> List:
         if not len(value) == 44:
-            raise ValueError(f'expected 44 values but there are {len(value)}')
+            raise ValueError(f"expected 44 values but there are {len(value)}")
         return value
 
     @staticmethod
@@ -103,10 +112,12 @@ class HazardAggregateCurve(BaseModel):
         arrow_schema = pydantic_to_schema(HazardAggregateCurve)
         if not USE_64BIT_VALUES:
             arrow_schema = arrow_schema.set(
-                arrow_schema.get_field_index('vs30'), pa.lib.field('vs30', pa.int32(), nullable=False)
+                arrow_schema.get_field_index("vs30"),
+                pa.lib.field("vs30", pa.int32(), nullable=False),
             )
             arrow_schema = arrow_schema.set(
-                arrow_schema.get_field_index('values'), pa.lib.field('values', pa.list_(pa.float32()), nullable=False)
+                arrow_schema.get_field_index("values"),
+                pa.lib.field("values", pa.list_(pa.float32()), nullable=False),
             )
 
         return arrow_schema

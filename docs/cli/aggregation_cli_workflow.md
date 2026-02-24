@@ -1,12 +1,12 @@
 ## Historic hazard curve extraction
 
 Here we demonstrate the end to end workflow for importing hazard curves from the NSHM_v1.0.4
- calculations performed in 2022/2023.
+calculations performed in 2022/2023.
 
-The following steps process a single GeneralTask (GT). Usually a GT this would include a subtask 
- for each logictree branch in the model (49 subtasks for the NSHM).
+The following steps process a single GeneralTask (GT). Usually a GT would include a subtask
+for each logictree branch in the model (49 subtasks for the NSHM).
 
-### Step 1. Check Hazard curve compatability. 
+### Step 1. Check Hazard curve compatibility.
 
 We want to ensure there's a suitable **CompatibleHazardConfig** for these curves and obtain the identifier.
 
@@ -17,7 +17,7 @@ $ poetry run ths_compat ls
 NZSHM22
 ```
 
-**List the identifiers, along with their metatdata**
+**List the identifiers, along with their metadata**
 
 ```bash
 $ poetry run ths_compat ls -v
@@ -29,7 +29,7 @@ At present we have but a single identifier: `NZSHM22`
 ### Step 2. Check/create Hazard Curve Producers.
 
 Now we need to find the **General Task (GT)** Identifier from Toshi API, which is used to obtain the
- historic calculation data (as HDF5 format) and additional metadata about the openquake configuration.
+historic calculation data (as HDF5 format) and additional metadata about the openquake configuration.
 
 The General Task ID below is `R2VuZXJhbFRhc2s6NjkzMTg5Mg==` [see in Weka](http://nzshm22-weka-ui-test.s3-website-ap-southeast-2.amazonaws.com/GeneralTask/R2VuZXJhbFRhc2s6NjkzMTg5Mg==).
 
@@ -63,7 +63,7 @@ AWS_PROFILE=chrisbc poetry run ths_rlz_import extract R2VuZXJhbFRhc2s6NjkzMTg5Mg
 
 #### Check random realisations
 
-This needs work, as currently the GT is not configurable, and it is needed to extract the correct metadata from the API for 
+This needs work, as currently the GT is not configurable, and it is needed to extract the correct metadata from the API for
 building the random queries.
 
 ### Step 4. Defrag
@@ -110,9 +110,9 @@ This is what happens automated in hazard task logic.
 
 `poetry run ths_rlz_import store-hazard ./WORKING/runzi/calc_2.hdf5 ./WORKING/runzi/oq_config.json NZSHM22 calcS_T "sha256:e8b44b806570dcdc4a725cafc2fbaf6dae99dbfbe69345d86b3069d3fe4a2bc6"  ./WORKING/ARROW/DSR`
 
-The DSR dataset produced will by partioned by the Toshi ID for the Hazard task, ensuring no dataset collisions
+The DSR dataset produced will be partitioned by the Toshi ID for the Hazard task, ensuring no dataset collisions
 
-## Historic (ToshiAPI ) workflow
+## Historic (ToshiAPI) workflow
 
 Here we're processing existing hazard task outputs from the given GeneralTask (GT) to build our parquet dataset.
 

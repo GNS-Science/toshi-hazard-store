@@ -1,3 +1,10 @@
+!!! warning "Experimental / Not Implemented"
+    The disaggregation models described on this page are **not currently implemented** in the codebase.
+    
+    There is experimental code in `toshi_hazard_store/model/revision_4/extract_disagg_hdf5.py` for extracting disaggregation data from OpenQuake HDF5 files, but the pydantic models described below do not exist yet.
+    
+    This page is kept for reference and future implementation planning.
+
 **Tables:**
 
  - **DisaggAggregationExceedance** - Disaggregation curves of Probablity of Exceedance

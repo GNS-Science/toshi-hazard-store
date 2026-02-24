@@ -135,3 +135,34 @@ The `toshi_hazard_store.query` module provides unified access to:
 2. Export from `toshi_hazard_store/query/__init__.py`
 3. Add tests in `tests/query/`
 4. Update docs in `docs/api/query/`
+
+## Documentation Conventions
+
+### MkDocs List Formatting
+MkDocs requires an **empty line before lists** for them to be recognized as list elements. Without the empty line, the markdown parser may not render them correctly.
+
+```markdown
+# Correct (empty line before list)
+Here is a description:
+
+- item 1
+- item 2
+
+# Incorrect (no empty line - won't render as list)
+Here is a description:
+- item 1
+- item 2
+```
+
+### Pydantic Model Documentation
+When documenting Pydantic model classes in markdown using mkdocstrings, use these options for consistency:
+
+```yaml
+::: toshi_hazard_store.model.hazard_models_pydantic.HazardAggregateCurve
+    options:
+      show_source: true
+      members: false
+      attributes: true
+```
+
+This pattern should be used for all pydantic model documentation in `docs/domain_model/`.

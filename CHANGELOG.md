@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.4.2] 2026-02-25
+
+### Added
+- Documentation for PyArrow parquet-based query API:
+  - New `docs/api/query/index.md` with query function overview
+  - Added docs for constraint enums (`AggregationEnum`, `IntensityMeasureTypeEnum`, `VS30Enum`, `ProbabilityEnum`)
+
+### Changed
+- **Breaking change in documentation**: Replaced outdated DynamoDB-era docs with current PyArrow parquet API:
+  - Rewrote `docs/usage.md` with current `get_hazard_curves()` and `get_gridded_hazard()` examples
+  - Rewrote `docs/configuration.md` to reflect current environment variables (`THS_DATASET_AGGR_URI`, etc.)
+  - Rewrote domain model pages to use mkdocstrings auto-generated docs from pydantic models:
+    - `docs/domain_model/openquake_models.md` → now documents `HazardAggregateCurve`
+    - `docs/domain_model/hazard_metadata.md` (renamed from `proposed_hazard_models.md`) → documents `CompatibleHazardCalculation`, `HazardCurveProducerConfig`
+    - `docs/domain_model/gridded_hazard_models.md` → documents `GriddedHazardPoeLevels`
+  - Updated `docs/cli/hazard_dataset_overview.md` and `docs/cli/aggregation_cli_workflow.md` (renamed from `usage.md`)
+  - Added mkdocstrings options for consistency in model documentation
+  - Fixed typo in `HazardCurveProducerConfig` docstring ("reproducablity" → "reproducibility")
+
+### Fixed
+- Added missing attributes section to `HazardCurveProducerConfig` docstring
+- Fixed cookiecutter placeholder URLs in `docs/installation.md`
+- Fixed various typos in documentation files
+- Added empty line before markdown lists (required for mkdocs parsing)
+- Added documentation conventions to `CLAUDE.md`
+
+### Removed
+- Removed commented-out nav entry `# - Parquet: TODO.md` from `mkdocs.yml`
+- Removed `.DS_Store` files from docs directory
+
 ## [1.4.1] 2026-02-24
 
 ### Removed
