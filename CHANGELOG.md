@@ -8,6 +8,14 @@
 - Comprehensive test coverage for `get_gridded_hazard` function with 6 new tests
 - New test module `tests/query/test_gridded_hazard_query.py`
 - Comprehensive test coverage for all CLI scripts (26 new tests)
+- **Hoisted query module exports**: `toshi_hazard_store.query` now provides unified access to:
+  - Main query functions: `get_hazard_curves`, `get_gridded_hazard`
+  - Data models: `AggregatedHazard`, `IMTValue`
+  - Location utilities: `downsample_code`, `get_hashes`
+  - Dataset cache accessors: `get_dataset`, `get_gridded_dataset`, `get_dataset_vs30`, `get_dataset_vs30_nloc0`
+  - Config constants: `DATASET_AGGR_URI`, `DATASET_GRIDDED_URI`
+- New comprehensive API documentation at `docs/api/query/index.md` with usage examples
+- `__all__` export list in `query/__init__.py` for clean public API
 
 ### Changed
 - Renamed CLI scripts for clearer naming conventions:
@@ -25,6 +33,8 @@
   - `query_strategies.py` - Different query strategies (205 lines)
   - `datasets.py` - Main query interface (115 lines, reduced from 529)
 - Updated all imports and references to use new module structure
+- **Simplified query imports**: All code now uses `from toshi_hazard_store import query`
+  pattern instead of deep submodule imports (`query.datasets`, `query.models`, etc.)
 - Removed all unused imports from script test files
 - Updated API documentation to remove references to removed modules
 
@@ -40,6 +50,13 @@
 ### Fixed
 - MkDocs build error caused by references to removed `gridded_hazard_query` module
 - All documentation now builds successfully
+- **Enabled skipped grid tests**: `test_build_and_roundtrip_gridded_dataset` in 
+  `tests/model/test_hazard_grid_models.py` was failing due to incorrect import 
+  (`datasets` vs `dataset_cache`) and improper `RegionGrid` mocking. Fixed by:
+  - Correcting import to use `dataset_cache` module
+  - Fixing monkeypatch target to patch at `dataset_cache.DATASET_AGGR_URI`
+  - Properly mocking `RegionGrid` Enum with `__getitem__` return value
+  - Converting `CodedLocation` objects to `(lat, lon)` tuples for mock
 
 ## [1.4.0-next-release] 2026-01
 ### Added
