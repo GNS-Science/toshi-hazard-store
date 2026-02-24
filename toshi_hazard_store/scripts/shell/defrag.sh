@@ -46,7 +46,7 @@ while IFS= read -r id; do
     echo "Elapsed time: $elapsed seconds"
 
     if [ $? -ne 0 ]; then
-        echo "Error: ths_import extract failed with id '$id'. Exiting loop."
+        echo "Error: ths_rlz_import extract failed with id '$id'. Exiting loop."
         break
     fi
     echo "Completed ths_ds_defrag $id" >> "$LOG_DIR/defrag.log"

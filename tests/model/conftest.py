@@ -1,3 +1,4 @@
+import itertools
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -7,6 +8,7 @@ from toshi_hazard_store.model.hazard_models_manager import (
     CompatibleHazardCalculationManager,
     HazardCurveProducerConfigManager,
 )
+from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 
 
@@ -63,3 +65,23 @@ def hcp_manager(storage_path, hazard_curve_producer_config_data, compatible_haza
     manager = HazardCurveProducerConfigManager(storage_path, ch_manager)
     manager.create(hazard_curve_producer_config_data)
     return manager
+
+
+@pytest.fixture(scope='session')
+def pyarrow_aggregation_models(many_rlz_args):
+    def generator_fn():
+        for loc, vs30, imt, agg in itertools.product(
+            many_rlz_args["locs"][:5], many_rlz_args["vs30s"], many_rlz_args["imts"], ['mean', 'cov', '0.95']
+        ):
+            yield HazardAggregateCurve(
+                compatible_calc_id="NZSHM22",
+                hazard_model_id="MyNewModel",
+                nloc_001=loc.resample(0.001).code,
+                nloc_0=loc.resample(1).code,
+                imt=imt,
+                vs30=vs30,
+                aggr=agg,
+                values=[(x / 1000) for x in range(44)],
+            )
+
+    yield generator_fn

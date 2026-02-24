@@ -1,4 +1,4 @@
-These are outputs from the [ths_ds_sanity script](../cli/ths_ds_sanity.md)
+These are outputs from the [ths_rlz_sanity script](../cli/ths_rlz_sanity.md)
 
 ## ARROW_DIRECT May 10 2025
 

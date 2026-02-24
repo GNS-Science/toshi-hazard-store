@@ -263,4 +263,4 @@ def test_compute_hazard_at_poe_exception():
 
     with pytest.raises(ValueError) as ex:
         compute_hazard_at_poe(0.4, accel_levels, poe_values, 1)
-    assert "Poe values not monotonous" in str(ex.value)
+    assert "Poe values not monotonic" in str(ex.value)

@@ -3,6 +3,7 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 import pytest
 
+# from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_realisation_schema
 
@@ -51,7 +52,10 @@ def test_serialise_realisation_curves_raises(tmp_path, random_hazard_rlz_curves)
 
     with pytest.raises(TypeError, match=r"must be a pyarrow Table or RecordBatchReader"):
         pyarrow_dataset.append_models_to_dataset(
-            random_hazard_rlz_curves, base_dir=base_dir, filesystem=filesystem, partitioning=partitioning
+            random_hazard_rlz_curves,
+            base_dir=base_dir,
+            filesystem=filesystem,
+            partitioning=partitioning,
         )
 
 
@@ -66,6 +70,7 @@ def test_serialise_realisation_curves(tmp_path, random_hazard_rlz_curves):
     table = pa.Table.from_pandas(df)
 
     pyarrow_dataset.append_models_to_dataset(table, base_dir=base_dir, filesystem=filesystem, partitioning=partitioning)
+    # schema = get_hazard_realisation_schema())
 
     # read and check the dataset
     dataset = ds.dataset(output_folder, format='parquet', partitioning='hive', schema=get_hazard_realisation_schema())

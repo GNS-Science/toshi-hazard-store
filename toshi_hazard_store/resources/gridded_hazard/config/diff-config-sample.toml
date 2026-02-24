@@ -1,0 +1,16 @@
+# cli command configuration example
+hazard_model_ids = ["NSHM_v1.0.4"]
+site_list = 'NZ_0_1_NB_1_1'
+vs30s = [
+    150,
+    400
+]
+# poes = [0.02, 0.22, 0.86]
+poes = [0.02, 0.025, 0.05, 0.1, 0.18, 0.22, 0.39, 0.4, 0.63, 0.86]
+imts = [
+
+    "SA(1.0)",
+]
+aggs = ["0.9"]
+# aggs = ["cov"]
+     

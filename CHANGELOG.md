@@ -1,14 +1,56 @@
 # Changelog
 
-## [1.4.0-next-release] 2026-01
+## [1.4.0] 2026-02-24
 ### Added
- - migrated 'ths_build_grid` script, module and tests from `toshi-hazard-haste` project.
- - DEVELOPMENT.md describes developer environment setup.
- - gridded pydantic model
+- `dataset_uri` parameter to `get_hazard_curves` and all query strategy functions, allowing
+  users to specify non-default dataset locations without changing environment variables
+- Missing `ths_grid_sanity` CLI doc page
+- Comprehensive test coverage for `get_gridded_hazard` function with 6 new tests
+- New test module `tests/query/test_gridded_hazard_query.py`
+- Comprehensive test coverage for all CLI scripts (26 new tests)
 
 ### Changed
- - set `pyarrow <3` upper bound as the new 3.0.0. version introduces some schema issues.
- - revised tox configuration for proper environment selection
+- Renamed CLI scripts for clearer naming conventions:
+  - `ths_build_gridded` → `ths_grid_build`
+  - `ths_import` → `ths_rlz_import`
+  - `ths_ds_sanity` → `ths_rlz_sanity`
+  - `ths_json_backup` → `ths_agg_backup`
+- Reorganized mkdocs nav: alphabetized CLI tools, created "Data Models" section,
+  nested "Legacy Migrations" under "Datasets"
+- Updated project description in pyproject.toml
+- Fixed docstrings in `get_hazard_curves` (missing `imts`) and `get_gridded_hazard`
+- Refactored large `datasets.py` module (529 lines) into 4 focused modules:
+  - `models.py` - Data models and constants (110 lines)
+  - `dataset_cache.py` - Dataset caching functionality (115 lines)
+  - `query_strategies.py` - Different query strategies (205 lines)
+  - `datasets.py` - Main query interface (115 lines, reduced from 529)
+- Updated all imports and references to use new module structure
+- Removed all unused imports from script test files
+- Updated API documentation to remove references to removed modules
+
+### Removed
+- Deprecated PynamoDB model `toshi_hazard_store/model/gridded_hazard.py`
+- Deprecated PynamoDB queries `toshi_hazard_store/query/gridded_hazard_query.py`
+- Unused import of `get_one_gridded_hazard` from `__init__.py`
+- Stale doc files: `docs/api.md`, `docs/assistant_logs/`, `docs/datasets/error.md`
+- Broken `Query API` nav section (referenced deleted file)
+- Legacy comments in pyproject.toml
+- All gridded hazard functionality now uses pyarrow datasets instead of DynamoDB
+
+### Fixed
+- MkDocs build error caused by references to removed `gridded_hazard_query` module
+- All documentation now builds successfully
+
+## [1.4.0-next-release] 2026-01
+### Added
+- migrated 'ths_build_grid` script, module and tests from `toshi-hazard-haste` project.
+- DEVELOPMENT.md describes developer environment setup.
+- gridded pydantic model
+- pa schemas built from pydantic model
+
+### Changed
+- set `pyarrow <3` upper bound as the new 3.0.0. version introduces some schema issues.
+- revised tox configuration for proper environment selection
 
 ## [1.3.1] 2026-01-20
 ### Changed

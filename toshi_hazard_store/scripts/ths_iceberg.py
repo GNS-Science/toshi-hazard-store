@@ -1,4 +1,4 @@
-'''
+"""
 A script to explore the performance and use of AWS S3 tables / pyiceberg as a possible
 alternative to AWS S3 General Purpose buckets.
 
@@ -12,7 +12,7 @@ Brief summary of findings:
  - AWS GLUE/ Iceberg do offer some  convenince factors perticualry around `shcema evolution`, however the
    need for this is not high in our use cases
 
-'''
+"""
 
 import datetime as dt
 
@@ -22,18 +22,22 @@ from pyiceberg.catalog import load_catalog
 from pyiceberg.expressions import EqualTo, In
 
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
-from toshi_hazard_store.query import datasets
 from toshi_hazard_store.query.hazard_query import downsample_code
+from toshi_hazard_store.query.query_strategies import (
+    get_hazard_curves_by_vs30,
+    get_hazard_curves_by_vs30_nloc0,
+    get_hazard_curves_naive,
+)
 
-DATASET_FORMAT = 'parquet'
+DATASET_FORMAT = "parquet"
 
 # Constants
-REGION = 'ap-southeast-2'
-CATALOG = 's3tablescatalog'
-DATABASE = 'ths_poc_iceberg_db'  # DATABASE -> Namepspace in pyiceberg terms
-TABLE_BUCKET = 'pyiceberg-blog-bucket'
-TABLE_BUCKET = 'ths-poc-iceberg'
-TABLE_NAME = 'AGGR'
+REGION = "ap-southeast-2"
+CATALOG = "s3tablescatalog"
+DATABASE = "ths_poc_iceberg_db"  # DATABASE -> Namepspace in pyiceberg terms
+TABLE_BUCKET = "pyiceberg-blog-bucket"
+TABLE_BUCKET = "ths-poc-iceberg"
+TABLE_NAME = "AGGR"
 
 rest_args = {
     "type": "rest",
@@ -79,7 +83,12 @@ def import_to_iceberg():
     t0 = dt.datetime.now()
     aggr_uri = "s3://ths-dataset-prod/NZSHM22_AGG"
     source_dir, source_filesystem = pyarrow_dataset.configure_output(aggr_uri)
-    dataset0 = ds.dataset(source_dir, filesystem=source_filesystem, format=DATASET_FORMAT, partitioning='hive')
+    dataset0 = ds.dataset(
+        source_dir,
+        filesystem=source_filesystem,
+        format=DATASET_FORMAT,
+        partitioning="hive",
+    )
     dt0 = dataset0.to_table(filter=fltr)
 
     t1 = dt.datetime.now()
@@ -102,13 +111,13 @@ def import_to_iceberg():
     t3 = dt.datetime.now()
     print(f"Saved {rows} rows to iceberg table in {(t3 - t2).total_seconds()}")
 
-    print(icetable.scan(row_filter=EqualTo("vs30", 400) & EqualTo('aggr', 'mean')).to_pandas())
+    print(icetable.scan(row_filter=EqualTo("vs30", 400) & EqualTo("aggr", "mean")).to_pandas())
 
 
 def query_arrow():
 
     fltr = (
-        (pc.field('aggr').isin(aggs))
+        (pc.field("aggr").isin(aggs))
         & (pc.field("nloc_001").isin([loc]))
         & (pc.field("nloc_0").isin([downsample_code(loc, 1)]))
         & (pc.field("imt").isin(imts))
@@ -120,7 +129,12 @@ def query_arrow():
     t0 = dt.datetime.now()
     aggr_uri = "s3://ths-dataset-prod/NZSHM22_AGG"
     source_dir, source_filesystem = pyarrow_dataset.configure_output(aggr_uri)
-    dataset0 = ds.dataset(source_dir, filesystem=source_filesystem, format=DATASET_FORMAT, partitioning='hive')
+    dataset0 = ds.dataset(
+        source_dir,
+        filesystem=source_filesystem,
+        format=DATASET_FORMAT,
+        partitioning="hive",
+    )
 
     t1 = dt.datetime.now()
     print(f"opened dateset in {(t1 - t0).total_seconds()}")
@@ -134,10 +148,10 @@ def query_arrow():
     print(df0.shape)
     t3 = dt.datetime.now()
 
-    print('>>>>>')
+    print(">>>>>")
     print(f"Queried pyarrow table in {(t3 - t2).total_seconds()} secs")
     print(f"Total {(t3 - t0).total_seconds()} secs")
-    print('>>>>>')
+    print(">>>>>")
 
 
 def query_ice():
@@ -153,9 +167,9 @@ def query_ice():
     print(f"opened table in {(t2 - t1).total_seconds()}")
 
     filter = (
-        In('aggr', aggs)
-        & In('imt', imts)
-        & In('aggr', aggs)
+        In("aggr", aggs)
+        & In("imt", imts)
+        & In("aggr", aggs)
         & EqualTo("nloc_001", loc)
         & EqualTo("nloc_0", downsample_code(loc, 1))
         & EqualTo("vs30", 400)
@@ -165,10 +179,10 @@ def query_ice():
 
     print(res.shape)
     t3 = dt.datetime.now()
-    print('>>>>>')
+    print(">>>>>")
     print(f"Queried iceberg table in {(t3 - t2).total_seconds()} secs")
     print(f"Total {(t3 - t0).total_seconds()} secs")
-    print('>>>>>')
+    print(">>>>>")
 
 
 def query_datasets(query_fn):
@@ -176,11 +190,11 @@ def query_datasets(query_fn):
     MODEL = "NSHM_v1.0.4"
     res = list(query_fn(location_codes=[loc], vs30s=vs30s, hazard_model=MODEL, imts=imts, aggs=aggs))
     assert len(res) == 80
-    print('>>>>>')
+    print(">>>>>")
     t3 = dt.datetime.now()
 
     print(f"Total for Function {query_fn.__name__} {(t3 - t0).total_seconds()} secs")
-    print('>>>>>')
+    print(">>>>>")
 
 
 if __name__ == "__main__":
@@ -190,9 +204,9 @@ if __name__ == "__main__":
     query_ice()
     print()
     for fn in [
-        datasets.get_hazard_curves_naive,
-        datasets.get_hazard_curves_by_vs30,
-        datasets.get_hazard_curves_by_vs30_nloc0,
+        get_hazard_curves_naive,
+        get_hazard_curves_by_vs30,
+        get_hazard_curves_by_vs30_nloc0,
     ]:
         query_datasets(fn)
         print()

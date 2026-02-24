@@ -3,14 +3,13 @@
 from datetime import datetime, timezone
 from typing import List
 
-from nzshm_common import grids
-from pydantic import BaseModel, Field, field_validator, model_validator
+import pyarrow as pa
+from lancedb.pydantic import pydantic_to_schema
+from pydantic import BaseModel, Field, field_validator
 
 from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 
-from .constraints import AggregationEnum, IntensityMeasureTypeEnum, VS30Enum
-
-DISABLE_GRIDDED_MODEL_VALIDATOR = False
+USE_64BIT_VALUES = False
 
 
 class CompatibleHazardCalculation(BaseModel):
@@ -93,80 +92,21 @@ class HazardAggregateCurve(BaseModel):
             raise ValueError(f'expected 44 values but there are {len(value)}')
         return value
 
+    @staticmethod
+    def pyarrow_schema() -> pa.schema:
+        """A pyarrow schema for aggregate hazard curve datasets.
 
-class GriddedHazardPoeLevels(BaseModel):
-    """A list of hazard acceleration (shaking) at various locations in a grid.
+        built dynamically from the pydantic model, using lancedb helper method.
+        """
 
-    Ground shaking levels for the given location_grid at the given poe, investigation time, vs30, imt and aggr.
+        # Convert the Pydantic model to a PyArrow schema
+        arrow_schema = pydantic_to_schema(HazardAggregateCurve)
+        if not USE_64BIT_VALUES:
+            arrow_schema = arrow_schema.set(
+                arrow_schema.get_field_index('vs30'), pa.lib.field('vs30', pa.int32(), nullable=False)
+            )
+            arrow_schema = arrow_schema.set(
+                arrow_schema.get_field_index('values'), pa.lib.field('values', pa.list_(pa.float32()), nullable=False)
+            )
 
-    Attributes:
-        compatible_calc_id: for hazard-calc equivalence.
-        hazard_model_id: the model that the values are derived from.
-        location_grid_id: the NSHM grid identifier.
-        imt: the imt label e.g. `PGA`, `SA(5.0)`.
-        vs30: the VS30 value.
-        aggr: the aggregation type. e.g `mean`, `0.9`, `0.95`.
-        investigation_time: the time period (in years) for which the poe applies.
-        poe: the Probability of Exceedance (poe) expressed as a normalized percentage (i.e 0 to 1.0).
-        accel_levels: a list of floats representing the acceleration level in G at the given poe for each grid location.
-           This list must align with the locations in the given `location_grid_id`.
-    """
-
-    compatible_calc_id: str
-    hazard_model_id: str
-    location_grid_id: str
-
-    imt: str
-    vs30: int
-    aggr: str
-    investigation_time: int
-    poe: float
-
-    accel_levels: List[float]  # was grid_poes, but this was incrreect
-
-    @field_validator('vs30', mode='before')
-    @classmethod
-    def validate_vs30_value(cls, value: int) -> int:
-        if value not in [x.value for x in VS30Enum]:
-            raise ValueError(f'vs30 value {value} is not supported.')
-        return value
-
-    @field_validator('imt', mode='before')
-    @classmethod
-    def validate_imt_value(cls, value: str) -> str:
-        if value not in [x.value for x in IntensityMeasureTypeEnum]:
-            raise ValueError(f'imt value {value} is not supported.')
-        return value
-
-    @field_validator('aggr', mode='before')
-    @classmethod
-    def validate_aggr_value(cls, value: str) -> str:
-        if value not in [x.value for x in AggregationEnum]:
-            raise ValueError(f'aggr value {value} is not supported.')
-        return value
-
-    @field_validator('investigation_time', mode='before')
-    @classmethod
-    def validate_investigation_time_value(cls, value: int) -> int:
-        if not value == 50:
-            raise ValueError(f'investigation time must be 50 years. {value} is not supported')
-        return value
-
-    @field_validator('poe', mode='before')
-    @classmethod
-    def validate_poe_value(cls, value: float) -> float:
-        if not (0 < value < 1):
-            raise ValueError(f'poe value {value} is not supported.')
-        return value
-
-    @model_validator(mode='before')
-    def validate_len_accel_levels(cls, data) -> List:
-        if DISABLE_GRIDDED_MODEL_VALIDATOR:
-            return data
-        else:
-            grid = grids.get_location_grid(data['location_grid_id'])
-            if not len(data['accel_levels']) == len(grid):
-                raise ValueError(
-                    f"expected accel_levels to have `{len(grid)}` values, but found: {len(data['accel_levels'])}"
-                )
-        return data
+        return arrow_schema
