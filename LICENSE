@@ -1,7 +1,7 @@
 GNU GENERAL PUBLIC LICENSE
                       Version 3, 29 June 2007
 
-    plugin export module for openquake to manage hazard data in dynamodb.
+    plugin export module for openquake to manage hazard data in parquet datasets.
     Copyright (C) 2022  GNS Science
 
     This program is free software: you can redistribute it and/or modify

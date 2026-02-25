@@ -1,8 +1,8 @@
 """
-Console script for comparing DynamoDB grids vs new Dataset grids
+Console script for comparing Dataset grids
 
 Given two datasources and a set of filter arguments, iterate the first datasource grid items and
-compare the corresponding item in the second. If value differnces are out-of-tolerance (OOT),
+compare the corresponding item in the second. If value differences are out-of-tolerance (OOT),
 record the details for the specific locations that are OOT.
 """
 
@@ -24,7 +24,7 @@ from toshi_hazard_store.model.gridded.grid_analysis import (
     LocationDiffDetail,
 )
 
-DATASET_FORMAT = 'parquet'  # TODO: make this an argument
+DATASET_FORMAT = "parquet"  # TODO: make this an argument
 
 log = logging.getLogger(__name__)
 
@@ -38,23 +38,23 @@ logging.basicConfig(level=logging.WARN)
 #
 @click.group()
 def main():
-    """Console script comparing DynamoDB grids vs new Dataset grids."""
+    """Console script comparing Dataset grids."""
 
 
-@main.command(name='iterate')
-@click.argument('DATASET')
-@click.argument('CONFIG', type=click.Path(exists=True))  # help="path to a valid configuration file."
+@main.command(name="iterate")
+@click.argument("DATASET")
+@click.argument("CONFIG", type=click.Path(exists=True))  # help="path to a valid configuration file."
 def cli_iterate(config, dataset):
     """check DATASET has everything in CONFIG"""
 
     conf = toml.load(config)
 
-    region_grid_id = conf.get('site_list')
-    hazard_model_ids = conf.get('hazard_model_ids')
-    imts = conf.get('imts')
-    vs30s = conf.get('vs30s')
-    aggs = conf.get('aggs')
-    poes = conf.get('poes')
+    region_grid_id = conf.get("site_list")
+    hazard_model_ids = conf.get("hazard_model_ids")
+    imts = conf.get("imts")
+    vs30s = conf.get("vs30s")
+    aggs = conf.get("aggs")
+    poes = conf.get("poes")
 
     expected_total = len(list(itertools.product(hazard_model_ids, imts, vs30s, aggs, poes)))
     count = 0
@@ -73,30 +73,36 @@ def cli_iterate(config, dataset):
         count += 1
 
     assert count == expected_total
-    click.echo(f'DONE, processed {count} grids, as expected.')
+    click.echo(f"DONE, processed {count} grids, as expected.")
 
 
-@main.command(name='diff')
-@click.argument('DATASET')
-@click.argument('CONFIG', type=click.Path(exists=True))  # help="path to a valid configuration file."
+@main.command(name="diff")
+@click.argument("DATASET")
+@click.argument("CONFIG", type=click.Path(exists=True))  # help="path to a valid configuration file."
 def cli_diff(config, dataset):
-    """Compare grids from DynamoDB vs DATASET using CONFIG"""
+    """Compare grids from two DATASET sources using CONFIG"""
 
     conf = toml.load(config)
 
-    region_grid_id = conf.get('site_list')
-    hazard_model_ids = conf.get('hazard_model_ids')
-    imts = conf.get('imts')
-    vs30s = conf.get('vs30s')
-    aggs = conf.get('aggs')
-    poes = conf.get('poes')
+    region_grid_id = conf.get("site_list")
+    hazard_model_ids = conf.get("hazard_model_ids")
+    imts = conf.get("imts")
+    vs30s = conf.get("vs30s")
+    aggs = conf.get("aggs")
+    poes = conf.get("poes")
 
     MAX_MISSES = 0
     MAX_HITS = 0
 
     RTOL, ATOL = 1e-5, 1e-6
 
-    diagnostic = GridDiffDiagnostic(atol=ATOL, rtol=RTOL, region_grid_id=region_grid_id, location_map={}, nans_map={})
+    diagnostic = GridDiffDiagnostic(
+        atol=ATOL,
+        rtol=RTOL,
+        region_grid_id=region_grid_id,
+        location_map={},
+        nans_map={},
+    )
 
     count, misses, hits, nans = 0, 0, 0, 0
     total = len(list(itertools.product(hazard_model_ids, imts, vs30s, aggs, poes)))
@@ -107,7 +113,6 @@ def cli_diff(config, dataset):
         desc=f"Grid differences for: {ATOL} rtol: {RTOL}",
         ncols=120,
     ):
-
         grid_id = GridIdentity(
             region_grid_id=region_grid_id,
             hazard_model_id=ghaz_dynamo.hazard_model_id,
@@ -128,16 +133,16 @@ def cli_diff(config, dataset):
         try:
             record_arrow = next(ds)
         except StopIteration:
-            click.echo(f'ERROR: no dataset result for entry: `{grid_id}`')
+            click.echo(f"ERROR: no dataset result for entry: `{grid_id}`")
             misses += 1
             if MAX_MISSES and misses >= MAX_MISSES:
-                click.echo(f'ABENDING after {misses} misses.')
+                click.echo(f"ABENDING after {misses} misses.")
                 break
             else:
                 continue
 
-        _A = np.array(ghaz_dynamo.grid_poes).astype('float')  # old gridded hazard field was poorly named
-        _B = np.array(record_arrow.accel_levels).astype('float')
+        _A = np.array(ghaz_dynamo.grid_poes).astype("float")  # old gridded hazard field was poorly named
+        _B = np.array(record_arrow.accel_levels).astype("float")
 
         diff = GridDiff(grid_id=grid_id, l_values=_A, r_values=_B)
 
@@ -150,7 +155,7 @@ def cli_diff(config, dataset):
             nans += 1
 
         if MAX_HITS and hits >= MAX_HITS:
-            click.echo(f'ABENDING after {misses} misses.')
+            click.echo(f"ABENDING after {misses} misses.")
             break
 
         # count += 1
@@ -158,20 +163,19 @@ def cli_diff(config, dataset):
         #     with open('grid_analysis.wip.json', 'w') as fp:
         #         json.dump(diagnostic.model_dump(), fp, indent=2)
 
-    with open('grid_analysis.json', 'w') as fp:
+    with open("grid_analysis.json", "w") as fp:
         json.dump(diagnostic.model_dump(), fp, indent=2)
 
-    click.echo(f'DONE, processed {count} grids, expected {total}. Diffs: {hits}, Nans: {nans}')
+    click.echo(f"DONE, processed {count} grids, expected {total}. Diffs: {hits}, Nans: {nans}")
 
 
-@main.command(name='report')
-@click.argument('GRID_DIFF_ANALYSIS_JSON', type=click.Path(exists=True))
+@main.command(name="report")
+@click.argument("GRID_DIFF_ANALYSIS_JSON", type=click.Path(exists=True))
 def cli_report(grid_diff_analysis_json):
     """Report on diff output to a jsonl file"""
 
-    with open("diff_analysis_flat.jsonl", 'w') as outfile:
-        with open(grid_diff_analysis_json, 'r') as jsonfile:
-
+    with open("diff_analysis_flat.jsonl", "w") as outfile:
+        with open(grid_diff_analysis_json, "r") as jsonfile:
             jsond = from_json(jsonfile.read())
             diag = GridDiffDiagnostic.model_validate(jsond)
             LIMIT = 0
@@ -190,7 +194,10 @@ def cli_report(grid_diff_analysis_json):
                     gid = GridIdentity.from_idx(grid_key)
                     diff = float(location_diff.l_value or 0) - float(location_diff.r_value or 0)
                     giddict = gid.model_dump() | dict(
-                        location_code=loc_code, error=diff, l_value=location_diff.l_value, r_value=location_diff.r_value
+                        location_code=loc_code,
+                        error=diff,
+                        l_value=location_diff.l_value,
+                        r_value=location_diff.r_value,
                     )
                     detail = LocationDiffDetail(**giddict)
                     outfile.write(detail.model_dump_json() + "\n")

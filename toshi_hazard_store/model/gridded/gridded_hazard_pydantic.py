@@ -21,7 +21,7 @@ class GriddedHazardPoeLevels(BaseModel):
 
     NB the validator methods on this model are 'rigorous and slow', for use when creating new model instances.
     If models that are being rehydrated from trusted source can use the pydantic use the `model_construct` method
-    to avoid the validatoin overhead.
+    to avoid the validation overhead.
 
     Attributes:
         compatible_calc_id: for hazard-calc equivalence.
@@ -33,7 +33,7 @@ class GriddedHazardPoeLevels(BaseModel):
         investigation_time: the time period (in years) for which the poe applies.
         poe: the Probability of Exceedance (poe) expressed as a normalized percentage (i.e 0 to 1.0).
         accel_levels: a list of floats representing the acceleration level in G at the given poe for each grid location.
-           This list must align with the locations in the given `location_grid_id`.
+            This list must align with the locations in the given `location_grid_id`.
     """
 
     compatible_calc_id: str

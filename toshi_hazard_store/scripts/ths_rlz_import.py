@@ -43,32 +43,34 @@ except ImportError:
 if HAVE_OQ:
     from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
     from toshi_hazard_store.oq_import.toshi_api_subtask import build_realisations
-    from toshi_hazard_store.oq_import.toshi_api_subtask import build_producers, generate_subtasks
+    from toshi_hazard_store.oq_import.toshi_api_subtask import (
+        build_producers,
+        generate_subtasks,
+    )
 
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.oq_import import toshi_api_client  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
-logging.getLogger('pynamodb').setLevel(logging.INFO)
-logging.getLogger('botocore').setLevel(logging.INFO)
-logging.getLogger('toshi_hazard_store').setLevel(logging.INFO)
+logging.getLogger("botocore").setLevel(logging.INFO)
+logging.getLogger("toshi_hazard_store").setLevel(logging.INFO)
 
 # logging.getLogger('nzshm_model').setLevel(logging.DEBUG)
-logging.getLogger('gql.transport').setLevel(logging.WARNING)
-logging.getLogger('urllib3').setLevel(logging.INFO)
-logging.getLogger('root').setLevel(logging.INFO)
+logging.getLogger("gql.transport").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.INFO)
+logging.getLogger("root").setLevel(logging.INFO)
 
 # for logging API query/reponses:
 # logging.getLogger('toshi_hazard_store.oq_import.toshi_api_client').setLevel(logging.DEBUG)
 # logging.getLogger('toshi_hazard_store.oq_import.toshi_api_subtask').setLevel(logging.DEBUG)
 log = logging.getLogger(__name__)
 
-API_URL = os.getenv('NZSHM22_TOSHI_API_URL', "http://127.0.0.1:5000/graphql")
-API_KEY = os.getenv('NZSHM22_TOSHI_API_KEY', "")
+API_URL = os.getenv("NZSHM22_TOSHI_API_URL", "http://127.0.0.1:5000/graphql")
+API_KEY = os.getenv("NZSHM22_TOSHI_API_KEY", "")
 S3_URL = None
 
 # DEPLOYMENT_STAGE = os.getenv('DEPLOYMENT_STAGE', 'LOCAL').upper()
-REGION = os.getenv('REGION', 'ap-southeast-2')  # SYDNEY
+REGION = os.getenv("REGION", "ap-southeast-2")  # SYDNEY
 
 chc_manager = CompatibleHazardCalculationManager(pathlib.Path(STORAGE_FOLDER))
 hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc_manager)
@@ -122,11 +124,11 @@ def store_hazard(
     chc_manager.load(compatible_calc_id)
 
     # sanity check the producer digest looks somewhat correct
-    if not ecr_digest[:7] == 'sha256:':
+    if not ecr_digest[:7] == "sha256:":
         raise ValueError(f"ecr_digest: `{ecr_digest}` doesn't look valid.")
 
     # calculate the openquake job configuration digest
-    jobconf = OpenquakeConfig.from_dict(json.load(open(config_path, 'r')))
+    jobconf = OpenquakeConfig.from_dict(json.load(open(config_path, "r")))
     config_digest = jobconf.compatible_hash_digest()
 
     model_generator = extract_classical_hdf5.rlzs_to_record_batch_reader(
@@ -140,7 +142,10 @@ def store_hazard(
 
     base_dir, filesystem = pyarrow_dataset.configure_output(output)
     pyarrow_dataset.append_models_to_dataset(
-        model_generator, base_dir=base_dir, partitioning=["calculation_id"], filesystem=filesystem
+        model_generator,
+        base_dir=base_dir,
+        partitioning=["calculation_id"],
+        filesystem=filesystem,
     )
 
 
@@ -159,17 +164,22 @@ def main():
 
 
 @main.command()
-@click.argument('gt_id')
-@click.argument('compatible_calc_fk')
-@click.option('-W', '--work_folder', default=lambda: os.getcwd(), help="defaults to current directory")
+@click.argument("gt_id")
+@click.argument("compatible_calc_fk")
 @click.option(
-    '--update',
-    '-U',
+    "-W",
+    "--work_folder",
+    default=lambda: os.getcwd(),
+    help="defaults to current directory",
+)
+@click.option(
+    "--update",
+    "-U",
     is_flag=True,
     default=False,
     help="overwrite existing producer record.",
 )
-@click.option('-v', '--verbose', is_flag=True, default=False)
+@click.option("-v", "--verbose", is_flag=True, default=False)
 def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
     r"""Prepare and validate Producer Configs a given GT_ID
 
@@ -185,11 +195,11 @@ def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
     gtapi = toshi_api_client.ApiClient(API_URL, None, with_schema_validation=False, headers=headers)
 
     if verbose:
-        click.echo('fetching General Task subtasks')
+        click.echo("fetching General Task subtasks")
 
     def get_hazard_task_ids(query_res):
-        for edge in query_res['children']['edges']:
-            yield edge['node']['child']['id']
+        for edge in query_res["children"]["edges"]:
+            yield edge["node"]["child"]["id"]
 
     # query the API for general task and
     query_res = gtapi.get_gt_subtasks(gt_id)
@@ -198,27 +208,37 @@ def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
 
     count = 0
     for subtask_info in generate_subtasks(
-        gt_id, gtapi, get_hazard_task_ids(query_res), work_folder, with_rlzs=False, verbose=verbose
+        gt_id,
+        gtapi,
+        get_hazard_task_ids(query_res),
+        work_folder,
+        with_rlzs=False,
+        verbose=verbose,
     ):
         count += 1
         build_producers(subtask_info, compatible_calc, verbose, update)
 
 
 @main.command()
-@click.argument('gt_id')
-@click.argument('compatible_calc_id')
-@click.option('-W', '--work_folder', default=lambda: os.getcwd(), help="defaults to current directory")
+@click.argument("gt_id")
+@click.argument("compatible_calc_id")
 @click.option(
-    '-O',
-    '--output',
+    "-W",
+    "--work_folder",
+    default=lambda: os.getcwd(),
+    help="defaults to current directory",
+)
+@click.option(
+    "-O",
+    "--output",
     help="local or S3 target",
 )
-@click.option('-v', '--verbose', is_flag=True, default=False)
-@click.option('-d', '--dry-run', is_flag=True, default=False)
-@click.option('-CID', '--partition-by-calc-id', is_flag=True, default=False)
-@click.option('-f64', '--use-64bit', is_flag=True, default=False)
-@click.option('-ff', '--skip-until-id', default=None)
-@click.option('--debug', is_flag=True, default=False, help="turn on debug logging")
+@click.option("-v", "--verbose", is_flag=True, default=False)
+@click.option("-d", "--dry-run", is_flag=True, default=False)
+@click.option("-CID", "--partition-by-calc-id", is_flag=True, default=False)
+@click.option("-f64", "--use-64bit", is_flag=True, default=False)
+@click.option("-ff", "--skip-until-id", default=None)
+@click.option("--debug", is_flag=True, default=False, help="turn on debug logging")
 def extract(
     gt_id,
     compatible_calc_id,
@@ -250,16 +270,16 @@ def extract(
     gtapi = toshi_api_client.ApiClient(API_URL, None, with_schema_validation=False, headers=headers)
 
     if debug:
-        logging.getLogger('toshi_hazard_store').setLevel(logging.DEBUG)
+        logging.getLogger("toshi_hazard_store").setLevel(logging.DEBUG)
 
     if verbose:
-        click.echo('fetching General Task subtasks')
+        click.echo("fetching General Task subtasks")
         if skip_until_id:
-            click.echo(f'skipping until task_id: {skip_until_id}')
+            click.echo(f"skipping until task_id: {skip_until_id}")
 
     def get_hazard_task_ids(query_res):
-        for edge in query_res['children']['edges']:
-            yield edge['node']['child']['id']
+        for edge in query_res["children"]["edges"]:
+            yield edge["node"]["child"]["id"]
 
     # query the API for general task and
     query_res = gtapi.get_gt_subtasks(gt_id)
@@ -274,14 +294,14 @@ def extract(
         skip_until_id=skip_until_id,
     ):
         if dry_run:
-            click.echo(f'DRY RUN. otherwise, would be processing subtask {count} {subtask_info} ')
+            click.echo(f"DRY RUN. otherwise, would be processing subtask {count} {subtask_info} ")
             continue
 
         # normal processing
         compatible_calc = chc_manager.load(compatible_calc_id)
 
         if verbose:
-            click.echo(f'Compatible calc: {compatible_calc.unique_id}')
+            click.echo(f"Compatible calc: {compatible_calc.unique_id}")
 
         build_realisations(
             subtask_info,
@@ -295,12 +315,12 @@ def extract(
 
 
 @main.command(name="store-hazard")
-@click.argument('hdf5_path')
-@click.argument('config_path')
-@click.argument('compatible_calc_id')
-@click.argument('hazard_calc_id')
-@click.argument('ecr_digest')
-@click.argument('output')
+@click.argument("hdf5_path")
+@click.argument("config_path")
+@click.argument("compatible_calc_id")
+@click.argument("hazard_calc_id")
+@click.argument("ecr_digest")
+@click.argument("output")
 def store_hazard_cli(
     hdf5_path,
     config_path,

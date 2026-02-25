@@ -1,95 +1,53 @@
-## CURRENT STATE
+# Hazard Curves
 
-These table models are used to store data created by GEMs **openquake** PSHA engine. Data is extracted from the HDF5 files created by openquake and stored with relevant metadata in the following tables.
+These models represent aggregated hazard curves derived from OpenQuake PSHA engine outputs.
 
-## Seismic Hazard Model diagram
+## Hazard Aggregate Curve
 
-**Tables:**
+The core model for aggregated hazard curve data, stored as PyArrow parquet datasets.
 
- - **ToshiOpenquakeMeta** - stores metadata from the job configuration and the openquake results.
+::: toshi_hazard_store.model.hazard_models_pydantic.HazardAggregateCurve
+    options:
+      show_source: true
+      members: false
+      attributes: true
 
-```mermaid
-classDiagram
-direction LR
+## PyArrow Schema
 
-class ToshiOpenquakeMeta {
-    partition_key = UnicodeAttribute(hash_key=True)  # a static value as we actually don't want to partition our data
-    hazsol_vs30_rk = UnicodeAttribute(range_key=True)
+The `HazardAggregateCurve` model can be converted to a PyArrow schema for dataset I/O:
 
-    created = TimestampAttribute(default=datetime_now)
-
-    hazard_solution_id = UnicodeAttribute()
-    general_task_id = UnicodeAttribute()
-    vs30 = NumberAttribute()  # vs30 value
-
-    imts = UnicodeSetAttribute()  # list of IMTs
-    locations_id = UnicodeAttribute()  # Location codes identifier (ENUM?)
-    source_ids = UnicodeSetAttribute()
-    source_tags = UnicodeSetAttribute()
-    inv_time = NumberAttribute()  # Invesigation time in years
-
-    src_lt = JSONAttribute()  # sources meta as DataFrame JSON
-    gsim_lt = JSONAttribute()  # gmpe meta as DataFrame JSON
-    rlz_lt = JSONAttribute()  # realization meta as DataFrame JSON
-}
+```python
+from toshi_hazard_store.model.hazard_models_pydantic import HazardAggregateCurve
+schema = HazardAggregateCurve.pyarrow_schema()
 ```
 
-**Tables:**
+The schema includes:
 
- - **OpenquakeRealization** -  stores the individual hazard realisation curves.
- - **HazardAggregation** - stores aggregate hazard curves from **OpenquakeRealization** curves.
+- `compatible_calc_id` (string) - Compatible calculation identifier
+- `hazard_model_id` (string) - Model identifier (e.g., "NSHM_v1.0.4")
+- `nloc_001` (string) - Location to 3 decimal places (e.g., "-38.330~17.550")
+- `nloc_0` (string) - Location to 0 decimal places (e.g., "-38.0~17.0") for partitioning
+- `imt` (string) - Intensity measure type (e.g., "PGA", "SA(5.0)")
+- `vs30` (int32) - VS30 value
+- `aggr` (string) - Aggregation type (e.g., "mean", "0.9", "std")
+- `values` (list of float32) - 44 IMT level values
 
-The base class **LocationIndexedModel** provides common attributes and indexing for models that support location-based indexing.
+## Constraint Enums
 
+These enumerations define valid values for model fields:
 
-```mermaid
-classDiagram
-direction TB
+### Aggregation Enum
 
-class LocationIndexedModel {
-    partition_key = UnicodeAttribute(hash_key=True)  # For this we will use a downsampled location to 1.0 degree
-    sort_key = UnicodeAttribute(range_key=True)
+::: toshi_hazard_store.model.constraints.AggregationEnum
 
-    nloc_001 = UnicodeAttribute()  # 0.001deg ~100m grid
-    nloc_01 = UnicodeAttribute()  # 0.01deg ~1km grid
-    nloc_1 = UnicodeAttribute()  # 0.1deg ~10km grid
-    nloc_0 = UnicodeAttribute()  # 1.0deg ~100km grid
+### Intensity Measure Type Enum
 
-    version = VersionAttribute()
-    uniq_id = UnicodeAttribute()
+::: toshi_hazard_store.model.constraints.IntensityMeasureTypeEnum
 
-    lat = FloatAttribute()  # latitude decimal degrees
-    lon = FloatAttribute()  # longitude decimal degrees
-    
-    vs30 = EnumConstrainedIntegerAttribute(VS30Enum)
-    site_vs30 = FloatAttribute(null=True)
+### VS30 Enum
 
-    created = TimestampAttribute(default=datetime_now)
+::: toshi_hazard_store.model.constraints.VS30Enum
 
-}
+### Probability Enum
 
-class OpenquakeRealization {
-    ... fields from LocationIndexedModel
-    hazard_solution_id = UnicodeAttribute()
-    source_tags = UnicodeSetAttribute()
-    source_ids = UnicodeSetAttribute()
-
-    rlz = IntegerAttribute()  # index of the openquake realization
-    values = ListAttribute(of=IMTValuesAttribute)
-}
-
-class HazardAggregation {
-    ... fields from LocationIndexedModel
-    hazard_model_id = UnicodeAttribute() e.g. `NSHM_V1.0.4``
-    imt = EnumConstrainedUnicodeAttribute(IntensityMeasureTypeEnum)
-    agg = EnumConstrainedUnicodeAttribute(AggregationEnum)
-    values = ListAttribute(of=LevelValuePairAttribute)    
-}
-
-
-ToshiOpenquakeMeta --> "0..*"  OpenquakeRealization
-HazardAggregation --> "1..*" OpenquakeRealization
-LocationIndexedModel <|-- OpenquakeRealization
-LocationIndexedModel <|-- HazardAggregation
-
-```
+::: toshi_hazard_store.model.constraints.ProbabilityEnum

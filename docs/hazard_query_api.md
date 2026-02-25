@@ -1,1 +1,0 @@
-::: toshi_hazard_store.query.hazard_query

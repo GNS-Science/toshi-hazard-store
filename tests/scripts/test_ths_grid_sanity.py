@@ -11,7 +11,7 @@ def test_cli_help():
     result = runner.invoke(ths_grid_sanity.main, ["--help"])
     assert result.exit_code == 0
     assert "Usage" in result.output
-    assert "Console script comparing DynamoDB grids" in result.output
+    assert "Console script comparing Dataset grids" in result.output
 
 
 def test_cli_diff_help():

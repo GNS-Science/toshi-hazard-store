@@ -16,7 +16,7 @@ def downsample_code(loc_code, res) -> str:
 
     Args:
         loc_code (str): The location code in format 'latitude~longitude'.
-        resolution (int): Resolution in grid degrees to downsample to.
+        res (int): Resolution in grid degrees to downsample to.
 
     Returns:
         str: The downsampled location code.
@@ -25,7 +25,7 @@ def downsample_code(loc_code, res) -> str:
         >>> downsample_code('37.7749~-122.4194', 0.1)
         '37.8~-122.4'
     """
-    lt = loc_code.split('~')
+    lt = loc_code.split("~")
     assert len(lt) == 2
     return CodedLocation(lat=float(lt[0]), lon=float(lt[1]), resolution=res).code
 
@@ -42,7 +42,7 @@ def get_hashes(locs: Iterable[str], resolution: float = 0.1) -> Iterable[str]:
     """
     hashes = set()
     for loc in locs:
-        lt = loc.split('~')
+        lt = loc.split("~")
         assert len(lt) == 2
         hashes.add(downsample_code(loc, resolution))
     return sorted(list(hashes))

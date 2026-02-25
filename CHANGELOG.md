@@ -1,5 +1,73 @@
 # Changelog
 
+## [1.4.2] 2026-02-25
+
+### Added
+- Documentation for PyArrow parquet-based query API:
+  - New `docs/api/query/index.md` with query function overview
+  - Added docs for constraint enums (`AggregationEnum`, `IntensityMeasureTypeEnum`, `VS30Enum`, `ProbabilityEnum`)
+
+### Changed
+- **Breaking change in documentation**: Replaced outdated DynamoDB-era docs with current PyArrow parquet API:
+  - Rewrote `docs/usage.md` with current `get_hazard_curves()` and `get_gridded_hazard()` examples
+  - Rewrote `docs/configuration.md` to reflect current environment variables (`THS_DATASET_AGGR_URI`, etc.)
+  - Rewrote domain model pages to use mkdocstrings auto-generated docs from pydantic models:
+    - `docs/domain_model/openquake_models.md` → now documents `HazardAggregateCurve`
+    - `docs/domain_model/hazard_metadata.md` (renamed from `proposed_hazard_models.md`) → documents `CompatibleHazardCalculation`, `HazardCurveProducerConfig`
+    - `docs/domain_model/gridded_hazard_models.md` → documents `GriddedHazardPoeLevels`
+  - Updated `docs/cli/hazard_dataset_overview.md` and `docs/cli/aggregation_cli_workflow.md` (renamed from `usage.md`)
+  - Added mkdocstrings options for consistency in model documentation
+  - Fixed typo in `HazardCurveProducerConfig` docstring ("reproducablity" → "reproducibility")
+
+### Fixed
+- Added missing attributes section to `HazardCurveProducerConfig` docstring
+- Fixed cookiecutter placeholder URLs in `docs/installation.md`
+- Fixed various typos in documentation files
+- Added empty line before markdown lists (required for mkdocs parsing)
+- Added documentation conventions to `CLAUDE.md`
+
+### Removed
+- Removed commented-out nav entry `# - Parquet: TODO.md` from `mkdocs.yml`
+- Removed `.DS_Store` files from docs directory
+
+## [1.4.1] 2026-02-24
+
+### Removed
+- **Complete removal of DynamoDB/PynamoDB dependencies**:
+  - Removed `pynamodb` and `pynamodb-attributes` from dependencies in `pyproject.toml`
+  - Deleted `toshi_hazard_store/pynamodb_settings.py` (PynamoDB configuration)
+  - Deleted entire `toshi_hazard_store/model/attributes/` module (4 files):
+    - `__init__.py`, `attributes.py`, `enum_attribute.py`, `enum_constrained_attribute.py`
+  - Deleted test files that tested only PynamoDB/DynamoDB functionality:
+    - `tests/test_attributes.py`
+    - `tests/gridded_hazard/features/test_main_features.py`
+- Removed pynamodb-specific logging from `ths_rlz_import.py` and `ths_grid_build.py`
+
+### Changed
+- Updated docstrings and documentation to remove DynamoDB references:
+  - `ths_grid_sanity.py`: Updated module and function docstrings
+  - `ths_agg_backup.py`: Updated comment on legacy S3 path
+  - `README.md`: Removed deprecated DynamoDB feature line
+  - `LICENSE`: Updated description to reference parquet datasets instead of DynamoDB
+  - `docs/configuration.md`: Removed AWS DynamoDB references
+  - `docs/cli/index.md` and `docs/cli/usage.md`: Updated migration workflow descriptions
+  - `tests/query/test_hazard_curve_migration.py`: Updated docstring and comments
+  - `tests/scripts/test_ths_grid_sanity.py`: Updated test assertion text
+
+### Fixed
+- Made `nzshm_model` imports lazy in `parse_oq_realizations.py` to prevent AWS secret
+  fetching at module import time (was causing test failures without AWS credentials)
+- Added global AWS mocking in `tests/conftest.py` using `pytest_configure()` hook:
+  - Mocks AWS Secrets Manager with dummy secrets for `nzshm_model` dependency
+  - Ensures tests never use real AWS services, even when credentials are present
+  - Prevents `AttributeError: 'NoneType' object has no attribute 'get'` when AWS
+    secrets cannot be fetched
+
+### Notes
+- This release completes the migration away from DynamoDB started in v1.4.0
+- The codebase now exclusively uses pyarrow datasets for all hazard data storage
+- Historical migration documentation in `docs/migration/` is preserved for reference
+
 ## [1.4.0] 2026-02-24
 ### Added
 - `dataset_uri` parameter to `get_hazard_curves` and all query strategy functions, allowing
@@ -8,6 +76,14 @@
 - Comprehensive test coverage for `get_gridded_hazard` function with 6 new tests
 - New test module `tests/query/test_gridded_hazard_query.py`
 - Comprehensive test coverage for all CLI scripts (26 new tests)
+- **Hoisted query module exports**: `toshi_hazard_store.query` now provides unified access to:
+  - Main query functions: `get_hazard_curves`, `get_gridded_hazard`
+  - Data models: `AggregatedHazard`, `IMTValue`
+  - Location utilities: `downsample_code`, `get_hashes`
+  - Dataset cache accessors: `get_dataset`, `get_gridded_dataset`, `get_dataset_vs30`, `get_dataset_vs30_nloc0`
+  - Config constants: `DATASET_AGGR_URI`, `DATASET_GRIDDED_URI`
+- New comprehensive API documentation at `docs/api/query/index.md` with usage examples
+- `__all__` export list in `query/__init__.py` for clean public API
 
 ### Changed
 - Renamed CLI scripts for clearer naming conventions:
@@ -25,6 +101,8 @@
   - `query_strategies.py` - Different query strategies (205 lines)
   - `datasets.py` - Main query interface (115 lines, reduced from 529)
 - Updated all imports and references to use new module structure
+- **Simplified query imports**: All code now uses `from toshi_hazard_store import query`
+  pattern instead of deep submodule imports (`query.datasets`, `query.models`, etc.)
 - Removed all unused imports from script test files
 - Updated API documentation to remove references to removed modules
 
@@ -40,6 +118,13 @@
 ### Fixed
 - MkDocs build error caused by references to removed `gridded_hazard_query` module
 - All documentation now builds successfully
+- **Enabled skipped grid tests**: `test_build_and_roundtrip_gridded_dataset` in 
+  `tests/model/test_hazard_grid_models.py` was failing due to incorrect import 
+  (`datasets` vs `dataset_cache`) and improper `RegionGrid` mocking. Fixed by:
+  - Correcting import to use `dataset_cache` module
+  - Fixing monkeypatch target to patch at `dataset_cache.DATASET_AGGR_URI`
+  - Properly mocking `RegionGrid` Enum with `__getitem__` return value
+  - Converting `CodedLocation` objects to `(lat, lon)` tuples for mock
 
 ## [1.4.0-next-release] 2026-01
 ### Added

@@ -1,75 +1,69 @@
 # Configuration
 
+The toshi_hazard_store library uses PyArrow parquet datasets for storing and retrieving hazard data.
 
-The toshi_hazard_store project was originally designed to support the AWS Dynamodb database service. It now provides an option
-to use a local sqlite3 store as an alternative.
+Run-time options are configured using environment variables, and/or a local `.env` (dotenv) file. See [python-dotenv](https://github.com/theskumar/python-dotenv).
 
- Caveats for local storage:
+The `.env` file should be created in the folder from where the Python interpreter is invoked - typically the root folder of your project.
 
- - a complete model (e.g. the NSHM_v1.0.4 dataset) will likely prove too large for this option.
- - this is a single-user solution.
- - we provide no way to migrate data between storage backends (although in principle this should be relatively easy)
+## Dataset Configuration
 
+The library requires at least one dataset to be configured:
 
-Run-time options let you configure the library for your use-case. Settings are made using environment variables, and/or a local `.env` (dotenv) file see [python-dotenv](https://github.com/theskumar/python-dotenv).
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `THS_DATASET_AGGR_URI` | (none) | URI for aggregated hazard curves dataset (e.g., `s3://bucket/path` or `/local/path`) |
+| `THS_DATASET_GRIDDED_URI` | (none) | URI for gridded hazard dataset (optional) |
+| `THS_DATASET_AGGR_ENABLED` | `FALSE` | Set to `TRUE` to enable aggregated dataset features |
 
-The '.env' file should be created in the folder from where the python interpreter is invoked - typically the root folder of your project.
+For public NSHM data access, contact nshm@gns.cri.nz for credentials.
 
+## General Settings
 
-### General settings
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `NZSHM22_HAZARD_STORE_STAGE` | `LOCAL` | Deployment stage discriminator (e.g., `TEST`, `PROD`) |
+| `NZSHM22_HAZARD_STORE_NUM_WORKERS` | `1` | Number of parallel workers for batch operations |
+| `NZSHM22_HAZARD_STORE_REGION` | `us-east-1` | AWS region |
 
-|         | Default | Description | for Cloud | for Local |
-|---------|---------|-------------|-----------|-----------|
-| **NZSHM22_HAZARD_STORE_STAGE**        | None | descriminator for table names | Required | Required |
-| **NZSHM22_HAZARD_STORE_NUM_WORKERS**  | 1 | number of parallel workers for batch operations | Optional integer | NA (single worker only) |
-| **THS_USE_SQLITE_ADAPTER**            | FALSE | use local (sqlite) storage? | NA | TRUE |
+## Cloud Settings (AWS)
 
+If accessing NSHM data from AWS:
 
-### Cloud settings
+| Environment Variable | Description |
+|---------------------|-------------|
+| `AWS_PROFILE` | Name of your AWS credentials profile |
+| `AWS_ACCESS_KEY_ID` | AWS access key (for short-term credentials) |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key |
+| `AWS_SESSION_TOKEN` | Session token (required for short-term credentials) |
 
-The NZSHM toshi-hazard-store database is available for public, read-only access using AWS API credentials (contact via email: nshm@gns.cri.nz).
+For short-term credentials, see [AWS documentation](https://docs.aws.amazon.com/cli/v1/userguide/cli-authentication-short-term.html).
 
-  - AWS credentials will be provided with so-called `short-term credentials` in the form of an `awx_access_key_id` and and `aws_access_key_secret`.
+## Example .env File
 
-  - Typically these are configured in your local credentials file as described in [Authenticate with short-term credentials](https://docs.aws.amazon.com/cli/v1/userguide/cli-authentication-short-term.html).
+```bash
+# Dataset configuration (required)
+THS_DATASET_AGGR_URI=s3://your-bucket/path/to/hazard-curves
+THS_DATASET_GRIDDED_URI=s3://your-bucket/path/to/gridded-hazard
+THS_DATASET_AGGR_ENABLED=TRUE
 
-  - An `AWS_PROFILE` environment variable determines the credentials used at run-time by THS.
-
-
-|         | Default | Description | for Cloud | for Local |
-|---------|---------|-------------|-----------|-----------|
-| **AWS_PROFILE**                       | None | Name of your AWS credentials | Required | N/A |
-| **NZSHM22_HAZARD_STORE_REGION**       | None | AWS regaion e.g us-east-1 | Required | N/A |
-| **NZSHM22_HAZARD_STORE_LOCAL_CACHE**  | None | folder for local cache  | Optional (leave unset to disable caching)| N/A |
-
-
-
-### Local (off-cloud) settings
-
-|         | Default | Description | for Cloud | for Local |
-|---------|---------|-------------|-----------|-----------|
-| **THS_SQLITE_FOLDER** | None | folder for local storage | N/A | Required
-
-
-## Example .env file
-
-```
-# GENERAL settings
+# General settings
 NZSHM22_HAZARD_STORE_STAGE=TEST
 NZSHM22_HAZARD_STORE_NUM_WORKERS=4
+NZSHM22_HAZARD_STORE_REGION=us-east-1
 
-# IMPORTANT !!
-THS_USE_SQLITE_ADAPTER=TRUE
-
-# CLOUD settings
-AWS_PROFILE={YOUR AWS PROFILE}
-NZSHM22_HAZARD_STORE_REGION={us-east-1)
-
-# LOCAL Caching (Optional, cloud only)
-NZSHM22_HAZARD_STORE_LOCAL_CACHE=/home/chrisbc/.cache/toshi_hazard_store
-
-# LOCAL Storage settings
-THS_SQLITE_FOLDER=/GNSDATA/LIB/toshi-hazard-store/LOCALSTORAGE
+# AWS credentials (if using cloud storage)
+AWS_PROFILE=your-profile-name
 ```
 
-These settings can be overridden by specifiying values in the local environment.
+## Dataset URIs
+
+The library supports various URI formats:
+
+- **Local path**: `/path/to/local/dataset`
+- **S3**: `s3://bucket/path/to/dataset`
+- **Other PyArrow-compatible filesystems** supported by `pyarrow.dataset`
+
+Datasets should be organized as PyArrow partitioned datasets with the following partitioning:
+- Aggregated curves: `vs30` and/or `vs30/nloc_0`
+- Gridded hazard: Standard partitioning

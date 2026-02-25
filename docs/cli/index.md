@@ -11,14 +11,14 @@ For hazard calculations:
  - `ths_rlz_import rlzs` to extract openquake hazard curves as a parquet dataset.
  - `ths_rlz_sanity count_rlzs` to count realisations in a parquet dataset.
 
-See [cli usage](./usage.md) for a detailed example of the above.
+See [Aggregation CLI workflow](./aggregation_cli_workflow.md) for a detailed example of the above.
 
 ## Migration workflow
 
 For migrating from older NSHM_v1.0.* calcuations
 we use the same [Import workflow (see above) ](#import-workflow), then:
 
-  - `ths_rlz_sanity random_rlz_new` to compare random hazard curves in AWS DynamodDB with new datasets
+  - `ths_rlz_sanity random_rlz_new` to compare random hazard curves with new datasets
 
 ## Utilities:
 
@@ -30,4 +30,4 @@ we use the same [Import workflow (see above) ](#import-workflow), then:
 
 ## History
 
-About the the old (DynamoDB/Caching/Localstorage) ways.
+About the legacy storage systems.
