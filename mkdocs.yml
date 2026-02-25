@@ -31,13 +31,7 @@ nav:
       - ths_rlz_import: cli/ths_rlz_import.md
       - ths_rlz_sanity: cli/ths_rlz_sanity.md
   - API:
-    - api/index.md
-    - Hazard query: hazard_query_api.md
-    - query:
-      - Overview: api/query/index.md
-      - datasets: api/query/datasets.md
-    - oq_import:
-      - oq config: api/oq_import/oq_config.md
+      - query API: api/query/index.md
   - Datasets:
     - Legacy Migrations:
       - Hazard dataset May-2024: migration/hazard_import_processing-may-2024.md
@@ -110,7 +104,9 @@ plugins:
       handlers:
         python:
           options:
-            show_submodules: true
+            show_submodules: false
+            show_root_toc_entry: false
+            heading_level: 3
 
 extra:
   social:

@@ -31,6 +31,7 @@ def get_hazard_curves(
     Retrieves aggregated hazard curves from the dataset.
 
     The optional `strategy` argument can be used to control how the query behaves:
+
      - 'naive' (the default) lets pyarrow do its normal thing.
      - 'd1' assumes the dataset is partitioned on `vs30`, generating multiple pyarrow queries from the user args.
      - 'd2' assumes the dataset is partitioned on `vs30, nloc_0` and acts accordingly.
