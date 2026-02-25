@@ -11,7 +11,7 @@ For hazard calculations:
  - `ths_rlz_import rlzs` to extract openquake hazard curves as a parquet dataset.
  - `ths_rlz_sanity count_rlzs` to count realisations in a parquet dataset.
 
-See [cli usage](./usage.md) for a detailed example of the above.
+See [Aggregation CLI workflow](./aggregation_cli_workflow.md) for a detailed example of the above.
 
 ## Migration workflow
 
