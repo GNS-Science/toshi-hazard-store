@@ -26,7 +26,7 @@ packages = [
 ]
 dependencies = [
     "geopandas (>=1.1.2)",
-    "lancedb (>=0.27.1)",
+    "lancedb (>=0.27.1, <0.30.0)",
     "matplotlib (>=3.10.8)",
     "nshm-toshi-client (>=1.0.1)",
     "numpy (>=1.24)",
