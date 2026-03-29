@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.4.3] 2026-03-30
+
+### Changed
+ - Restricted `lancedb` to <0.30
+
 ## [1.4.2] 2026-02-25
 
 ### Added

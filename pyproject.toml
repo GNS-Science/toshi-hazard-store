@@ -1,6 +1,6 @@
 [project]
 name = "toshi-hazard-store"
-version = "1.4.2"
+version = "1.4.3"
 
 homepage = "https://github.com/GNS-Science/toshi-hazard-store"
 description = "Library for saving and retrieving NZHSM openquake hazard results with convenience (uses pyarrow with parquet format)."
@@ -26,7 +26,7 @@ packages = [
 ]
 dependencies = [
     "geopandas (>=1.1.2)",
-    "lancedb (>=0.27.1)",
+    "lancedb (>=0.27.1, <0.30.0)",
     "matplotlib (>=3.10.8)",
     "nshm-toshi-client (>=1.0.1)",
     "numpy (>=1.24)",
