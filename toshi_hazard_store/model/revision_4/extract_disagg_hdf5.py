@@ -262,7 +262,6 @@ csvfile = WORKING / 'openquake_csv_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTI2MTg2'
 import random
 
 if __name__ == '__main__':
-
     """
     disagg = pathlib.Path('/GNSDATA/LIB/toshi-hazard-store/WORKING/DISAGG')
     bad_file_1 = disagg / 'calc_1.hdf5'

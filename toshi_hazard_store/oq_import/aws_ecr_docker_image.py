@@ -94,7 +94,6 @@ def process_repo_images(ecr_client, reponame, since: Optional[datetime] = None):
 
 
 class ECRRepoStash:
-
     def __init__(self, reponame, oldest_image_date: datetime, ecr_client=None):
         self._client = ecr_client or boto3.client('ecr', config=aws_config)
         self._reponame = reponame

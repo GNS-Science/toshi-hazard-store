@@ -1,161 +1,130 @@
-# CLAUDE.md - Project Context for AI Assistants
+# CLAUDE.md
 
-This file provides project-specific context for AI assistants (Claude Code, opencode, etc.) working on this codebase.
-
-## Project Overview
-
-- **Name**: toshi-hazard-store
-- **Type**: Python library (PyPI package)
-- **Description**: Library for saving and retrieving NZHSM openquake hazard results using pyarrow with parquet format
-- **Python**: Requires Python >=3.10, <4.0
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Development Commands
 
 ### Testing
 ```bash
-# Run all tests (requires AWS mocking via conftest.py)
-poetry run pytest
-
-# Run specific test file
-poetry run pytest tests/oq_import/test_extract_classical_hdf5.py
-
-# Run with different (unprivileged) AWS profile (should still pass due to mocking)
-AWS_PROFILE=default poetry run pytest
+uv run pytest                                                    # all tests
+uv run pytest tests/oq_import/test_extract_classical_hdf5.py   # single file
+uv run pytest -k "test_name"                                     # single test by name
 ```
 
 ### Format & Lint
 ```bash
-# Run format and lint checks
-poetry run tox -e format,lint
-
-# Run individually
-poetry run tox -e format   # isort + black
-poetry run tox -e lint     # flake8 + mypy
+uv run tox -e format,lint   # ruff format + ruff check + mypy
+uv run tox -e format        # ruff format + ruff check --fix (imports) only
+uv run tox -e lint          # ruff check + mypy only
 ```
 
-### Version Bumping
+### Build & Release
 ```bash
-# Bump version (updates pyproject.toml, __init__.py, creates git tag)
-bump2version patch  # 1.4.0 -> 1.4.1
-bump2version minor  # 1.4.0 -> 1.5.0
-bump2version major  # 1.4.0 -> 2.0.0
+uv build
+bump2version patch   # updates pyproject.toml, __init__.py, creates git tag
+git push && git push --tags   # triggers PyPI publish via GitHub Actions
 ```
 
-### Other Development
-```bash
-# Install dependencies
-poetry install
+## Architecture
 
-# Sync dependencies 
-poetry sync
+### Layers
 
-# Run specific tox environment
-poetry run tox -e py311  # Test with Python 3.11
-
-# Build package
-poetry build
 ```
+toshi_hazard_store/
+├── query/          ← Public API: get_hazard_curves(), get_gridded_hazard()
+├── model/          ← Pydantic models, PyArrow schemas, storage I/O
+│   └── pyarrow/    ← Dataset read/write (local + S3)
+├── gridded_hazard/ ← Compute gridded hazard from aggregated curves
+├── oq_import/      ← Extract OpenQuake HDF5 → parquet (import pipeline)
+└── scripts/        ← Click CLI entry points (ths_rlz_import, ths_grid_build, …)
+```
+
+### Query Module (`query/`)
+
+The only public API. Three query strategies in `query_strategies.py` differ in how they partition PyArrow dataset reads — functionally equivalent, but performance varies with dataset size:
+
+- **`naive`** — single filter across the whole dataset
+- **`d1`** — iterates per-vs30 partition (good for mid-size data)
+- **`d2`** — iterates per-vs30 then per-nloc_0 partition (best for large NSHM datasets / AWS Lambda)
+
+`dataset_cache.py` wraps dataset accessors with `@lru_cache`; cache sizes are tuned (maxsize=1 for full dataset, maxsize=32 for vs30+nloc_0 partitions).
+
+Dataset URIs come from env vars `THS_DATASET_AGGR_URI` and `THS_DATASET_GRIDDED_URI`.
+
+### Parquet Storage Layout
+
+Datasets use Hive-style partitioning:
+
+```
+<dataset_root>/
+├── vs30=250/
+│   └── nloc_0=-38.0/
+│       └── <uuid>-part-0.parquet
+└── vs30=400/
+    └── nloc_0=-37.0/
+        └── <uuid>-part-0.parquet
+```
+
+Schemas are generated dynamically from Pydantic models via `lancedb.pydantic.pydantic_to_schema()`. All hazard curves have **exactly 44 values** (validated by Pydantic).
+
+Write path: `model/pyarrow/pyarrow_dataset.py::append_models_to_dataset()`.
+
+### Location Codes
+
+Locations are string codes in `"lat~lon"` format (e.g. `"-38.330~17.550"`) at three resolutions:
+
+| Field | Resolution | Purpose |
+|-------|-----------|---------|
+| `nloc_001` | 0.001° | Exact query filtering |
+| `nloc_0` | 1.0° | Hive partition key |
+| (intermediate) | 0.1° | Secondary spatial filtering |
+
+Use `CodedLocation` from `nzshm-common` to generate these codes via `.resample(resolution)`.
+
+### Key Non-Obvious Patterns
+
+**Performance reads**: `GriddedHazardPoeLevels.model_construct()` skips Pydantic validators when loading from trusted parquet data. Use the regular constructor only for user input.
+
+**Lazy AWS imports**: `oq_import/parse_oq_realizations.py` defers `nzshm_model` imports (which call AWS Secrets Manager) until first use via an `@lru_cache` wrapper. This prevents test failures before mocking is set up.
+
+**Dictionary arrays**: HDF5 extraction uses `pa.DictionaryArray` for low-cardinality columns (`imt`, `rlz`, digest fields) to compress data dramatically.
+
+**Reproducibility fields**: Each curve record stores `compatible_calc_id`, `producer_digest` (Docker SHA256), and `config_digest` (OQ job config hash) for traceability.
 
 ## Code Conventions
 
-### Style
 - **Formatter**: black (line-length 120)
 - **Import sorting**: isort (multi_line_output=3, force_grid_wrap=0)
-- **Linting**: flake8
-- **Type checking**: mypy
-
-### Key Patterns
-- Use `from toshi_hazard_store import query` for query module access
-- All public APIs should have type hints
-- Docstrings for public functions (Google style)
-- Tests live in `tests/` mirror the source structure
+- **Linting**: flake8 + mypy
+- **Docstrings**: Google style for public functions
 
 ## Testing Requirements
 
 ### AWS Mocking
-The project uses `moto` for AWS service mocking. A global mock is set up in `tests/conftest.py` via `pytest_configure()` hook:
 
-- Mocks AWS Secrets Manager with dummy secrets for `nzshm_model` dependency
-- Tests should NEVER make real AWS calls
-- Secrets created:
-  - `NZSHM22_TOSHI_API_SECRET_PROD`
-  - `NZSHM22_TOSHI_API_SECRET_TEST`
+`tests/conftest.py::pytest_configure()` starts the `moto` mock BEFORE test collection to intercept all AWS calls. It creates fake Secrets Manager secrets for `nzshm_model`:
 
-## Important Files
+- `NZSHM22_TOSHI_API_SECRET_PROD`
+- `NZSHM22_TOSHI_API_SECRET_TEST`
 
-- `pyproject.toml` - Project configuration, dependencies, entry points
-- `CHANGELOG.md` - Release notes (follows Keep a Changelog format)
-- `LICENSE` - AGPL-3.0-or-later
-- `tests/conftest.py` - Global test configuration including AWS mocking
-- `toshi_hazard_store/__init__.py` - Version (`__version__`) and public exports
-- `toshi_hazard_store/query/` - Main query API module
+Any new dependency that calls AWS at import time must be accounted for here.
 
 ## Release Process
 
-1. Make changes and ensure tests pass
-2. Run `poetry run tox -e format,lint` - must pass
-3. Update CHANGELOG.md with version header (e.g., `## [1.4.1] 2026-02-24`)
-4. Run `bump2version patch` (or minor/major as appropriate) - **MANUAL**
-5. Push changes and tag: `git push && git push --tags` - **MANUAL**
-6. GitHub workflow automatically builds and publishes to PyPI - **AUTOMATED**
-
-## Dependency Notes
-
-### Key Dependencies
-- **pyarrow**: Data storage format (parquet datasets)
-- **pandas**: Data manipulation
-- **pydantic**: Data validation
-- **nzshm-model**: NZSHM-specific models and logic
-- **moto**: AWS mocking for tests (in dev dependencies)
-
-## Architecture
-
-### Query Module
-The `toshi_hazard_store.query` module provides unified access to:
-- `get_hazard_curves()` - Main hazard curve query function
-- `get_gridded_hazard()` - Gridded hazard query function
-- Data models: `AggregatedHazard`, `IMTValue`
-- Dataset utilities: `get_dataset()`, `get_dataset_vs30()`, etc.
-- Constants: `DATASET_AGGR_URI`, `DATASET_GRIDDED_URI`
-
-### Storage
-- **Primary**: PyArrow datasets (parquet format)
-- **Previously**: DynamoDB (deprecated, removed in v1.4.1), SQLLite (long ago)
-
-## Common Tasks
-
-### Adding a new CLI script
-1. Create module in `toshi_hazard_store/scripts/`
-2. Add entry point in `pyproject.toml` `[project.scripts]`
-3. Add tests in `tests/scripts/`
-4. Document in `docs/cli/`
-
-### Adding new query functionality
-1. Add to `toshi_hazard_store/query/query_strategies.py`
-2. Export from `toshi_hazard_store/query/__init__.py`
-3. Add tests in `tests/query/`
-4. Update docs in `docs/api/query/`
+1. Ensure tests pass and `poetry run tox -e format,lint` passes
+2. Update `CHANGELOG.md` with version header (e.g. `## [1.4.1] 2026-02-24`)
+3. `bump2version patch` (or `minor`/`major`) — commits + tags automatically
+4. `git push && git push --tags` — GitHub Actions publishes to PyPI
 
 ## Documentation Conventions
 
-### MkDocs List Formatting
-MkDocs requires an **empty line before lists** for them to be recognized as list elements. Without the empty line, the markdown parser may not render them correctly.
+### MkDocs Lists
 
-```markdown
-# Correct (empty line before list)
-Here is a description:
+Always include an **empty line before lists** — the markdown parser silently ignores lists without one.
 
-- item 1
-- item 2
+### Pydantic Model Docs
 
-# Incorrect (no empty line - won't render as list)
-Here is a description:
-- item 1
-- item 2
-```
-
-### Pydantic Model Documentation
-When documenting Pydantic model classes in markdown using mkdocstrings, use these options for consistency:
+Use this pattern for all models in `docs/domain_model/`:
 
 ```yaml
 ::: toshi_hazard_store.model.hazard_models_pydantic.HazardAggregateCurve
@@ -164,5 +133,3 @@ When documenting Pydantic model classes in markdown using mkdocstrings, use thes
       members: false
       attributes: true
 ```
-
-This pattern should be used for all pydantic model documentation in `docs/domain_model/`.

@@ -142,7 +142,6 @@ def report_rlzs_grouped_by_partition(source: str, verbose, bail_on_error=True) -
 
     count_all = 0
     for filter in gen_filter(dataset):
-
         df0 = dataset.to_table(filter=filter).to_pandas()
         unique_srcs_gmms = unique_permutations_series(df0.gmms_digest, df0.sources_digest)
 

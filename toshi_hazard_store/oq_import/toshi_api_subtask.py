@@ -19,9 +19,11 @@ from toshi_hazard_store.model.hazard_models_pydantic import (  # noqa
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
 from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
 
-from . import aws_ecr_docker_image as aws_ecr
-from . import toshi_api_client  # noqa: E402
-from . import oq_config
+from . import (
+    aws_ecr_docker_image as aws_ecr,
+    oq_config,
+    toshi_api_client,  # noqa: E402
+)
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +79,7 @@ def build_producers(
     else:
         hpc_manager.create(hpc)
         if verbose:
-            click.echo(f"{hpc.unique_id} has foreign key " f" {hpc.compatible_calc_fk}" f" {hpc.updated_at})")
+            click.echo(f"{hpc.unique_id} has foreign key  {hpc.compatible_calc_fk} {hpc.updated_at})")
 
 
 def build_realisations(
@@ -167,7 +169,6 @@ def generate_subtasks(
     skipping = True if skip_until_id else False
 
     for task_id in subtask_ids:
-
         # completed already
         # if task_id in ['T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDE3', 'T3BlbnF1YWtlSGF6YXJkVGFzazoxMzI4NDI3']:
         #     continue

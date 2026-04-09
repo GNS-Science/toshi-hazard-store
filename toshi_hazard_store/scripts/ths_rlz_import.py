@@ -42,9 +42,9 @@ except ImportError:
 
 if HAVE_OQ:
     from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
-    from toshi_hazard_store.oq_import.toshi_api_subtask import build_realisations
     from toshi_hazard_store.oq_import.toshi_api_subtask import (
         build_producers,
+        build_realisations,
         generate_subtasks,
     )
 

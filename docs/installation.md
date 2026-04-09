@@ -11,10 +11,10 @@ terminal:
 $ pip install toshi-hazard-store
 ```
 
-### using  poetry
+### using  uv
 
 ``` console
-$ poetry add toshi-hazard-store
+$ uv add toshi-hazard-store
 ```
 
 These are the preferred method to install toshi-hazard-store, as they will always install the most recent stable release.

@@ -55,11 +55,11 @@ Ready to contribute? Here's how to set up `toshi-hazard-store` for local develop
     $ git clone git@github.com:your_name_here/toshi-hazard-store.git
     ```
 
-3. Ensure [poetry](https://python-poetry.org/docs/) is installed.
-4. Install dependencies and start your virtualenv:
+3. Ensure [uv](https://docs.astral.sh/uv/) is installed.
+4. Install dependencies:
 
     ```
-    $ poetry install -E test -E doc -E dev
+    $ uv sync --group dev
     ```
 
 5. Create a branch for local development:
@@ -74,7 +74,7 @@ Ready to contribute? Here's how to set up `toshi-hazard-store` for local develop
    tests, including testing other Python versions, with tox:
 
     ```
-    $ poetry run tox
+    $ uv run tox
     ```
 
 7. Commit your changes and push your branch to GitHub:
@@ -102,7 +102,7 @@ Before you submit a pull request, check that it meets these guidelines:
 ## Tips
 
 ```
-$ poetry run pytest tests/test_toshi_hazard_store.py
+$ uv run pytest tests/test_toshi_hazard_store.py
 ```
 
 To run a subset of tests.
@@ -115,7 +115,7 @@ Make sure all your changes are committed (including an entry in CHANGELOG.md).
 Then run:
 
 ```
-$ poetry run bump2version patch # possible: major / minor / patch
+$ bump2version patch # possible: major / minor / patch
 $ git push
 $ git push --tags
 ```

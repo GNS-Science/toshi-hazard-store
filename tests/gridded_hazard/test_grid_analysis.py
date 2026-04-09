@@ -11,7 +11,6 @@ def test_grid_analysis_from_json():
     src_json = Path(folder, 'grid_analysis.wip.json')
 
     with src_json.open('r') as jsonfile:
-
         jsond = from_json(jsonfile.read())
         diag = grid_analysis.GridDiffDiagnostic.model_validate(jsond)
 
