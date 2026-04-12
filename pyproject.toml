@@ -125,6 +125,9 @@ ignore = ["E203", "E266"]
 [tool.ruff.lint.isort]
 combine-as-imports = true
 
+[tool.uv]
+exclude-newer = "1 week"
+
 [tool.uv.build-backend]
 module-root = ""
 source-include = ["tests/**"]
