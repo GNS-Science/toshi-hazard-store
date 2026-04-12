@@ -6,7 +6,6 @@ log = logging.getLogger(__name__)
 
 
 class ApiClient(toshi_client_base.ToshiClientBase):
-
     def get_gt_subtasks(self, id):
         qry = '''
             query general ($id:ID!)  {

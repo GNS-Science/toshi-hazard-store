@@ -6,7 +6,7 @@ homepage = "https://github.com/GNS-Science/toshi-hazard-store"
 description = "Library for saving and retrieving NZHSM openquake hazard results with convenience (uses pyarrow with parquet format)."
 authors = [
     { name = "Chris B Chamberlain", email = "chrisbc@artisan.co.nz" },
-    {name="NSHM Compute Working Group", email="nshm@gns.cri.nz"}    
+    {name="NSHM Compute Working Group", email="nshm@gns.cri.nz"}
 ]
 readme="README.md"
 license = "AGPL-3.0-or-later"
@@ -20,25 +20,21 @@ classifiers=[
     'Programming Language :: Python :: 3.12',
 ]
 requires-python = ">=3.10,<4.0"
-packages = [
-    { include = "toshi_hazard_store" },
-    { include = "tests", format = "sdist" },
-]
 dependencies = [
-    "geopandas (>=1.1.2)",
-    "lancedb (>=0.27.1, <0.30.0)",
-    "matplotlib (>=3.10.8)",
-    "nshm-toshi-client (>=1.0.1)",
-    "numpy (>=1.24)",
-    "nzshm-common (>=0.8.4)",
-    "nzshm-model (>=0.13.6)",
-    "pandas (>=2,<3)",
-    "pathy (>=0.11.0)",
-    "pyarrow (>=20.0.0)",
-    "pydantic (>=2.11.5)",
-    "python-dotenv (>=1.0.1)",
-    "s3path (>=0.6.1)",
-    "toml (>=0.10.2)",
+    "geopandas>=1.1.2",
+    "lancedb>=0.27.1,<0.30.0",
+    "matplotlib>=3.10.8",
+    "nshm-toshi-client>=1.0.1",
+    "numpy>=1.24",
+    "nzshm-common>=0.8.4",
+    "nzshm-model>=0.13.6",
+    "pandas>=2,<3",
+    "pathy>=0.11.0",
+    "pyarrow>=20.0.0",
+    "pydantic>=2.11.5",
+    "python-dotenv>=1.0.1",
+    "s3path>=0.6.1",
+    "toml>=0.10.2",
 ]
 
 [project.scripts]
@@ -51,91 +47,91 @@ ths_grid_sanity = 'toshi_hazard_store.scripts.ths_grid_sanity:main'
 ths_rlz_import = 'toshi_hazard_store.scripts.ths_rlz_import:main'
 ths_rlz_sanity = 'toshi_hazard_store.scripts.ths_rlz_sanity:main'
 
-[dependency-groups]
+[project.optional-dependencies]
 openquake = [
-    "fiona (>=1.9.5)",
-    "networkx (>=3.2.1)",
+    "fiona>=1.9.5",
+    "networkx>=3.2.1",
     "numba",
-    "pydantic-to-pyarrow (>=0.1.6)",
-    "openquake-engine (>=3.20.1)"
+    "pydantic-to-pyarrow>=0.1.6",
+    "openquake-engine>=3.20.1",
 ]
 scripts = [
     "boto3",
-    "click (>=8.1.3)",
-    "click-plugins (>=1.1.1)",
+    "click>=8.1.3",
+    "click-plugins>=1.1.1",
 ]
+
+[dependency-groups]
 doc = [
-    { include-group = "scripts" },
-    "mkdocs (>=1.6.1)",
-    "mkdocs-autorefs (>=1.0.1)",
-    "mkdocs-click (>=0.8.1)",
-    "mkdocs-include-markdown-plugin (>=7.1.8)",
-    "mkdocs-material (>=9.5.21)",
-    "mkdocs-material-extensions (>=1.3.1)",
-    "mkdocs-pymdownx-material-extras (>=2.5.6)",
-    "mkdocstrings (>=0.26.2)",
-    "mkdocstrings-python (>=1.18.2,<2.0.0)",
+    "boto3",
+    "click>=8.1.3",
+    "click-plugins>=1.1.1",
+    "mkdocs>=1.6.1",
+    "mkdocs-autorefs>=1.0.1",
+    "mkdocs-click>=0.8.1",
+    "mkdocs-include-markdown-plugin>=7.1.8",
+    "mkdocs-material>=9.5.21",
+    "mkdocs-material-extensions>=1.3.1",
+    "mkdocs-pymdownx-material-extras>=2.5.6",
+    "mkdocstrings>=0.26.2",
+    "mkdocstrings-python>=1.18.2,<2.0.0",
 ]
 
 dev = [
-    "black (>=24.10.0)",
-    "bump2version (>=1.0.1)",
-    "flake8 (>=7.1.1)",
-    "flake8-docstrings (>=1.7.0)",
-    "ipython (>=8.11.0)",
-    "isort (>=5.13.2)",
-    "matplotlib (>=3.6.3)",
-    "moto (>=4)",
-    "mypy (>=1.18.2)",
-    "pandas-stubs (==2.3.0.250703.*)",
-    "pip-audit (>=2.9.0)",
-    "pytest-cov  (>=2.12.0)",
+    "bump2version>=1.0.1",
+    "ipython>=8.11.0",
+    "matplotlib>=3.6.3",
+    "moto>=4",
+    "mypy>=1.18.2",
+    "pandas-stubs==2.3.0.250703.*",
+    "pip-audit>=2.9.0",
+    "pytest-cov>=2.12.0",
     "pytest-lazy-fixtures",
-    "pytest-xdist (>=3.5.0)",
-    "pyvista (>=0.44.1)",
-    "safety (>=3.6.2)",
+    "pytest-xdist>=3.5.0",
+    "pyvista>=0.44.1",
+    "ruff>=0.9.0",
+    "safety>=3.6.2",
     "semver",
-    "tox (>=4.4.4)",
-    "twine (>=6.2.0,<7.0.0)",
-    "types-requests (>=2.32.4.20250913,<3.0.0.0)",
-    "types-toml (>=0.10.8.20240310,<0.11.0.0)",
-    "pytest-mock (>=3.15.1,<4.0.0)",
+    "tox>=4.4.4",
+    "tox-uv>=1.0.0",
+    "twine>=6.2.0,<7.0.0",
+    "types-requests>=2.32.4.20250913,<3.0.0.0",
+    "types-toml>=0.10.8.20240310,<0.11.0.0",
+    "pytest-mock>=3.15.1,<4.0.0",
 ]
 
-[tool.black]
+[tool.ruff]
 line-length = 120
-skip-string-normalization = true
-target-version = ['py310', 'py311']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
+target-version = "py310"
+extend-exclude = [
+    "toshi_hazard_store/scripts/legacy/ths_cache.py",
+    "toshi_hazard_store/scripts/legacy/testing_ths_v2.py",
+    "toshi_hazard_store/scripts/migration",
+    "demo",
+]
 
-[tool.isort]
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-line_length = 120
-skip_gitignore = true
-# you can skip files as below
-#skip_glob = docs/conf.py
+[tool.ruff.format]
+quote-style = "preserve"
 
-[tool.poetry.requires-plugins]
-poetry-plugin-export = ">=1.8"
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E203", "E266"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*.py" = ["D100", "D101", "D102"]
+"toshi_hazard_store/scripts/ths_r4_import.py" = ["E402"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.uv]
+exclude-newer = "1 week"
+
+[tool.uv.build-backend]
+module-root = ""
+source-include = ["tests/**"]
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.5"]
+build-backend = "uv_build"

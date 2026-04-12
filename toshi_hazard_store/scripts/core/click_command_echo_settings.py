@@ -5,13 +5,14 @@ from typing import TYPE_CHECKING
 import click
 
 if TYPE_CHECKING:
-
     # from toshi_hazard_store.config import *
-    from toshi_hazard_store.config import DEPLOYMENT_STAGE
-    from toshi_hazard_store.config import DEPLOYMENT_STAGE as THS_STAGE
-    from toshi_hazard_store.config import NUM_BATCH_WORKERS
-    from toshi_hazard_store.config import REGION
-    from toshi_hazard_store.config import REGION as THS_REGION
+    from toshi_hazard_store.config import (
+        DEPLOYMENT_STAGE,
+        DEPLOYMENT_STAGE as THS_STAGE,
+        NUM_BATCH_WORKERS,
+        REGION,
+        REGION as THS_REGION,
+    )
 
     API_URL = None
 

@@ -16,6 +16,5 @@ def get_index_from_s3():
 
 
 if __name__ == '__main__':
-
     gt_index = get_index_from_s3()
     print(gt_index)

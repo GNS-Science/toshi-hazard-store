@@ -187,12 +187,12 @@ def test_hdf5_realisations_direct_to_parquet_roundtrip(tmp_path):
 
     assert test_loc_df.shape == (192 / 4, 12)
     assert test_loc_df['imt'].tolist()[0] == 'PGA'
-    assert (
-        test_loc_df['imt'].tolist()[-1] == 'SA(3.0)'
-    ), "not so weird, as the IMT keys are sorted alphnumerically in openquake now."
-    assert (
-        test_loc_df['imt'].tolist().index('SA(3.0)') == 3
-    ), "also not so weird, as the IMT keys are sorted alphnumerically"
+    assert test_loc_df['imt'].tolist()[-1] == 'SA(3.0)', (
+        "not so weird, as the IMT keys are sorted alphnumerically in openquake now."
+    )
+    assert test_loc_df['imt'].tolist().index('SA(3.0)') == 3, (
+        "also not so weird, as the IMT keys are sorted alphnumerically"
+    )
 
     assert test_loc_df['nloc_001'].tolist()[0] == test_loc.code
     assert test_loc_df['nloc_0'].tolist()[0] == test_loc.resample(1.0).code

@@ -84,7 +84,6 @@ def rlzs(context, dataset0, dataset1, levels, calc_id, count, verbose, exit_on_e
 
     all_checked = 0
     for sub_folder in src_folders:
-
         source_folder_a, source_folder_b = (folder0 / sub_folder), (folder1 / sub_folder)
 
         assert source_folder_a.exists()
@@ -111,7 +110,6 @@ def rlzs(context, dataset0, dataset1, levels, calc_id, count, verbose, exit_on_e
         ## Random checks
         partition_checked = 0
         for i in range(count):
-
             imt = random.choice(imts)
             nloc_3 = random.choice(nloc_3s)
             src_digest = random.choice(src_digests)
@@ -195,7 +193,6 @@ def aggs(context, dataset0, dataset1, count):
 
     ## Random checks
     for i in range(count):
-
         imt = random.choice(imts)
         nloc_3 = random.choice(nloc_3s1)
         # agg = random.choice(aggs)
