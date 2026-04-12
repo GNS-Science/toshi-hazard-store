@@ -115,7 +115,7 @@ Make sure all your changes are committed (including an entry in CHANGELOG.md).
 Then run:
 
 ```
-$ bump2version patch # possible: major / minor / patch
+$ uv run bump2version patch # possible: major / minor / patch
 $ git push
 $ git push --tags
 ```
