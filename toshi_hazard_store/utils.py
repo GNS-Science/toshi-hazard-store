@@ -19,5 +19,5 @@ def normalise_site_code(oq_site_object: tuple, force_normalized: bool = False) -
     rounded = CodedLocation(lon=lon, lat=lat, resolution=0.001)
 
     if not force_normalized:
-        rounded.code = oq_site_object[0].decode()  # restore the original location code
+        rounded._code = oq_site_object[0].decode()  # restore the original location code
     return rounded
