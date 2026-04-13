@@ -92,7 +92,7 @@ class GriddedHazardPoeLevels(BaseModel):
         if DISABLE_GRIDDED_MODEL_VALIDATOR:
             return data
         else:
-            grid = grids.get_location_grid(data['location_grid_id'])
+            grid = list(grids.get_location_grid(data['location_grid_id']))
             if not len(data['accel_levels']) == len(grid):
                 raise ValueError(
                     f"expected accel_levels to have `{len(grid)}` values, but found: {len(data['accel_levels'])}"

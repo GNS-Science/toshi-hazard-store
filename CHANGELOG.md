@@ -1,9 +1,25 @@
 # Changelog
 
+## [1.5.0] 2026-04-13
+
+### Changed
+- Allow un-registered branches to be stored in realization database
+
+### Added
+- Helper function to warn if using un-registered branches
+
+### Changed
+- Migrated package manager from poetry to uv
+- More robust type checking and type hints
+- Small bug fixes
+
+### Removed
+- normalise_site_code utility function
+
 ## [1.4.3] 2026-03-30
 
 ### Changed
- - Restricted `lancedb` to <0.30
+- Restricted `lancedb` to <0.30
 
 ## [1.4.2] 2026-02-25
 

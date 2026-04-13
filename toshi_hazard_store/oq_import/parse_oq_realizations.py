@@ -7,7 +7,9 @@ NB maybe this belongs in the nzshm_model.psha_adapter.openquake package ??
 import collections
 import logging
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+
+from nzshm_model.branch_registry import BranchRegistryEntry, identity_digest
 
 from .transform import Realization, parse_logic_tree_branches
 
@@ -53,7 +55,7 @@ def build_rlz_mapper(extractor: "Extractor") -> dict[int, RealizationRecord]:
 
 def build_rlz_gmm_map(
     gsim_branches: dict[str, str],
-) -> dict[str, Any]:
+) -> dict[str, BranchRegistryEntry]:
     """Build a map of realizations to GMMs.
 
     Args:
@@ -62,19 +64,19 @@ def build_rlz_gmm_map(
     Returns:
         A dictionary mapping realization IDs to branch registry entries.
     """
-    registry = _get_registry()
     rlz_gmm_map = {}
     for gsim_id, gsim in gsim_branches.items():
         log.debug(f"build_rlz_gmm_map(gsim_lt): {gsim_id} {gsim}")
         branch = _get_gmcm_branch_from_element_text(gsim)
-        entry = registry.gmm_registry.get_by_identity(branch.registry_identity)
+        digest = identity_digest(branch.registry_identity)
+        entry = BranchRegistryEntry(identity=branch.registry_identity, hash_digest=digest)
         rlz_gmm_map[gsim_id] = entry
     return rlz_gmm_map
 
 
 def build_rlz_source_map(
     source_branches: dict[str, str],
-) -> dict[str, Any]:
+) -> dict[str, BranchRegistryEntry]:
     """Build a map of realizations to sources.
 
     Args:
@@ -83,7 +85,6 @@ def build_rlz_source_map(
     Returns:
         A dictionary mapping realization IDs to branch registry entries.
     """
-    registry = _get_registry()
     rlz_source_map = dict()
     for source_str in source_branches.values():
         log.debug(f"build_rlz_source_map(source_lt): {source_str}")
@@ -97,10 +98,17 @@ def build_rlz_source_map(
         # handle special case where tag was stored in calc instead of toshi_ids
         # e.g. T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz
         if source_str[0] == "[" and source_str[-1] == "]":
+            registry = _get_registry()
             entry = registry.source_registry.get_by_extra(source_str)
+            if not entry:
+                raise ValueError(
+                    "source branch string did not include source IDs, but BranchRegistryEntry"
+                    "cannot be retrieved by extra"
+                )
         else:
             sources = "|".join(sorted(source_str.split("|")))
-            entry = registry.source_registry.get_by_identity(sources)
+            digest = identity_digest(sources)
+            entry = BranchRegistryEntry(identity=sources, hash_digest=digest)
 
         rlz_source_map[source_str] = entry
     return rlz_source_map
@@ -108,8 +116,8 @@ def build_rlz_source_map(
 
 def build_rlz_map(
     realizations: list[Realization],
-    source_map: dict[str, Any],
-    gmm_map: dict[str, Any],
+    source_map: dict[str, BranchRegistryEntry],
+    gmm_map: dict[str, BranchRegistryEntry],
 ) -> dict[int, RealizationRecord]:
     """Builds a dictionary mapping realization indices to their corresponding RealizationRecord objects.
 
