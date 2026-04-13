@@ -9,6 +9,8 @@ import logging
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
+from nzshm_model.branch_registry import BranchRegistryEntry, identity_digest
+
 from .transform import Realization, parse_logic_tree_branches
 
 if TYPE_CHECKING:
@@ -53,7 +55,7 @@ def build_rlz_mapper(extractor: "Extractor") -> dict[int, RealizationRecord]:
 
 def build_rlz_gmm_map(
     gsim_branches: dict[str, str],
-) -> dict[str, Any]:
+) -> dict[str, BranchRegistryEntry]:
     """Build a map of realizations to GMMs.
 
     Args:
@@ -74,7 +76,7 @@ def build_rlz_gmm_map(
 
 def build_rlz_source_map(
     source_branches: dict[str, str],
-) -> dict[str, Any]:
+) -> dict[str, BranchRegistryEntry]:
     """Build a map of realizations to sources.
 
     Args:
@@ -108,8 +110,8 @@ def build_rlz_source_map(
 
 def build_rlz_map(
     realizations: list[Realization],
-    source_map: dict[str, Any],
-    gmm_map: dict[str, Any],
+    source_map: dict[str, BranchRegistryEntry],
+    gmm_map: dict[str, BranchRegistryEntry],
 ) -> dict[int, RealizationRecord]:
     """Builds a dictionary mapping realization indices to their corresponding RealizationRecord objects.
 
