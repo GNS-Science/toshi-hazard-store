@@ -13,6 +13,9 @@
 - More robust type checking and type hints
 - Small bug fixes
 
+### Removed
+- normalise_site_code utility function
+
 ## [1.4.3] 2026-03-30
 
 ### Changed
