@@ -102,7 +102,7 @@ def build_rlz_source_map(
             entry = registry.source_registry.get_by_extra(source_str)
             if not entry:
                 raise ValueError(
-                    "source branch string did not include source IDs, but BranchRegistryEntry" \
+                    "source branch string did not include source IDs, but BranchRegistryEntry"
                     "cannot be retrieved by extra"
                 )
         else:

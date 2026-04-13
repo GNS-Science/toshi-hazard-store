@@ -31,9 +31,7 @@ class TestCheckRegistryStatusSource:
             check_registry_status({UNREGISTERED_DIGEST}, registry_type="source")
 
     def test_mixed_returns_only_unregistered(self):
-        result = check_registry_status(
-            {REGISTERED_SOURCE_DIGEST, UNREGISTERED_DIGEST}, registry_type="source"
-        )
+        result = check_registry_status({REGISTERED_SOURCE_DIGEST, UNREGISTERED_DIGEST}, registry_type="source")
         assert result == {UNREGISTERED_DIGEST}
 
     def test_empty_input_returns_empty_set(self):
