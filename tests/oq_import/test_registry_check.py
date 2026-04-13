@@ -4,7 +4,7 @@ import warnings
 
 import pytest
 
-from toshi_hazard_store.oq_import.registry_check import check_registry_status
+from toshi_hazard_store.query.registry_check import check_registry_status
 
 # Known registered digests from nzshm_model resources CSVs
 REGISTERED_SOURCE_DIGEST = "af9ec2b004d7"
