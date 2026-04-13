@@ -60,6 +60,11 @@ def test_rlz_mapper():
     rlz_mapper = build_rlz_mapper(extractor)
     rlz_mapper_dict = to_dict(rlz_mapper)
     expected = json.loads(rlz_mapper_file.read_text())
+    # expected was built with empty strings instead of None as `extra` member for gmm branches, but
+    # we build our BranchRegistryEntry objects on the fly with None.
+    for value in expected.values():
+        if value['gmms']['extra'] == '':
+            value['gmms']['extra'] = None
     assert rlz_mapper_dict == expected
 
 
