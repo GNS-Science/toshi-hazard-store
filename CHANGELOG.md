@@ -1,9 +1,17 @@
 # Changelog
 
-## [1.5.0] Unreleased
+## [1.5.0] 2026-04-13
 
 ### Changed
-- migrated package manager from poetry to uv
+- Allow un-registered branches to be stored in realization database
+
+### Added
+- Helper function to warn if using un-registered branches
+
+### Changed
+- Migrated package manager from poetry to uv
+- More robust type checking and type hints
+- Small bug fixes
 
 ## [1.4.3] 2026-03-30
 
