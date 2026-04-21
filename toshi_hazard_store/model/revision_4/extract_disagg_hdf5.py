@@ -199,7 +199,7 @@ def disaggs_to_record_batch_reader(
         compatible_calc_id: FK for hazard-calc equivalence.
         producer_digest: ECR image SHA256 digest of the producer.
         config_digest: digest of the OQ job configuration.
-        probability: ProbabilityEnum identifying the target hazard level at which the disagg was computed.
+        probability: ProbabilityEnum identifying the target hazard probability at which the disagg was computed.
             This is supplied by the caller — it is NOT read from the HDF5.
         kind: disaggregation kind to extract (must appear in oqparam['disagg_outputs']).
         use_64bit_values: use float64 for disagg_value when True.
@@ -212,11 +212,11 @@ def disaggs_to_record_batch_reader(
     extractor = Extractor(str(hdf5_file))
     oqparam = json.loads(extractor.get('oqparam').json)
 
-    assert oqparam['calculation_mode'] == 'disaggregation', (
-        f"calculation_mode is '{oqparam['calculation_mode']}', expected 'disaggregation'"
-    )
+    if oqparam['calculation_mode'] != 'disaggregation':
+        raise ValueError(f"calculation_mode is '{oqparam['calculation_mode']}', expected 'disaggregation'")
     available_kinds = oqparam.get('disagg_outputs', [])
-    assert kind in available_kinds, f"kind '{kind}' not in disagg_outputs {available_kinds}"
+    if kind not in available_kinds:
+        raise ValueError(f"kind '{kind}' not in disagg_outputs {available_kinds}")
 
     imts = list(oqparam['iml_disagg'].keys())
 

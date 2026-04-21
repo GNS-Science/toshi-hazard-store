@@ -114,7 +114,8 @@ def build_realisations(
         ecr_image_digest=subtask_info.ecr_image.imageDigest,
         config_digest=subtask_info.config_hash,
     )
-    assert hpc_manager.load(hpc.unique_id), f'hazard producer config {hpc.unique_id} not found'
+    if not hpc_manager.load(hpc.unique_id):
+        raise RuntimeError(f'hazard producer config {hpc.unique_id} not found')
 
     partitioning = ["calculation_id"] if partition_by_calc_id else ['nloc_0']
 
@@ -167,7 +168,8 @@ def build_disaggregations(
         ecr_image_digest=subtask_info.ecr_image.imageDigest,
         config_digest=subtask_info.config_hash,
     )
-    assert hpc_manager.load(hpc.unique_id), f'hazard producer config {hpc.unique_id} not found'
+    if not hpc_manager.load(hpc.unique_id):
+        raise RuntimeError(f'hazard producer config {hpc.unique_id} not found')
 
     partitioning = ["calculation_id"] if partition_by_calc_id else ['nloc_0']
 
