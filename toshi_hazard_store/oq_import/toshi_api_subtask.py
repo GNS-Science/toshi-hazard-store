@@ -8,6 +8,7 @@ from typing import Iterable, Iterator, Optional
 import click
 
 from toshi_hazard_store.config import ECR_REPONAME, STORAGE_FOLDER
+from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.model.hazard_models_manager import (
     CompatibleHazardCalculationManager,
     HazardCurveProducerConfigManager,
@@ -17,7 +18,7 @@ from toshi_hazard_store.model.hazard_models_pydantic import (  # noqa
     HazardCurveProducerConfig,
 )
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
-from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
+from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, extract_disagg_hdf5
 
 from . import (
     aws_ecr_docker_image as aws_ecr,
@@ -123,6 +124,61 @@ def build_realisations(
         compatible_calc_id=compatible_calc,
         producer_digest=subtask_info.ecr_image.imageDigest,
         config_digest=subtask_info.config_hash,
+        use_64bit_values=use_64bit_values,
+    )
+
+    base_dir, filesystem = pyarrow_dataset.configure_output(output)
+    pyarrow_dataset.append_models_to_dataset(
+        model_generator, base_dir=base_dir, partitioning=partitioning, filesystem=filesystem
+    )
+
+
+def build_disaggregations(
+    subtask_info: 'SubtaskRecord',
+    compatible_calc: str,
+    output: str,
+    verbose: bool,
+    probability: ProbabilityEnum,
+    kind: str = 'TRT_Mag_Dist_Eps',
+    use_64bit_values: bool = False,
+    partition_by_calc_id: bool = False,
+):
+    """Build disaggregation records for a given subtask info.
+
+    Args:
+        subtask_info (SubtaskRecord): Subtask information.
+        compatible_calc (str): FK of the compatible hazard calculation.
+        output (str): Output path (local or S3 URI).
+        verbose (bool): Verbose flag.
+        probability (ProbabilityEnum): Target hazard level at which disagg was computed.
+        kind (str): Disaggregation kind to extract e.g. "TRT_Mag_Dist_Eps".
+        use_64bit_values (bool): Flag to use 64-bit values.
+        partition_by_calc_id (bool): Partition by calculation_id rather than nloc_0.
+
+    Returns:
+        None
+    """
+    if verbose:  # pragma: no-cover
+        click.echo(f"{str(subtask_info)[:80]} ...")
+
+    hpc = HazardCurveProducerConfig(
+        compatible_calc_fk=compatible_calc,
+        ecr_image=subtask_info.ecr_image.model_dump(),
+        ecr_image_digest=subtask_info.ecr_image.imageDigest,
+        config_digest=subtask_info.config_hash,
+    )
+    assert hpc_manager.load(hpc.unique_id), f'hazard producer config {hpc.unique_id} not found'
+
+    partitioning = ["calculation_id"] if partition_by_calc_id else ['nloc_0']
+
+    model_generator = extract_disagg_hdf5.disaggs_to_record_batch_reader(
+        hdf5_file=str(subtask_info.hdf5_path),
+        calculation_id=subtask_info.hazard_calc_id,
+        compatible_calc_id=compatible_calc,
+        producer_digest=subtask_info.ecr_image.imageDigest,
+        config_digest=subtask_info.config_hash,
+        probability=probability,
+        kind=kind,
         use_64bit_values=use_64bit_values,
     )
 

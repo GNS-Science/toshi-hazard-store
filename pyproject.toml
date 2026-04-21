@@ -44,6 +44,7 @@ ths_ds_defrag = 'toshi_hazard_store.scripts.ths_ds_defrag:main'
 ths_ds_filter = 'toshi_hazard_store.scripts.ths_ds_filter:main'
 ths_grid_build = 'toshi_hazard_store.scripts.ths_grid_build:main'
 ths_grid_sanity = 'toshi_hazard_store.scripts.ths_grid_sanity:main'
+ths_disagg_import = 'toshi_hazard_store.scripts.ths_disagg_import:main'
 ths_rlz_import = 'toshi_hazard_store.scripts.ths_rlz_import:main'
 ths_rlz_sanity = 'toshi_hazard_store.scripts.ths_rlz_sanity:main'
 
@@ -98,6 +99,7 @@ dev = [
     "types-requests>=2.32.4.20250913,<3.0.0.0",
     "types-toml>=0.10.8.20240310,<0.11.0.0",
     "pytest-mock>=3.15.1,<4.0.0",
+    "notebook>=7.5.5",
 ]
 
 [tool.ruff]
