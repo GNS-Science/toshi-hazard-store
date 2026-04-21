@@ -1,7 +1,7 @@
 import hashlib
 import json
 import logging
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, Iterator, Tuple
 
 import numpy as np
 import pyarrow as pa
@@ -46,11 +46,11 @@ def compute_bins_digest(disagg_rlzs) -> str:
     return hashlib.sha256(serialised.encode()).hexdigest()[:16]
 
 
-def _decode_trt(trt_array) -> List[str]:
+def _decode_trt(trt_array) -> list[str]:
     return [t.decode() if isinstance(t, bytes) else str(t) for t in trt_array]
 
 
-def _build_dim_index_arrays(present_dims: List[str], dim_sizes: Dict[str, int], n_rlz: int) -> Dict[str, np.ndarray]:
+def _build_dim_index_arrays(present_dims: list[str], dim_sizes: Dict[str, int], n_rlz: int) -> Dict[str, np.ndarray]:
     """Return a mapping of dim_name → flat integer index array.
 
     The rlz axis is last and varies fastest (C order).  Array length is product(dim_sizes) * n_rlz.
@@ -64,8 +64,8 @@ def _build_dim_index_arrays(present_dims: List[str], dim_sizes: Dict[str, int], 
 
 def generate_disagg_record_batches(
     extractor,
-    imts: List[str],
-    sites_info: List[Tuple],
+    imts: list[str],
+    sites_info: list[Tuple],
     nloc_0_idx_to_code: Dict[int, str],
     rlz_map: dict,
     probability: ProbabilityEnum,
@@ -221,8 +221,8 @@ def disaggs_to_record_batch_reader(
     imts = list(oqparam['iml_disagg'].keys())
 
     # Build site records using the dataframe API (matches extract_classical_hdf5 pattern).
-    nloc_001_locations: List[coded_location.CodedLocation] = []
-    vs30_values: List[float] = []
+    nloc_001_locations: list[coded_location.CodedLocation] = []
+    vs30_values: list[float] = []
     df0 = extractor.get('sitecol').to_dframe()
     for idx in range(df0.shape[0]):
         site_loc = coded_location.CodedLocation(lat=df0.iloc[idx].lat, lon=df0.iloc[idx].lon, resolution=0.001)
