@@ -120,6 +120,30 @@ def test_kind_column_populated(disagg_hdf5_info, probability):
 
 
 @_REQUIRE_OQ
+def test_disagg_axes_column_populated(disagg_hdf5_info, probability):
+    """Every row carries the same axis-order list matching the HDF5 shape_descr."""
+    hdf5_path, kind, imts = disagg_hdf5_info
+    extractor = Extractor(str(hdf5_path))
+    probe = extractor.get(f'disagg?kind={kind}&imt={imts[0]}&site_id=0&poe_id=0&spec=rlzs')
+    expected_axes = [str(d) for d in probe.shape_descr if d not in ('imt', 'poe')]
+
+    reader = extract_disagg_hdf5.disaggs_to_record_batch_reader(
+        hdf5_file=str(hdf5_path),
+        calculation_id='test-calc-id',
+        compatible_calc_id='compat-0',
+        producer_digest='sha256:' + 'a' * 64,
+        config_digest='cfg-abc123',
+        probability=probability,
+        kind=kind,
+    )
+    for batch in reader:
+        axes_col = batch.column('disagg_axes')
+        assert batch.num_rows > 0
+        for i in range(batch.num_rows):
+            assert axes_col[i].as_py() == expected_axes
+
+
+@_REQUIRE_OQ
 def test_record_count_matches_shape(disagg_hdf5_info, probability):
     """Total rows == n_sites * n_rlz; each row's disagg_values has product(dim_sizes) entries."""
     hdf5_path, kind, imts = disagg_hdf5_info
@@ -148,8 +172,15 @@ def test_record_count_matches_shape(disagg_hdf5_info, probability):
     for batch in reader:
         total_rows += batch.num_rows
         values_col = batch.column('disagg_values')
+        axes_col = batch.column('disagg_axes')
         for i in range(batch.num_rows):
             assert len(values_col[i]) == n_cells_per_rlz
+            # Cross-check: product of per-axis bin counts equals the flattened length.
+            axes_i = axes_col[i].as_py()
+            expected_len = 1
+            for ax in axes_i:
+                expected_len *= len(getattr(probe, ax))
+            assert expected_len == n_cells_per_rlz
     assert total_rows == expected_rows
 
 

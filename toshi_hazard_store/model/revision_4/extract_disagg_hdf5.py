@@ -125,6 +125,10 @@ def generate_disagg_record_batches(
     sources_list = [sources_by_ordinal[o] for o in ordinals]
     gmms_list = [gmms_by_ordinal[o] for o in ordinals]
 
+    # Axis order for disagg_values, straight from the HDF5. Readers reshape from this,
+    # not by parsing `kind`, so upstream changes to the kind↔axis relationship are safe.
+    disagg_axes = [str(d) for d in shape_descr]
+
     # Bin-centre lists are identical across rows in the batch; parquet compresses the repetition.
     trt_centers = _decode_trt(disagg_data.trt) if 'trt' in shape_descr else None
     mag_centers = disagg_data.mag.astype(vtype).tolist() if 'mag' in shape_descr else None
@@ -153,6 +157,7 @@ def generate_disagg_record_batches(
             pa.array(sources_list, type=pa.string()).dictionary_encode().cast(dict_type),
             pa.array(gmms_list, type=pa.string()).dictionary_encode().cast(dict_type),
             pa.DictionaryArray.from_arrays(zeros, [kind]),
+            _repeated_list_col(disagg_axes, pa.string()),
             _repeated_list_col(trt_centers, pa.string()),
             _repeated_list_col(mag_centers, pa_vtype),
             _repeated_list_col(dist_centers, pa_vtype),
