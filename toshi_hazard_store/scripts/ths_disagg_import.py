@@ -7,63 +7,32 @@ sitecol and ``iml_disagg`` of the form ``{<imt>: [<iml>]}``). Inputs with more t
 any of these are rejected with a ``ValueError``.
 """
 
-import json
 import logging
 import os
-import pathlib
 
 import click
-from nzshm_model.psha_adapter.openquake.hazard_config import OpenquakeConfig
 
-from toshi_hazard_store.config import STORAGE_FOLDER
 from toshi_hazard_store.model.constraints import ProbabilityEnum
-from toshi_hazard_store.model.hazard_models_manager import (
-    CompatibleHazardCalculationManager,
-    HazardCurveProducerConfigManager,
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
+from toshi_hazard_store.oq_import import toshi_api_client
+from toshi_hazard_store.scripts._common import (
+    API_KEY,
+    API_URL,
+    HAVE_OQ,
+    chc_manager,
+    get_hazard_task_ids,
+    prepare_store_inputs,
+    producers,
+    raise_if_no_openquake,
 )
-
-try:
-    import openquake  # noqa
-
-    HAVE_OQ = True
-except ImportError:
-    HAVE_OQ = False
 
 if HAVE_OQ:
     from toshi_hazard_store.model.revision_4 import extract_disagg_hdf5
-    from toshi_hazard_store.oq_import.toshi_api_subtask import (
-        build_disaggregations,
-        build_producers,
-        generate_subtasks,
-    )
-
-from toshi_hazard_store.model.pyarrow import pyarrow_dataset
-from toshi_hazard_store.oq_import import toshi_api_client  # noqa: E402
-
-logging.basicConfig(level=logging.INFO)
-logging.getLogger("botocore").setLevel(logging.INFO)
-logging.getLogger("toshi_hazard_store").setLevel(logging.INFO)
-logging.getLogger("gql.transport").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.INFO)
-logging.getLogger("root").setLevel(logging.INFO)
+    from toshi_hazard_store.oq_import.toshi_api_subtask import build_disaggregations, generate_subtasks
 
 log = logging.getLogger(__name__)
 
-API_URL = os.getenv("NZSHM22_TOSHI_API_URL", "http://127.0.0.1:5000/graphql")
-API_KEY = os.getenv("NZSHM22_TOSHI_API_KEY", "")
-REGION = os.getenv("REGION", "ap-southeast-2")
-
-chc_manager = CompatibleHazardCalculationManager(pathlib.Path(STORAGE_FOLDER))
-hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc_manager)
-
 _PROBABILITY_NAMES = [p.name for p in ProbabilityEnum]
-
-
-def raise_if_no_openquake():
-    if not HAVE_OQ:
-        raise RuntimeError(
-            "openquake dependency is not installed, please use `toshi-hazard-store['openquake'] installer option`."
-        )
 
 
 def store_disagg(
@@ -99,22 +68,7 @@ def store_disagg(
         kind: disaggregation kind to extract e.g. "TRT_Mag_Dist_Eps".
         use_64bit_values: use float64 for disagg_value when True.
     """
-    raise_if_no_openquake()
-
-    config_file_path = pathlib.Path(config_path)
-    hdf5_file_path = pathlib.Path(hdf5_path)
-    if not config_file_path.is_file():
-        raise FileNotFoundError(f"config_path: `{config_path}` is not a file.")
-    if not hdf5_file_path.is_file():
-        raise FileNotFoundError(f"hdf5_path: `{hdf5_path}` is not a file.")
-
-    chc_manager.load(compatible_calc_id)
-
-    if not ecr_digest[:7] == "sha256:":
-        raise ValueError(f"ecr_digest: `{ecr_digest}` doesn't look valid.")
-
-    jobconf = OpenquakeConfig.from_dict(json.load(open(config_path, "r")))
-    config_digest = jobconf.compatible_hash_digest()
+    config_digest = prepare_store_inputs(hdf5_path, config_path, compatible_calc_id, ecr_digest)
 
     model_generator = extract_disagg_hdf5.disaggs_to_record_batch_reader(
         hdf5_file=str(hdf5_path),
@@ -147,35 +101,7 @@ def main():
     """
 
 
-@main.command()
-@click.argument("gt_id")
-@click.argument("compatible_calc_fk")
-@click.option("-W", "--work_folder", default=lambda: os.getcwd(), help="defaults to current directory")
-@click.option("--update", "-U", is_flag=True, default=False, help="overwrite existing producer record.")
-@click.option("-v", "--verbose", is_flag=True, default=False)
-def producers(gt_id, compatible_calc_fk, work_folder, update, verbose):
-    r"""Prepare and validate Producer Configs for a given GT_ID.
-
-    GT_ID is an NSHM General task id containing HazardAutomation Tasks\n
-    compatible_calc_fk is the unique key of the compatible_calc
-    """
-    headers = {"x-api-key": API_KEY}
-    gtapi = toshi_api_client.ApiClient(API_URL, None, with_schema_validation=False, headers=headers)
-
-    if verbose:
-        click.echo("fetching General Task subtasks")
-
-    def get_hazard_task_ids(query_res):
-        for edge in query_res["children"]["edges"]:
-            yield edge["node"]["child"]["id"]
-
-    query_res = gtapi.get_gt_subtasks(gt_id)
-    compatible_calc = chc_manager.load(compatible_calc_fk)
-
-    for subtask_info in generate_subtasks(
-        gt_id, gtapi, get_hazard_task_ids(query_res), work_folder, with_rlzs=False, verbose=verbose
-    ):
-        build_producers(subtask_info, compatible_calc, verbose, update)
+main.add_command(producers)
 
 
 @main.command()
@@ -238,10 +164,6 @@ def extract(
         click.echo("fetching General Task subtasks")
         if skip_until_id:
             click.echo(f"skipping until task_id: {skip_until_id}")
-
-    def get_hazard_task_ids(query_res):
-        for edge in query_res["children"]["edges"]:
-            yield edge["node"]["child"]["id"]
 
     query_res = gtapi.get_gt_subtasks(gt_id)
     prob_enum = ProbabilityEnum[probability]
