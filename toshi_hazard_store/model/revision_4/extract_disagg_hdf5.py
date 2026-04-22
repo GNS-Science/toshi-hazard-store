@@ -115,7 +115,7 @@ def generate_disagg_record_batches(
     disagg_array: npt.NDArray = disagg_data.array  # shape: (dims..., n_rlz)
 
     # Squeeze imt and poe axes (both fixed to 1 by the query).
-    for dim_name in ('imt', 'poe'):
+    for dim_name in _QUERY_DIMS:
         if dim_name in shape_descr:
             axis = shape_descr.index(dim_name)
             disagg_array = np.squeeze(disagg_array, axis=axis)
