@@ -47,8 +47,14 @@ def compute_bins_digest(disagg_rlzs) -> str:
     return hashlib.sha256(serialised.encode()).hexdigest()[:16]
 
 
-def _decode_trt(trt_array) -> list[str]:
-    return [t.decode() if isinstance(t, bytes) else str(t) for t in trt_array]
+def _stringify_bin_centers(values) -> list[str]:
+    """Axis-type-agnostic stringifier for HDF5 bin-centre arrays.
+
+    TRT-style byte labels are decoded; numeric (or any other) scalars fall back to
+    ``str()``. This keeps the extractor working for any new axis type OpenQuake
+    introduces, without having to enumerate known axis names.
+    """
+    return [v.decode() if isinstance(v, bytes) else str(v) for v in values]
 
 
 def generate_disagg_record_batches(
@@ -70,10 +76,12 @@ def generate_disagg_record_batches(
     """Yield a single RecordBatch containing one row per realisation.
 
     Each row carries the flattened disaggregation array for that rlz in the
-    ``disagg_values`` list column. Bin centres for each present dimension are carried
-    on the row as list columns (``trt``, ``mag``, ``dist``, ``eps``) so the grid can be
-    reshaped on read; absent dimensions are NULL. The source HDF5 is required to contain
-    exactly one site, one IMT and one POE.
+    ``disagg_values`` list column, plus an ordered ``disagg_bins`` map
+    (``{axis_name: [bin_centre_str, ...]}``) whose key order defines the axis
+    order of ``disagg_values``. Bin centres are stringified uniformly (bytes
+    decoded, everything else via ``str()``) so the map value type is homogeneous
+    and any new axis type from OpenQuake flows through without code changes.
+    The source HDF5 is required to contain exactly one site, one IMT and one POE.
 
     Args:
         extractor: OpenQuake Extractor instance.
@@ -91,6 +99,7 @@ def generate_disagg_record_batches(
     vtype = np.float64 if use_64bit_values else np.float32
     pa_vtype = pa.float64() if use_64bit_values else pa.float32()
     dict_type = pa.dictionary(pa.int8(), pa.string(), False)
+    bins_map_type = pa.map_(pa.string(), pa.list_(pa.string()))
 
     # rlzN → ordinal mapping, and per-ordinal digest lookups.
     ordinal_by_label: Dict[str, int] = {f'rlz{ordinal}': ordinal for ordinal in rlz_map}
@@ -125,18 +134,12 @@ def generate_disagg_record_batches(
     sources_list = [sources_by_ordinal[o] for o in ordinals]
     gmms_list = [gmms_by_ordinal[o] for o in ordinals]
 
-    # Axis order for disagg_values, straight from the HDF5. Readers reshape from this,
-    # not by parsing `kind`, so upstream changes to the kind↔axis relationship are safe.
-    disagg_axes = [str(d) for d in shape_descr]
-
-    # Bin-centre lists are identical across rows in the batch; parquet compresses the repetition.
-    trt_centers = _decode_trt(disagg_data.trt) if 'trt' in shape_descr else None
-    mag_centers = disagg_data.mag.astype(vtype).tolist() if 'mag' in shape_descr else None
-    dist_centers = disagg_data.dist.astype(vtype).tolist() if 'dist' in shape_descr else None
-    eps_centers = disagg_data.eps.astype(vtype).tolist() if 'eps' in shape_descr else None
-
-    def _repeated_list_col(value, inner_type) -> pa.Array:
-        return pa.array([value] * n_rlz, type=pa.list_(inner_type))
+    # Build {axis_name: [bin_centre_str, ...]} in shape_descr order. Dict insertion order
+    # is preserved through pyarrow's map encoding, so readers recover the axis order from
+    # the map keys. Identical across rows in the batch; parquet compresses the repetition.
+    disagg_bins: Dict[str, list] = {
+        str(dim): _stringify_bin_centers(getattr(disagg_data, str(dim))) for dim in shape_descr
+    }
 
     zeros = np.zeros(n_rlz, dtype=np.int8)
     vs30_arr = np.full(n_rlz, int(vs30), dtype=np.int32)
@@ -157,11 +160,7 @@ def generate_disagg_record_batches(
             pa.array(sources_list, type=pa.string()).dictionary_encode().cast(dict_type),
             pa.array(gmms_list, type=pa.string()).dictionary_encode().cast(dict_type),
             pa.DictionaryArray.from_arrays(zeros, [kind]),
-            _repeated_list_col(disagg_axes, pa.string()),
-            _repeated_list_col(trt_centers, pa.string()),
-            _repeated_list_col(mag_centers, pa_vtype),
-            _repeated_list_col(dist_centers, pa_vtype),
-            _repeated_list_col(eps_centers, pa_vtype),
+            pa.array([disagg_bins] * n_rlz, type=bins_map_type),
             pa.array(per_rlz_flat.tolist(), type=pa.list_(pa_vtype)),
         ],
         schema=schema,

@@ -1,60 +1,60 @@
 """Helpers for reshaping flattened disaggregation arrays stored in parquet rows."""
 
-from typing import Sequence, Union
+from typing import Union
 
 import numpy as np
 import numpy.typing as npt
 
-# All recognised axis names and the order the schema stores their bin lists.
-_KNOWN_AXES = ('trt', 'mag', 'dist', 'eps')
+
+def parse_disagg_bins(disagg_bins: Union[dict, list, tuple]) -> dict:
+    """Cast stringified bin centres back to floats where possible, preserving axis order.
+
+    Pairs with the extractor's stringification (bytes → decode, numeric → ``str()``):
+    any bin list whose members all parse as ``float`` is returned as a list of floats;
+    bin lists that don't (e.g. TRT labels like ``'Active Shallow Crust'``) are kept as
+    strings. No axis-name special cases — the decision is driven purely by the value
+    contents, so new axis types flow through without code changes.
+
+    Args:
+        disagg_bins: the ``disagg_bins`` column cell for one row. Accepts either a
+            ``dict`` or an iterable of ``(key, value)`` pairs (what pyarrow's
+            ``MapScalar.as_py()`` / ``MapArray.to_pylist()`` return). Key order
+            defines axis order and is preserved in the returned dict.
+
+    Returns:
+        ``dict`` mapping axis name → list of bin centres. Numeric-only lists become
+        ``list[float]``; mixed/string lists become ``list[str]``.
+    """
+    items = list(disagg_bins.items()) if hasattr(disagg_bins, 'items') else list(disagg_bins)
+    result: dict = {}
+    for k, v in items:
+        try:
+            result[k] = [float(x) for x in v]
+        except (TypeError, ValueError):
+            result[k] = list(v)
+    return result
 
 
 def reshape_disagg_values(
-    disagg_values: Union[Sequence[float], npt.ArrayLike],
-    disagg_axes: Sequence[str],
-    trt: Union[Sequence, None] = None,
-    mag: Union[Sequence, None] = None,
-    dist: Union[Sequence, None] = None,
-    eps: Union[Sequence, None] = None,
+    disagg_values: npt.ArrayLike,
+    disagg_bins: Union[dict, list, tuple],
 ) -> npt.NDArray:
     """Reshape a flattened disaggregation row back into its N-dimensional grid.
 
-    ``disagg_values`` was stored in C-order over the axes given by ``disagg_axes``
-    (e.g. ``['trt', 'mag', 'dist', 'eps']``). This function recovers that shape
-    from the bin-centre lists that are stored alongside each row, then calls
-    ``numpy.reshape`` with the inferred shape.
+    ``disagg_values`` was stored in C-order over the axes defined by the key order
+    of ``disagg_bins``. Axis order and bin sizes both come from the map: its keys
+    give the axis order, ``len(bins[key])`` gives each dimension size.
 
     Args:
-        disagg_values: the flat list or array from the ``disagg_values`` column.
-        disagg_axes: ordered axis names from the ``disagg_axes`` column
-            (e.g. ``['trt', 'mag', 'dist', 'eps']``). Every name must be one of
-            ``'trt'``, ``'mag'``, ``'dist'``, ``'eps'``.
-        trt: bin labels from the ``trt`` column (``None`` when axis absent).
-        mag: bin centres from the ``mag`` column (``None`` when axis absent).
-        dist: bin centres from the ``dist`` column (``None`` when axis absent).
-        eps: bin centres from the ``eps`` column (``None`` when axis absent).
+        disagg_values: flat sequence from the ``disagg_values`` column.
+        disagg_bins: the ``disagg_bins`` column cell for this row. Accepts either a
+            ``dict`` (e.g. constructed in Python) or an iterable of ``(key, value)``
+            pairs (what pyarrow's ``MapScalar.as_py()`` / ``MapArray.to_pylist()``
+            return). Key order defines axis order.
 
     Returns:
-        A numpy array with shape ``(len(ax0_bins), len(ax1_bins), …)`` where axes
-        follow the order in ``disagg_axes``.
-
-    Raises:
-        ValueError: if an axis name in ``disagg_axes`` is not recognised, or if its
-            corresponding bin list is ``None``.
-        ValueError: if the total element count does not match the product of the
-            inferred axis sizes (i.e. ``disagg_values`` is inconsistent with the bins).
+        N-dimensional numpy array whose axes follow ``disagg_bins`` key order.
     """
-    bins = {'trt': trt, 'mag': mag, 'dist': dist, 'eps': eps}
-
-    unknown = [ax for ax in disagg_axes if ax not in _KNOWN_AXES]
-    if unknown:
-        raise ValueError(f"Unrecognised axis name(s): {unknown}. Expected one of {_KNOWN_AXES}.")
-
-    shape = []
-    for ax in disagg_axes:
-        b = bins[ax]
-        if b is None:
-            raise ValueError(f"Axis '{ax}' is listed in disagg_axes but its bin list is None.")
-        shape.append(len(b))
-
+    items = list(disagg_bins.items()) if hasattr(disagg_bins, 'items') else list(disagg_bins)
+    shape = tuple(len(v) for _, v in items)
     return np.asarray(disagg_values).reshape(shape)

@@ -120,8 +120,8 @@ def test_kind_column_populated(disagg_hdf5_info, probability):
 
 
 @_REQUIRE_OQ
-def test_disagg_axes_column_populated(disagg_hdf5_info, probability):
-    """Every row carries the same axis-order list matching the HDF5 shape_descr."""
+def test_disagg_bins_column_populated(disagg_hdf5_info, probability):
+    """Every row carries a disagg_bins map whose keys match the HDF5 shape_descr order."""
     hdf5_path, kind, imts = disagg_hdf5_info
     extractor = Extractor(str(hdf5_path))
     probe = extractor.get(f'disagg?kind={kind}&imt={imts[0]}&site_id=0&poe_id=0&spec=rlzs')
@@ -137,10 +137,15 @@ def test_disagg_axes_column_populated(disagg_hdf5_info, probability):
         kind=kind,
     )
     for batch in reader:
-        axes_col = batch.column('disagg_axes')
+        bins_col = batch.column('disagg_bins')
         assert batch.num_rows > 0
         for i in range(batch.num_rows):
-            assert axes_col[i].as_py() == expected_axes
+            row = bins_col[i].as_py()  # list of (key, value) pairs, order preserved
+            keys = [k for k, _ in row]
+            assert keys == expected_axes
+            for _, v in row:
+                assert len(v) > 0
+                assert all(isinstance(x, str) for x in v)
 
 
 @_REQUIRE_OQ
@@ -172,14 +177,14 @@ def test_record_count_matches_shape(disagg_hdf5_info, probability):
     for batch in reader:
         total_rows += batch.num_rows
         values_col = batch.column('disagg_values')
-        axes_col = batch.column('disagg_axes')
+        bins_col = batch.column('disagg_bins')
         for i in range(batch.num_rows):
             assert len(values_col[i]) == n_cells_per_rlz
-            # Cross-check: product of per-axis bin counts equals the flattened length.
-            axes_i = axes_col[i].as_py()
+            # Cross-check: product of per-axis bin counts from the map equals the flat length.
+            bins_i = bins_col[i].as_py()
             expected_len = 1
-            for ax in axes_i:
-                expected_len *= len(getattr(probe, ax))
+            for _, v in bins_i:
+                expected_len *= len(v)
             assert expected_len == n_cells_per_rlz
     assert total_rows == expected_rows
 

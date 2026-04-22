@@ -11,12 +11,12 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
     """A schema for disaggregation realisation datasets extracted from openquake.
 
     One row per (probability, imt, location, rlz). The disaggregation grid is stored as a
-    single flattened list (``disagg_values``) in C-order over the dimensions listed by
-    ``disagg_axes`` (e.g. ``['trt', 'mag', 'dist', 'eps']``). ``disagg_axes`` is captured
-    from the HDF5's own ``shape_descr`` at extraction time — readers should use it, not
-    parse ``kind``, to recover the axis order. Bin centres for each present dimension are
-    stored as list columns alongside so the grid can be reshaped on read; absent
-    dimensions (for kinds that exclude them) are NULL. See
+    single flattened list (``disagg_values``) in C-order. Axis order and bin centres are
+    carried together in a single ``disagg_bins`` map column — ``{axis_name: [bin_centre, ...]}``
+    ordered by the HDF5's own ``shape_descr`` at extraction time. pyarrow maps preserve
+    per-row key insertion order, so readers reshape from the map's key order rather than
+    parsing ``kind``. Numeric bin centres (``mag``, ``dist``, ``eps``) are stringified to
+    keep the map value type homogeneous; parse with ``float(x)`` on read. See
     ``toshi_hazard_store.model.pyarrow.disagg_reshape.reshape_disagg_values``.
 
     Attributes:
@@ -34,18 +34,16 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
         sources_digest: unique hash for the NSHM LTB source branch
         gmms_digest: unique hash for the NSHM LTB GSIM branch
         kind: disaggregation kind e.g. "TRT_Mag_Dist_Eps" (for filtering/partitioning)
-        disagg_axes: ordered list of axis names for disagg_values (from HDF5 shape_descr)
-        trt: list of tectonic region type labels (nullable — absent when kind excludes TRT)
-        mag: list of magnitude bin centres (nullable — absent when kind excludes Mag)
-        dist: list of distance bin centres in km (nullable — absent when kind excludes Dist)
-        eps: list of epsilon bin centres (nullable — absent when kind excludes Eps)
-        disagg_values: flattened disaggregation array over disagg_axes, C-order
+        disagg_bins: ordered map ``{axis_name: [bin_centre_str, ...]}`` — key order
+            defines the axis order of ``disagg_values``; values are stringified bin centres
+        disagg_values: flattened disaggregation array over ``disagg_bins`` axes, C-order
     """
     vtype = pa.float64() if use_64bit_values else pa.float32()
     values_type = pa.list_(vtype)
     vs30_type = pa.int32()
     dict_type = pa.dictionary(pa.int8(), pa.string(), False)
     str_type = pa.string()
+    bins_map_type = pa.map_(pa.string(), pa.list_(pa.string()))
 
     return pa.schema(
         [
@@ -63,11 +61,7 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
             ("sources_digest", dict_type),
             ("gmms_digest", dict_type),
             ("kind", dict_type),
-            ("disagg_axes", pa.list_(pa.string())),
-            ("trt", pa.list_(pa.string())),
-            ("mag", values_type),
-            ("dist", values_type),
-            ("eps", values_type),
+            ("disagg_bins", bins_map_type),
             ("disagg_values", values_type),
         ]
     )
