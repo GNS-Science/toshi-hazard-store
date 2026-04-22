@@ -10,8 +10,11 @@ USE_64BIT_VALUES_DEFAULT = False
 def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFAULT) -> pa.schema:
     """A schema for disaggregation realisation datasets extracted from openquake.
 
-    One row per (rlz, site, imt, disagg-bin-cell).  Dimension columns (trt, mag, dist, eps)
-    are nullable so the same schema works for all disagg kinds — absent dimensions are NULL.
+    One row per (probability, imt, location, rlz). The disaggregation grid is stored as a
+    single flattened list (``disagg_values``) in C-order over the dimensions named by
+    ``kind`` (e.g. ``TRT_Mag_Dist_Eps`` → trt x mag x dist x eps). Bin centres for each
+    present dimension are stored as list columns alongside, so the grid can be reshaped
+    on read. Absent dimensions (for kinds that exclude them) are NULL.
 
     Attributes:
         compatible_calc_id: FK for hazard-calc equivalence
@@ -27,14 +30,15 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
         rlz: realisation label from the original calculation e.g. "rlz-000"
         sources_digest: unique hash for the NSHM LTB source branch
         gmms_digest: unique hash for the NSHM LTB GSIM branch
-        kind: disaggregation kind e.g. "TRT_Mag_Dist_Eps"
-        trt: tectonic region type label (nullable — absent when kind excludes TRT)
-        mag: magnitude bin centre (nullable — absent when kind excludes Mag)
-        dist: distance bin centre in km (nullable — absent when kind excludes Dist)
-        eps: epsilon bin centre (nullable — absent when kind excludes Eps)
-        disagg_value: disaggregation contribution value
+        kind: disaggregation kind e.g. "TRT_Mag_Dist_Eps"; defines the dim order of disagg_values
+        trt: list of tectonic region type labels (nullable — absent when kind excludes TRT)
+        mag: list of magnitude bin centres (nullable — absent when kind excludes Mag)
+        dist: list of distance bin centres in km (nullable — absent when kind excludes Dist)
+        eps: list of epsilon bin centres (nullable — absent when kind excludes Eps)
+        disagg_values: flattened disaggregation array over the present dims, C-order
     """
     vtype = pa.float64() if use_64bit_values else pa.float32()
+    values_type = pa.list_(vtype)
     vs30_type = pa.int32()
     dict_type = pa.dictionary(pa.int8(), pa.string(), False)
     str_type = pa.string()
@@ -42,24 +46,24 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
     return pa.schema(
         [
             ("compatible_calc_id", str_type),
-            pa.field("producer_digest", dict_type),
-            pa.field("config_digest", dict_type),
+            ("producer_digest", dict_type),
+            ("config_digest", dict_type),
             ("calculation_id", str_type),
-            pa.field("bins_digest", dict_type),
+            ("bins_digest", dict_type),
             ("nloc_001", str_type),
             ("nloc_0", str_type),
             ("vs30", vs30_type),
-            pa.field("imt", dict_type),
-            pa.field("probability", dict_type),
-            pa.field("rlz", dict_type),
-            pa.field("sources_digest", dict_type),
-            pa.field("gmms_digest", dict_type),
-            pa.field("kind", dict_type),
-            pa.field("trt", dict_type, nullable=True),
-            pa.field("mag", vtype, nullable=True),
-            pa.field("dist", vtype, nullable=True),
-            pa.field("eps", vtype, nullable=True),
-            ("disagg_value", vtype),
+            ("imt", dict_type),
+            ("probability", dict_type),
+            ("rlz", dict_type),
+            ("sources_digest", dict_type),
+            ("gmms_digest", dict_type),
+            ("kind", dict_type),
+            ("trt", pa.list_(pa.string())),
+            ("mag", values_type),
+            ("dist", values_type),
+            ("eps", values_type),
+            ("disagg_values", values_type),
         ]
     )
 

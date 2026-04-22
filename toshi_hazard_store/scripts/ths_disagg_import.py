@@ -1,6 +1,10 @@
 """Console script for extracting NSHM disaggregation results to parquet dataset format.
 
 Either for a given General Task or a single HDF5 file (as used in AWS batch jobs).
+
+Each input HDF5 must contain exactly one site, one IMT and one POE (i.e. a single-row
+sitecol and ``iml_disagg`` of the form ``{<imt>: [<iml>]}``). Inputs with more than one of
+any of these are rejected with a ``ValueError``.
 """
 
 import json
@@ -78,8 +82,13 @@ def store_disagg(
     This function is provided for direct use (the Python API) and is also used by the CLI
     wrapper ``store_disagg_cli``.
 
+    The HDF5 at ``hdf5_path`` must contain exactly one site, one IMT and one POE; inputs
+    with more than one of any of these are rejected with a ``ValueError`` by the underlying
+    extractor.
+
     Args:
-        hdf5_path: path to the disaggregation HDF5 file.
+        hdf5_path: path to the disaggregation HDF5 file (must contain exactly one site,
+            one IMT and one POE).
         config_path: path to the ``oq_config.json`` file.
         compatible_calc_id: FK of the compatible calculation.
         hazard_calc_id: FK of the hazard calculation.
@@ -132,6 +141,9 @@ def main():
     """Console script for extracting NSHM disaggregation results to parquet dataset format.
 
     Either for a given General Task or a single HDF5 file (as used in runzi AWS batch jobs).
+
+    Each input HDF5 must contain exactly one site, one IMT and one POE; inputs with more
+    than one of any of these are rejected.
     """
 
 
@@ -205,6 +217,9 @@ def extract(
     debug,
 ):
     """Extract disaggregation results for the given GT_ID, writing to OUTPUT in parquet format.
+
+    Each subtask's HDF5 must contain exactly one site, one IMT and one POE; any HDF5 with
+    more than one of any of these will cause the import to fail with a ValueError.
 
     Arguments:\n
 
@@ -297,9 +312,12 @@ def store_disagg_cli(
 ):
     """Extract openquake disaggregation results from HDF5_PATH writing to OUTPUT in parquet format.
 
+    HDF5_PATH must contain exactly one site, one IMT and one POE; inputs with more than
+    one of any of these are rejected with a ValueError.
+
     Arguments:\n
 
-    HDF5_PATH: path to the disaggregation HDF5 file.\n
+    HDF5_PATH: path to the disaggregation HDF5 file (exactly one site, one IMT and one POE).\n
     CONFIG_PATH: path to the ``oq_config.json`` file.\n
     COMPATIBLE_CALC_ID: FK of the compatible calculation.\n
     HAZARD_CALC_ID: FK of the hazard calculation.\n
