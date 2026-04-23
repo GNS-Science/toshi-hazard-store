@@ -7,14 +7,14 @@ import numpy as np
 import numpy.typing as npt
 import pyarrow as pa
 
-try:
+try:  # pragma: no cover
     import openquake  # noqa
 
     HAVE_OQ = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAVE_OQ = False
 
-if HAVE_OQ:
+if HAVE_OQ:  # pragma: no cover
     from openquake.calculators.extract import Extractor
 
 from nzshm_common.location import CodedLocation
@@ -34,15 +34,16 @@ def compute_bins_digest(disagg_rlzs) -> str:
     """Return a short sha256 hex digest over the bin centres in a disagg extract result.
 
     The digest is a compatibility key: two disagg matrices with the same digest share identical
-    bin structure and can be safely combined.
+    bin structure and can be safely combined. Both axis names and per-axis values are sorted
+    so that reordering by OpenQuake at any level leaves the digest unchanged; values are
+    stringified with ``_stringify_bin_centers`` (the same type-agnostic helper used to build
+    the stored ``disagg_bins`` map).
     """
-    payload: dict = {}
-    if hasattr(disagg_rlzs, 'trt') and len(disagg_rlzs.trt):
-        payload['trt'] = sorted(t.decode() if isinstance(t, bytes) else str(t) for t in disagg_rlzs.trt)
-    for dim in ('mag', 'dist', 'eps'):
-        arr = getattr(disagg_rlzs, dim, None)
-        if arr is not None and len(arr):
-            payload[dim] = arr.tolist()
+    axes = [str(d) for d in disagg_rlzs.shape_descr if str(d) not in _QUERY_DIMS]
+    payload = {
+        name: sorted(_stringify_bin_centers(getattr(disagg_rlzs, name)))
+        for name in sorted(axes)
+    }
     serialised = json.dumps(payload, sort_keys=True, separators=(',', ':'))
     return hashlib.sha256(serialised.encode()).hexdigest()[:16]
 

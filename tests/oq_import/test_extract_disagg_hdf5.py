@@ -59,6 +59,28 @@ def test_compute_bins_digest_deterministic(disagg_hdf5_info):
 
 
 @_REQUIRE_OQ
+def test_compute_bins_digest_order_insensitive(disagg_hdf5_info):
+    """Digest is stable under shape_descr axis reordering and per-axis value reordering."""
+    hdf5_path, kind, imts = disagg_hdf5_info
+    extractor = Extractor(str(hdf5_path))
+    probe = extractor.get(f'disagg?kind={kind}&imt={imts[0]}&site_id=0&poe_id=0&spec=rlzs')
+
+    reversed_axes = list(reversed(list(probe.shape_descr)))
+    first_bin_axis = next(str(d) for d in probe.shape_descr if str(d) not in ('imt', 'poe'))
+    reversed_values = list(reversed(list(getattr(probe, first_bin_axis))))
+
+    class _Reordered:
+        shape_descr = reversed_axes
+
+        def __getattr__(self, name):
+            if name == first_bin_axis:
+                return reversed_values
+            return getattr(probe, name)
+
+    assert extract_disagg_hdf5.compute_bins_digest(probe) == extract_disagg_hdf5.compute_bins_digest(_Reordered())
+
+
+@_REQUIRE_OQ
 def test_disaggs_to_record_batch_reader_smoke(disagg_hdf5_info, probability, tmp_path):
     """Reader yields at least one batch conforming to the disagg schema."""
     hdf5_path, kind, imts = disagg_hdf5_info
