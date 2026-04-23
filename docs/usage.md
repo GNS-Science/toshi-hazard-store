@@ -17,7 +17,7 @@ Disaggregation realizations can be imported from OpenQuake hdf5 using ['ths_disa
 ```console
 ths_disagg_import store-disagg [OPTIONS] HDF5_PATH CONFIG_PATH COMPATIBLE_CALC_ID HAZARD_CALC_ID ECR_DIGEST OUTPUT
 ```
-Realizations will be partitioned by unique ID (`HAZARD_CALC_ID`). To compact the dataset and re-partition for easy filtering use the [`ths_ds_defrag`](cli/ths_ds_defrag.md). For disaggregations, the suggested partitioning is `bins_digest,vs30,nloc_0`
+When defragging a disaggregation dataset the suggested partitioning is `bins_digest,vs30,nloc_0`, not the default `vs30,nloc_0`; this makes filtering for specific disaggregation types (e.g. mangitude and distance disaggregation vs TRT disaggregation) easier.
 ```console
 ths_ds_defrag -v -p "bins_digest,vs30,nloc_0" /tmp/disagg-debug-out/ /tmp/disagg-defragg-rlz/
 ```

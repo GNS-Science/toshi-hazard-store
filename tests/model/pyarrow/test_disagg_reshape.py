@@ -7,7 +7,8 @@ from toshi_hazard_store.model.pyarrow.disagg_reshape import parse_disagg_bins, r
 
 
 def _make_flat(shape):
-    """Return a sequential float array of the given shape, then flattened."""
+    """Return a 1D sequential float array with the number of elements euqal to the number of elements of a ndarray
+    with the dimensions shape. This simulates a flattened disaggregation array."""
     return np.arange(int(np.prod(shape)), dtype=np.float32).tolist()
 
 
