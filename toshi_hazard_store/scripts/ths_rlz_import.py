@@ -1,5 +1,5 @@
 """
-Console script for extracting NSHM hazard curves to parquet dataset format
+Console script for extracting OpenQuake hazard realization curves to parquet dataset format
  - either from a given General Task
  - or for a single HDF5 file (as used in AWS batch jobs)
 

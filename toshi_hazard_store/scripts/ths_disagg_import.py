@@ -1,4 +1,4 @@
-"""Console script for extracting NSHM disaggregation results to parquet dataset format.
+"""Console script for extracting disaggregation realizations from OpenQuake to parquet dataset format.
 
 Either for a given General Task or a single HDF5 file (as used in AWS batch jobs).
 

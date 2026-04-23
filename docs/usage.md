@@ -5,6 +5,23 @@ To use toshi-hazard-store in a project you must first:
 - [Install the library](./installation.md), and
 - [Configure it](./configuration.md) for your requirements (e.g., cloud use or local offline use)
 
+## Import Realizations
+
+Hazard curve realizations (curves for individual branches of the logic tree) can be imported from OpenQuake hdf5 and stored as parquet datasets with the [`ths_rlz_import`](cli/ths_rlz_import.md) script.
+```console
+ths_rlz_import store-hazard [OPTIONS] HDF5_PATH CONFIG_PATH COMPATIBLE_CALC_ID HAZARD_CALC_ID ECR_DIGEST OUTPUT
+```
+Realizations will be partitioned by unique ID (`HAZARD_CALC_ID`). To compact the dataset and re-partition for easy filtering use the [`ths_ds_defrag`](cli/ths_ds_defrag.md). The default partitioning works for hazard curve realizations.
+
+Disaggregation realizations can be imported from OpenQuake hdf5 using ['ths_disagg_import'](cli/ths_disagg_import.md).
+```console
+ths_disagg_import store-disagg [OPTIONS] HDF5_PATH CONFIG_PATH COMPATIBLE_CALC_ID HAZARD_CALC_ID ECR_DIGEST OUTPUT
+```
+Realizations will be partitioned by unique ID (`HAZARD_CALC_ID`). To compact the dataset and re-partition for easy filtering use the [`ths_ds_defrag`](cli/ths_ds_defrag.md). For disaggregations, the suggested partitioning is `bins_digest,vs30,nloc_0`
+```console
+ths_ds_defrag -v -p "bins_digest,vs30,nloc_0" /tmp/disagg-debug-out/ /tmp/disagg-defragg-rlz/
+```
+
 ## Query the Hazard Store
 
 The library provides two main query functions for retrieving hazard data from PyArrow parquet datasets.
