@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.0] Unreleased
+
+### Added
+- Import disaggregation realizations from OpenQuake
+
+### Changed
+- Unpin `lancedb` dependency
+
 ## [1.5.0] 2026-04-13
 
 ### Changed
