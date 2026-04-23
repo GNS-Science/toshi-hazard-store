@@ -40,10 +40,7 @@ def compute_bins_digest(disagg_rlzs) -> str:
     the stored ``disagg_bins`` map).
     """
     axes = [str(d) for d in disagg_rlzs.shape_descr if str(d) not in _QUERY_DIMS]
-    payload = {
-        name: sorted(_stringify_bin_centers(getattr(disagg_rlzs, name)))
-        for name in sorted(axes)
-    }
+    payload = {name: sorted(_stringify_bin_centers(getattr(disagg_rlzs, name))) for name in sorted(axes)}
     serialised = json.dumps(payload, sort_keys=True, separators=(',', ':'))
     return hashlib.sha256(serialised.encode()).hexdigest()[:16]
 
