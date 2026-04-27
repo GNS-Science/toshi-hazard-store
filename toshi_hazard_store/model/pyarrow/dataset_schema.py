@@ -60,7 +60,6 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
             ("rlz", dict_type),
             ("sources_digest", dict_type),
             ("gmms_digest", dict_type),
-            ("kind", dict_type),
             ("disagg_bins", bins_map_type),
             ("disagg_values", values_type),
         ]

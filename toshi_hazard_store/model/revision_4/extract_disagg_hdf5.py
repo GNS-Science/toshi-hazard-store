@@ -157,7 +157,6 @@ def generate_disagg_record_batches(
             pa.array(rlz_labels, type=pa.string()).dictionary_encode().cast(dict_type),
             pa.array(sources_list, type=pa.string()).dictionary_encode().cast(dict_type),
             pa.array(gmms_list, type=pa.string()).dictionary_encode().cast(dict_type),
-            pa.DictionaryArray.from_arrays(zeros, [kind]),
             pa.array([disagg_bins] * n_rlz, type=bins_map_type),
             pa.array(per_rlz_flat.tolist(), type=pa.list_(pa_vtype)),
         ],

@@ -123,25 +123,6 @@ def test_probability_column_populated(disagg_hdf5_info, probability):
 
 
 @_REQUIRE_OQ
-def test_kind_column_populated(disagg_hdf5_info, probability):
-    """Every row carries the requested kind."""
-    hdf5_path, kind, imts = disagg_hdf5_info
-    reader = extract_disagg_hdf5.disaggs_to_record_batch_reader(
-        hdf5_file=str(hdf5_path),
-        calculation_id='test-calc-id',
-        compatible_calc_id='compat-0',
-        producer_digest='sha256:' + 'a' * 64,
-        config_digest='cfg-abc123',
-        probability=probability,
-        kind=kind,
-    )
-    for batch in reader:
-        kind_col = batch.column('kind')
-        unique_kinds = kind_col.dictionary.to_pylist()
-        assert unique_kinds == [kind]
-
-
-@_REQUIRE_OQ
 def test_disagg_bins_column_populated(disagg_hdf5_info, probability):
     """Every row carries a disagg_bins map whose keys match the HDF5 shape_descr order."""
     hdf5_path, kind, imts = disagg_hdf5_info
