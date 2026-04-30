@@ -15,7 +15,8 @@ Realizations will be partitioned by unique ID (`HAZARD_CALC_ID`). To compact the
 
 Disaggregation realizations can be imported from OpenQuake hdf5 using ['ths_disagg_import'](cli/ths_disagg_import.md).
 ```console
-ths_disagg_import store-disagg [OPTIONS] HDF5_PATH CONFIG_PATH COMPATIBLE_CALC_ID HAZARD_CALC_ID ECR_DIGEST OUTPUT
+ths_disagg_import store-disagg [OPTIONS] HDF5_PATH CONFIG_PATH COMPATIBLE_CALC_ID HAZARD_CALC_ID ECR_DIGEST OUTPUT \
+  -P _2_PCT_IN_50YRS -M NSHM_v1.0.4 -A mean
 ```
 When defragging a disaggregation dataset the suggested partitioning is `bins_digest,vs30,nloc_0`, not the default `vs30,nloc_0`; this makes filtering for specific disaggregation types (e.g. mangitude and distance disaggregation vs TRT disaggregation) easier.
 ```console

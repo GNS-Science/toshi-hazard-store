@@ -140,6 +140,8 @@ def build_disaggregations(
     output: str,
     verbose: bool,
     probability: ProbabilityEnum,
+    hazard_model_id: str,
+    target_aggr: str,
     kind: str = 'TRT_Mag_Dist_Eps',
     use_64bit_values: bool = False,
     partition_by_calc_id: bool = False,
@@ -152,6 +154,8 @@ def build_disaggregations(
         output (str): Output path (local or S3 URI).
         verbose (bool): Verbose flag.
         probability (ProbabilityEnum): Target hazard level at which disagg was computed.
+        hazard_model_id (str): NSHM hazard model identifier e.g. "NSHM_v1.0.4".
+        target_aggr (str): Aggregate of the hazard curve the disagg targets e.g. "mean".
         kind (str): Disaggregation kind to extract e.g. "TRT_Mag_Dist_Eps".
         use_64bit_values (bool): Flag to use 64-bit values.
         partition_by_calc_id (bool): Partition by calculation_id rather than nloc_0.
@@ -180,6 +184,8 @@ def build_disaggregations(
         producer_digest=subtask_info.ecr_image.imageDigest,
         config_digest=subtask_info.config_hash,
         probability=probability,
+        hazard_model_id=hazard_model_id,
+        target_aggr=target_aggr,
         kind=kind,
         use_64bit_values=use_64bit_values,
     )
