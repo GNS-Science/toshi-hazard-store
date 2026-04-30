@@ -29,6 +29,7 @@ nav:
       - ths_grid_build: cli/ths_grid_build.md
       - ths_grid_sanity: cli/ths_grid_sanity.md
       - ths_rlz_import: cli/ths_rlz_import.md
+      - ths_disagg_import: cli/ths_disagg_import.md
       - ths_rlz_sanity: cli/ths_rlz_sanity.md
   - API:
       - query API: api/query/index.md
