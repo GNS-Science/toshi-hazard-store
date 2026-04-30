@@ -66,6 +66,56 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
     )
 
 
+def get_disagg_aggregate_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFAULT) -> pa.schema:
+    """A schema for disaggregation aggregate datasets.
+
+    One row per (compatible_calc_id, hazard_model_id, location, imt, vs30, target_aggr,
+    probability, imtl, aggr). The disaggregation grid is stored as a single flattened list
+    (``disagg_values``) in C-order; axis order and bin centres are in ``disagg_bins``.
+
+    Attributes:
+        compatible_calc_id: FK for hazard-calc equivalence
+        hazard_model_id: NSHM hazard model identifier e.g. "NSHM_v1.0.4" (caller-supplied)
+        bins_digest: sha256 of the bin centers/labels — compatibility key for combining disaggs
+        nloc_001: location string at 0.001° resolution e.g. "-38.330~175.550"
+        nloc_0: location string at 1.0° resolution (used for partitioning)
+        vs30: VS30 value in m/s
+        imt: intensity measure type label e.g. "PGA", "SA(1.0)"
+        target_aggr: hazard-curve aggregation the disagg was conditioned on e.g. "mean", "0.5"
+        probability: ProbabilityEnum name supplied by caller e.g. "_10_PCT_IN_50YRS"
+        imtl: IML at which the disagg was computed
+        aggr: aggregation type applied across realisations e.g. "mean", "0.1"
+        disagg_bins: ordered map ``{axis_name: [bin_centre_str, ...]}`` — key order
+            defines the axis order of ``disagg_values``; values are stringified bin centres
+        disagg_values: flattened disaggregation array over ``disagg_bins`` axes, C-order
+    """
+    vtype = pa.float64() if use_64bit_values else pa.float32()
+    imtl_type = pa.float64() if use_64bit_values else pa.float32()
+    values_type = pa.list_(vtype)
+    vs30_type = pa.int32()
+    dict_type = pa.dictionary(pa.int8(), pa.string(), False)
+    str_type = pa.string()
+    bins_map_type = pa.map_(pa.string(), pa.list_(pa.string()))
+
+    return pa.schema(
+        [
+            ("compatible_calc_id", str_type),
+            ("hazard_model_id", dict_type),
+            ("bins_digest", dict_type),
+            ("nloc_001", str_type),
+            ("nloc_0", str_type),
+            ("vs30", vs30_type),
+            ("imt", dict_type),
+            ("target_aggr", dict_type),
+            ("probability", dict_type),
+            ("imtl", imtl_type),
+            ("aggr", dict_type),
+            ("disagg_bins", bins_map_type),
+            ("disagg_values", values_type),
+        ]
+    )
+
+
 def get_hazard_realisation_schema(use_64_bit_values: bool = USE_64BIT_VALUES_DEFAULT) -> pa.schema:
     """A schema for Hazard Realization curves dataset extracted from openquake.
 

@@ -5,6 +5,7 @@ import pytest
 from toshi_hazard_store.model.hazard_models_pydantic import (
     AwsEcrImage,
     CompatibleHazardCalculation,
+    DisaggregationAggregate,
     HazardAggregateCurve,
     HazardCurveProducerConfig,
 )
@@ -95,3 +96,49 @@ class TestHazardAggregateCurve:
         with pytest.raises(ValueError, match=r"expected 44 values but") as exc:
             HazardAggregateCurve(**invalid_data)
         print(exc)
+
+
+class TestDisaggregationAggregate:
+    def setup_method(self):
+        self.bins = {
+            "mag": ["5.5", "6.5", "7.5"],
+            "dist": ["10.0", "50.0", "100.0", "200.0"],
+            "eps": ["-1.0", "0.0", "1.0"],
+        }
+        self.data = dict(
+            compatible_calc_id="NZSHM22",
+            hazard_model_id="NSHM_v1.0.4",
+            nloc_001="-38.330~175.550",
+            nloc_0="-38.0~175.0",
+            imt="PGA",
+            vs30=400,
+            target_aggr="mean",
+            probability="_10_PCT_IN_50YRS",
+            imtl=0.1,
+            aggr="mean",
+            bins_digest="abc123def456",
+            disagg_bins=self.bins,
+            disagg_values=[float(i) for i in range(3 * 4 * 3)],
+        )
+
+    def test_model_dump(self):
+        model = DisaggregationAggregate(**self.data)
+        assert model.model_dump() == self.data
+
+    def test_missing_required_field(self):
+        invalid = dict(**self.data)
+        del invalid["bins_digest"]
+        with pytest.raises(ValueError, match=r"Field required"):
+            DisaggregationAggregate(**invalid)
+
+    def test_empty_bins_raises(self):
+        invalid = dict(**self.data)
+        invalid["disagg_bins"] = {}
+        with pytest.raises(ValueError, match=r"disagg_bins must not be empty"):
+            DisaggregationAggregate(**invalid)
+
+    def test_values_shape_mismatch_raises(self):
+        invalid = dict(**self.data)
+        invalid["disagg_values"] = invalid["disagg_values"][:-1]
+        with pytest.raises(ValueError, match=r"disagg_values length"):
+            DisaggregationAggregate(**invalid)
