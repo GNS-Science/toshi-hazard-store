@@ -1,9 +1,11 @@
+import enum
 import typing
 from datetime import datetime, timezone
 
 import pyarrow as pa
 import pytest
 
+from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.model.hazard_models_pydantic import (
     AwsEcrImage,
     CompatibleHazardCalculation,
@@ -115,7 +117,7 @@ class TestDisaggregationAggregate:
             imt="PGA",
             vs30=400,
             target_aggr="mean",
-            probability="_10_PCT_IN_50YRS",
+            probability=ProbabilityEnum._10_PCT_IN_50YRS,
             imtl=0.1,
             aggr="mean",
             bins_digest="abc123def456",
@@ -125,12 +127,19 @@ class TestDisaggregationAggregate:
 
     def test_model_dump(self):
         model = DisaggregationAggregate(**self.data)
-        assert model.model_dump() == self.data
+        expected = {**self.data, "probability": self.data["probability"].name}
+        assert model.model_dump() == expected
 
     def test_missing_required_field(self):
         invalid = dict(**self.data)
         del invalid["bins_digest"]
         with pytest.raises(ValueError, match=r"Field required"):
+            DisaggregationAggregate(**invalid)
+
+    def test_invalid_probability_raises(self):
+        invalid = dict(**self.data)
+        invalid["probability"] = 999.9
+        with pytest.raises(ValueError):
             DisaggregationAggregate(**invalid)
 
     def test_empty_bins_raises(self):
@@ -157,6 +166,8 @@ class TestDisaggregationAggregate:
             args = typing.get_args(py_anno)
 
             if py_anno is str:
+                return pa.types.is_string(a) or pa.types.is_large_string(a)
+            if isinstance(py_anno, type) and issubclass(py_anno, enum.Enum):
                 return pa.types.is_string(a) or pa.types.is_large_string(a)
             if py_anno is int:
                 return pa.types.is_integer(a)

@@ -1,6 +1,7 @@
 import pyarrow.dataset as ds
 import pytest
 
+from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.model.hazard_models_pydantic import DisaggregationAggregate
 from toshi_hazard_store.model.pyarrow import (
     pyarrow_dataset,
@@ -29,7 +30,7 @@ def disagg_aggregate_models():
                 imt="PGA",
                 vs30=400,
                 target_aggr="mean",
-                probability="_10_PCT_IN_50YRS",
+                probability=ProbabilityEnum._10_PCT_IN_50YRS,
                 imtl=0.1,
                 aggr="mean",
                 bins_digest="abc123def456",

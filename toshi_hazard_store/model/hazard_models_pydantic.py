@@ -6,8 +6,9 @@ from typing import List
 
 import pyarrow as pa
 from lancedb.pydantic import pydantic_to_schema
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator, model_validator
 
+from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 
 USE_64BIT_VALUES = False
@@ -152,11 +153,15 @@ class DisaggregationAggregate(BaseModel):
     vs30: int
     imt: str
     target_aggr: str
-    probability: str
+    probability: ProbabilityEnum
     imtl: float
     aggr: str
     disagg_bins: dict[str, list[str]]
     disagg_values: List[float]
+
+    @field_serializer("probability")
+    def serialize_probability(self, value: ProbabilityEnum) -> str:
+        return value.name
 
     @field_validator("disagg_bins")
     @classmethod
