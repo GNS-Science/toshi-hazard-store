@@ -1,5 +1,7 @@
+import typing
 from datetime import datetime, timezone
 
+import pyarrow as pa
 import pytest
 
 from toshi_hazard_store.model.hazard_models_pydantic import (
@@ -142,3 +144,43 @@ class TestDisaggregationAggregate:
         invalid["disagg_values"] = invalid["disagg_values"][:-1]
         with pytest.raises(ValueError, match=r"disagg_values length"):
             DisaggregationAggregate(**invalid)
+
+    def test_schema_matches_pydantic_fields(self):
+        """Assert that get_disagg_aggregate_schema stays in sync with DisaggregationAggregate."""
+
+        def _strip_dict(t: pa.DataType) -> pa.DataType:
+            return t.value_type if pa.types.is_dictionary(t) else t
+
+        def _is_compatible(py_anno, arrow_type: pa.DataType) -> bool:
+            a = _strip_dict(arrow_type)
+            origin = typing.get_origin(py_anno)
+            args = typing.get_args(py_anno)
+
+            if py_anno is str:
+                return pa.types.is_string(a) or pa.types.is_large_string(a)
+            if py_anno is int:
+                return pa.types.is_integer(a)
+            if py_anno is float:
+                return pa.types.is_floating(a)
+            if origin is list:
+                return pa.types.is_list(a) and _is_compatible(args[0], a.value_type)
+            if origin is dict:
+                return (
+                    pa.types.is_map(a)
+                    and _is_compatible(args[0], a.key_type)
+                    and _is_compatible(args[1], a.item_type)
+                )
+            raise TypeError(f"Unrecognised pydantic annotation: {py_anno!r}")
+
+        schema = DisaggregationAggregate.pyarrow_schema()
+        pydantic_fields = DisaggregationAggregate.model_fields
+
+        assert list(pydantic_fields.keys()) == schema.names, (
+            f"Field order mismatch:\n  pydantic: {list(pydantic_fields.keys())}\n  schema:   {schema.names}"
+        )
+
+        for name, field_info in pydantic_fields.items():
+            arrow_field = schema.field(name)
+            assert _is_compatible(field_info.annotation, arrow_field.type), (
+                f"field '{name}': pydantic {field_info.annotation!r} incompatible with arrow type {arrow_field.type}"
+            )

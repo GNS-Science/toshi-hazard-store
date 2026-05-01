@@ -130,15 +130,15 @@ class DisaggregationAggregate(BaseModel):
     Attributes:
         compatible_calc_id: FK for hazard-calc equivalence.
         hazard_model_id: NSHM hazard model identifier e.g. "NSHM_v1.0.4" (caller-supplied).
+        bins_digest: sha256[:16] over sorted axes + sorted bin centres (compatibility key).
         nloc_001: location string at 0.001° resolution e.g. "-38.330~175.550".
         nloc_0: location string at 1.0° resolution (used for partitioning).
-        imt: intensity measure type label e.g. "PGA", "SA(1.0)".
         vs30: VS30 value in m/s.
+        imt: intensity measure type label e.g. "PGA", "SA(1.0)".
         target_aggr: hazard-curve aggregation the disagg was conditioned on e.g. "mean", "0.5".
         probability: ProbabilityEnum name supplied by caller e.g. "_10_PCT_IN_50YRS".
         imtl: IML at which the disagg was computed.
         aggr: aggregation type applied across realisations e.g. "mean", "0.1".
-        bins_digest: sha256[:16] over sorted axes + sorted bin centres (compatibility key).
         disagg_bins: ordered map ``{axis_name: [bin_centre_str, ...]}`` — key order
             defines the axis order of ``disagg_values``; values are stringified bin centres.
         disagg_values: flattened disaggregation array over ``disagg_bins`` axes, C-order.
@@ -146,15 +146,15 @@ class DisaggregationAggregate(BaseModel):
 
     compatible_calc_id: str
     hazard_model_id: str
+    bins_digest: str
     nloc_001: str
     nloc_0: str
-    imt: str
     vs30: int
+    imt: str
     target_aggr: str
     probability: str
     imtl: float
     aggr: str
-    bins_digest: str
     disagg_bins: dict[str, list[str]]
     disagg_values: List[float]
 
