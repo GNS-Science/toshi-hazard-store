@@ -9,6 +9,7 @@ from lancedb.pydantic import pydantic_to_schema
 from pydantic import BaseModel, Field, field_serializer, field_validator, model_validator
 
 from toshi_hazard_store.model.constraints import ProbabilityEnum
+from toshi_hazard_store.model.pyarrow.dataset_schema import get_disagg_aggregate_schema
 from toshi_hazard_store.oq_import.aws_ecr_docker_image import AwsEcrImage
 
 USE_64BIT_VALUES = False
@@ -182,6 +183,4 @@ class DisaggregationAggregate(BaseModel):
     @staticmethod
     def pyarrow_schema() -> pa.schema:
         """A pyarrow schema for aggregate disaggregation datasets."""
-        from toshi_hazard_store.model.pyarrow.dataset_schema import get_disagg_aggregate_schema
-
         return get_disagg_aggregate_schema()
