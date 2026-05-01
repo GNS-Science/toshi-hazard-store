@@ -177,9 +177,7 @@ class TestDisaggregationAggregate:
                 return pa.types.is_list(a) and _is_compatible(args[0], a.value_type)
             if origin is dict:
                 return (
-                    pa.types.is_map(a)
-                    and _is_compatible(args[0], a.key_type)
-                    and _is_compatible(args[1], a.item_type)
+                    pa.types.is_map(a) and _is_compatible(args[0], a.key_type) and _is_compatible(args[1], a.item_type)
                 )
             raise TypeError(f"Unrecognised pydantic annotation: {py_anno!r}")
 

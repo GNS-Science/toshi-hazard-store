@@ -1,3 +1,5 @@
+import math
+
 import pyarrow.dataset as ds
 import pytest
 
@@ -14,8 +16,8 @@ _BINS = {
     "dist": ["10.0", "50.0", "100.0", "200.0"],
     "eps": ["-1.0", "0.0", "1.0"],
 }
-_EXPECTED_SHAPE = (3, 4, 3)
-_N_VALUES = 3 * 4 * 3
+_EXPECTED_SHAPE = tuple([len(element) for element in _BINS.values()])
+_N_VALUES = math.prod(_EXPECTED_SHAPE)
 
 
 @pytest.fixture
@@ -38,7 +40,7 @@ def disagg_aggregate_models():
                 disagg_values=[float(j) for j in range(_N_VALUES)],
             )
 
-    yield _models()
+    return _models()
 
 
 def test_serialise_disagg_aggregate(tmp_path, disagg_aggregate_models):
