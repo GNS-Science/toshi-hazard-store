@@ -1,0 +1,44 @@
+"""pyarrow helper function for disaggregation aggregate datasets."""
+
+import logging
+from typing import Iterable, Optional
+
+from pyarrow import fs
+
+from toshi_hazard_store.model.hazard_models_pydantic import DisaggregationAggregate
+from toshi_hazard_store.model.pyarrow import pyarrow_dataset
+
+log = logging.getLogger(__name__)
+
+
+def append_models_to_dataset(
+    models: Iterable['DisaggregationAggregate'],
+    base_dir: str,
+    dataset_format: str = 'parquet',
+    filesystem: Optional[fs.FileSystem] = None,
+    partitioning: Optional[Iterable[str]] = None,
+    existing_data_behavior: str = "overwrite_or_ignore",
+) -> None:
+    """
+    Write DisaggregationAggregate models to dataset.
+
+    Args:
+    models: An iterable of model data objects.
+    base_dir: The path where the data will be stored.
+    dataset_format (optional): The format of the dataset. Defaults to 'parquet'.
+    filesystem (optional): The file system to use for storage. Defaults to None.
+    partitioning (optional): The partitioning scheme to apply. Defaults to ['nloc_0'].
+    existing_data_behavior: how to treat existing data (see pyarrow docs).
+
+    Returns: None
+    """
+    table = pyarrow_dataset.table_from_models(models)
+    pyarrow_dataset.append_models_to_dataset(
+        table,
+        base_dir,
+        dataset_format,
+        filesystem,
+        partitioning,
+        existing_data_behavior,
+        schema=DisaggregationAggregate.pyarrow_schema(),
+    )
