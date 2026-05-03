@@ -69,6 +69,9 @@ def generate_disagg_record_batches(
     producer_digest: str,
     config_digest: str,
     calculation_id: str,
+    hazard_model_id: str,
+    target_aggr: str,
+    imtl: float,
     use_64bit_values: bool,
 ) -> Iterator[pa.RecordBatch]:
     """Yield a single RecordBatch containing one row per realisation.
@@ -92,10 +95,14 @@ def generate_disagg_record_batches(
         kind: disaggregation kind e.g. "TRT_Mag_Dist_Eps".
         bins_digest: pre-computed bins compatibility digest.
         compatible_calc_id, producer_digest, config_digest, calculation_id: provenance fields.
+        hazard_model_id: NSHM hazard model identifier (caller-supplied).
+        target_aggr: aggregate of the hazard curve the disagg targets e.g. "mean" (caller-supplied).
+        imtl: IML at which the disagg was computed (read from oqparam['iml_disagg']).
         use_64bit_values: use float64 for disagg_values when True.
     """
     vtype = np.float64 if use_64bit_values else np.float32
     pa_vtype = pa.float64() if use_64bit_values else pa.float32()
+    pa_imtl_type = pa.float64() if use_64bit_values else pa.float32()
     dict_type = pa.dictionary(pa.int8(), pa.string(), False)
     bins_map_type = pa.map_(pa.string(), pa.list_(pa.string()))
 
@@ -145,6 +152,7 @@ def generate_disagg_record_batches(
     yield pa.RecordBatch.from_arrays(
         [
             pa.array([compatible_calc_id] * n_rlz, type=pa.string()),
+            pa.DictionaryArray.from_arrays(zeros, [hazard_model_id]),
             pa.DictionaryArray.from_arrays(zeros, [producer_digest]),
             pa.DictionaryArray.from_arrays(zeros, [config_digest]),
             pa.array([calculation_id] * n_rlz, type=pa.string()),
@@ -153,7 +161,9 @@ def generate_disagg_record_batches(
             pa.array([nloc_0_code] * n_rlz, type=pa.string()),
             vs30_arr,
             pa.DictionaryArray.from_arrays(zeros, [imt]),
+            pa.DictionaryArray.from_arrays(zeros, [target_aggr]),
             pa.DictionaryArray.from_arrays(zeros, [probability.name]),
+            pa.array([float(imtl)] * n_rlz, type=pa_imtl_type),
             pa.array(rlz_labels, type=pa.string()).dictionary_encode().cast(dict_type),
             pa.array(sources_list, type=pa.string()).dictionary_encode().cast(dict_type),
             pa.array(gmms_list, type=pa.string()).dictionary_encode().cast(dict_type),
@@ -171,6 +181,8 @@ def disaggs_to_record_batch_reader(
     producer_digest: str,
     config_digest: str,
     probability: ProbabilityEnum,
+    hazard_model_id: str,
+    target_aggr: str,
     kind: str = 'TRT_Mag_Dist_Eps',
     use_64bit_values: bool = False,
 ) -> pa.RecordBatchReader:
@@ -188,6 +200,8 @@ def disaggs_to_record_batch_reader(
         config_digest: digest of the OQ job configuration.
         probability: ProbabilityEnum identifying the target hazard probability at which the disagg was computed.
             This is supplied by the caller — it is NOT read from the HDF5.
+        hazard_model_id: NSHM hazard model identifier (caller-supplied) e.g. "NSHM_v1.0.4".
+        target_aggr: aggregate of the hazard curve the disagg targets (caller-supplied) e.g. "mean", "0.5".
         kind: disaggregation kind to extract (must appear in oqparam['disagg_outputs']).
         use_64bit_values: use float64 for disagg_values when True.
 
@@ -212,6 +226,7 @@ def disaggs_to_record_batch_reader(
     imt, imls = next(iter(iml_disagg.items()))
     if len(imls) != 1:
         raise ValueError(f"iml_disagg must contain exactly one POE (one IML per IMT), got {len(imls)}: {imls}")
+    imtl = float(imls[0])
 
     # Build site record from the single-site sitecol.
     df0 = extractor.get('sitecol').to_dframe()
@@ -247,6 +262,9 @@ def disaggs_to_record_batch_reader(
         producer_digest=producer_digest,
         config_digest=config_digest,
         calculation_id=calculation_id,
+        hazard_model_id=hazard_model_id,
+        target_aggr=target_aggr,
+        imtl=imtl,
         use_64bit_values=use_64bit_values,
     )
     return pa.RecordBatchReader.from_batches(schema, batches)

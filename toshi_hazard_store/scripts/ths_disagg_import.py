@@ -43,6 +43,8 @@ def store_disagg(
     ecr_digest: str,
     output: str,
     probability: ProbabilityEnum,
+    hazard_model_id: str,
+    target_aggr: str,
     kind: str = 'TRT_Mag_Dist_Eps',
     use_64bit_values: bool = False,
 ) -> None:
@@ -65,6 +67,8 @@ def store_disagg(
             e.g. sha256:db023d95e7ec6707fe3484c7b3c1f8fd4d1c134d5a6d7ec5e939700b625293d9
         output: path to the output file OR S3 URI.
         probability: ProbabilityEnum identifying the target hazard level.
+        hazard_model_id: NSHM hazard model identifier e.g. "NSHM_v1.0.4".
+        target_aggr: aggregate of the hazard curve the disagg targets e.g. "mean", "0.5".
         kind: disaggregation kind to extract e.g. "TRT_Mag_Dist_Eps".
         use_64bit_values: use float64 for disagg_value when True.
     """
@@ -77,6 +81,8 @@ def store_disagg(
         producer_digest=ecr_digest,
         config_digest=config_digest,
         probability=probability,
+        hazard_model_id=hazard_model_id,
+        target_aggr=target_aggr,
         kind=kind,
         use_64bit_values=use_64bit_values,
     )
@@ -122,6 +128,10 @@ main.add_command(producers)
     default="TRT_Mag_Dist_Eps",
     help="Disaggregation kind to extract (must be in oqparam['disagg_outputs']).",
 )
+@click.option("-M", "--hazard-model-id", required=True, help="NSHM hazard model identifier e.g. 'NSHM_v1.0.4'.")
+@click.option(
+    "-A", "--target-aggr", required=True, help="Aggregate of the hazard curve the disagg targets e.g. 'mean', '0.5'."
+)
 @click.option("-v", "--verbose", is_flag=True, default=False)
 @click.option("-d", "--dry-run", is_flag=True, default=False)
 @click.option("-CID", "--partition-by-calc-id", is_flag=True, default=False)
@@ -135,6 +145,8 @@ def extract(
     output,
     probability,
     kind,
+    hazard_model_id,
+    target_aggr,
     verbose,
     dry_run,
     partition_by_calc_id,
@@ -193,6 +205,8 @@ def extract(
             output,
             verbose,
             probability=prob_enum,
+            hazard_model_id=hazard_model_id,
+            target_aggr=target_aggr,
             kind=kind,
             use_64bit_values=use_64bit,
             partition_by_calc_id=partition_by_calc_id,
@@ -220,6 +234,10 @@ def extract(
     default="TRT_Mag_Dist_Eps",
     help="Disaggregation kind to extract (must be in oqparam['disagg_outputs']).",
 )
+@click.option("-M", "--hazard-model-id", required=True, help="NSHM hazard model identifier e.g. 'NSHM_v1.0.4'.")
+@click.option(
+    "-A", "--target-aggr", required=True, help="Aggregate of the hazard curve the disagg targets e.g. 'mean', '0.5'."
+)
 @click.option("-f64", "--use-64bit", is_flag=True, default=False)
 def store_disagg_cli(
     hdf5_path,
@@ -230,6 +248,8 @@ def store_disagg_cli(
     output,
     probability,
     kind,
+    hazard_model_id,
+    target_aggr,
     use_64bit,
 ):
     """Extract openquake disaggregation results from HDF5_PATH writing to OUTPUT in parquet format.
@@ -255,6 +275,8 @@ def store_disagg_cli(
         ecr_digest,
         output,
         probability=ProbabilityEnum[probability],
+        hazard_model_id=hazard_model_id,
+        target_aggr=target_aggr,
         kind=kind,
         use_64bit_values=use_64bit,
     )

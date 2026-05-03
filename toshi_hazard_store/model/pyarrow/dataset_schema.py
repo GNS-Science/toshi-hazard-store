@@ -21,6 +21,7 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
 
     Attributes:
         compatible_calc_id: FK for hazard-calc equivalence
+        hazard_model_id: NSHM hazard model identifier e.g. "NSHM_v1.0.4" (caller-supplied)
         producer_digest: ECR image SHA256 digest of the producer
         config_digest: digest of the OQ job configuration
         calculation_id: reference to the original calculation
@@ -29,17 +30,19 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
         nloc_0: location string at 1.0° resolution (used for partitioning)
         vs30: VS30 value in m/s
         imt: intensity measure type label e.g. "PGA", "SA(1.0)"
+        target_aggr: aggregate of the hazard curve the disagg targets e.g. "mean", "0.5" (caller-supplied)
         probability: ProbabilityEnum name supplied by caller (not read from HDF5)
+        imtl: IML at which the disagg was computed (read from oqparam['iml_disagg'])
         rlz: realisation label from the original calculation e.g. "rlz-000"
         sources_digest: unique hash for the NSHM LTB source branch
         gmms_digest: unique hash for the NSHM LTB GSIM branch
-        kind: disaggregation kind e.g. "TRT_Mag_Dist_Eps" (for filtering/partitioning)
         disagg_bins: ordered map ``{axis_name: [bin_centre_str, ...]}`` — key order
             defines the axis order of ``disagg_values``; values are stringified bin centres
         disagg_values: flattened disaggregation array over ``disagg_bins`` axes, C-order
     """
     vtype = pa.float64() if use_64bit_values else pa.float32()
     values_type = pa.list_(vtype)
+    imtl_type = pa.float64() if use_64bit_values else pa.float32()
     vs30_type = pa.int32()
     dict_type = pa.dictionary(pa.int8(), pa.string(), False)
     str_type = pa.string()
@@ -48,6 +51,7 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
     return pa.schema(
         [
             ("compatible_calc_id", str_type),
+            ("hazard_model_id", dict_type),
             ("producer_digest", dict_type),
             ("config_digest", dict_type),
             ("calculation_id", str_type),
@@ -56,7 +60,9 @@ def get_disagg_realisation_schema(use_64bit_values: bool = USE_64BIT_VALUES_DEFA
             ("nloc_0", str_type),
             ("vs30", vs30_type),
             ("imt", dict_type),
+            ("target_aggr", dict_type),
             ("probability", dict_type),
+            ("imtl", imtl_type),
             ("rlz", dict_type),
             ("sources_digest", dict_type),
             ("gmms_digest", dict_type),

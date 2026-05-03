@@ -28,6 +28,9 @@ _DISAGG_HDF5_PATH = (
     / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTI4NDUy/calc_1.hdf5'
 )
 
+_HAZARD_MODEL_ID = 'TEST_MODEL_v0'
+_TARGET_AGGR = 'mean'
+
 _REQUIRE_OQ = pytest.mark.skipif(not HAVE_OQ, reason="openquake not installed")
 
 
@@ -91,6 +94,8 @@ def test_disaggs_to_record_batch_reader_smoke(disagg_hdf5_info, probability, tmp
         producer_digest='sha256:' + 'a' * 64,
         config_digest='cfg-abc123',
         probability=probability,
+        hazard_model_id=_HAZARD_MODEL_ID,
+        target_aggr=_TARGET_AGGR,
         kind=kind,
     )
     expected_schema = get_disagg_realisation_schema()
@@ -114,6 +119,8 @@ def test_probability_column_populated(disagg_hdf5_info, probability):
         producer_digest='sha256:' + 'a' * 64,
         config_digest='cfg-abc123',
         probability=probability,
+        hazard_model_id=_HAZARD_MODEL_ID,
+        target_aggr=_TARGET_AGGR,
         kind=kind,
     )
     for batch in reader:
@@ -137,6 +144,8 @@ def test_disagg_bins_column_populated(disagg_hdf5_info, probability):
         producer_digest='sha256:' + 'a' * 64,
         config_digest='cfg-abc123',
         probability=probability,
+        hazard_model_id=_HAZARD_MODEL_ID,
+        target_aggr=_TARGET_AGGR,
         kind=kind,
     )
     for batch in reader:
@@ -174,6 +183,8 @@ def test_record_count_matches_shape(disagg_hdf5_info, probability):
         producer_digest='sha256:' + 'a' * 64,
         config_digest='cfg-abc123',
         probability=probability,
+        hazard_model_id=_HAZARD_MODEL_ID,
+        target_aggr=_TARGET_AGGR,
         kind=kind,
     )
     total_rows = 0
@@ -212,6 +223,8 @@ def test_wrong_calculation_mode_raises(disagg_hdf5_info, probability):
                 producer_digest='sha256:' + 'a' * 64,
                 config_digest='x',
                 probability=probability,
+                hazard_model_id=_HAZARD_MODEL_ID,
+                target_aggr=_TARGET_AGGR,
                 kind=kind,
             )
         )
@@ -230,6 +243,33 @@ def test_invalid_kind_raises(disagg_hdf5_info, probability):
                 producer_digest='sha256:' + 'a' * 64,
                 config_digest='x',
                 probability=probability,
+                hazard_model_id=_HAZARD_MODEL_ID,
+                target_aggr=_TARGET_AGGR,
                 kind='Not_A_Real_Kind',
             )
         )
+
+
+@_REQUIRE_OQ
+def test_new_columns_populated(disagg_hdf5_info, probability):
+    """hazard_model_id, target_aggr and imtl columns carry the caller-supplied / HDF5 values."""
+    hdf5_path, kind, _ = disagg_hdf5_info
+    oqp = json.loads(Extractor(str(hdf5_path)).get('oqparam').json)
+    expected_imtl = float(next(iter(oqp['iml_disagg'].values()))[0])
+
+    reader = extract_disagg_hdf5.disaggs_to_record_batch_reader(
+        hdf5_file=str(hdf5_path),
+        calculation_id='test-calc-id',
+        compatible_calc_id='compat-0',
+        producer_digest='sha256:' + 'a' * 64,
+        config_digest='cfg-abc123',
+        probability=probability,
+        hazard_model_id=_HAZARD_MODEL_ID,
+        target_aggr=_TARGET_AGGR,
+        kind=kind,
+    )
+    for batch in reader:
+        assert batch.column('hazard_model_id').dictionary.to_pylist() == [_HAZARD_MODEL_ID]
+        assert batch.column('target_aggr').dictionary.to_pylist() == [_TARGET_AGGR]
+        for v in batch.column('imtl').to_pylist():
+            assert v == pytest.approx(expected_imtl)
