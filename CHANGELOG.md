@@ -4,9 +4,15 @@
 
 ### Added
 - Import disaggregation realizations from OpenQuake
+- Store disaggregation aggregates as PyArrow parquet datasets (`DisaggregationAggregate` model, schema, writer)
+- Query disaggregation aggregates via `toshi_hazard_store.query.get_disagg_aggregates()` with naive/d1/d2 strategies
+- `DisaggregationAggregate.to_ndarray()` to reshape flat `disagg_values` into an N-D array
+- `_bins_digest_from_dict()` shared helper for computing the bins compatibility digest from a `disagg_bins` dict
+- Documentation for disaggregation aggregates: updated `docs/domain_model/disaggregation_models.md` and query Quick Start
 
 ### Changed
 - Unpin `lancedb` dependency
+- `dataset_cache.py` refactored: shared `_open_partitioned_dataset()` helper used by all six dataset accessors (hazard + disagg)
 
 ## [1.5.0] 2026-04-13
 
