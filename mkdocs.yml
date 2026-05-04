@@ -18,7 +18,7 @@ nav:
       - Hazard Metadata: domain_model/hazard_metadata.md
       - Hazard Curves: domain_model/openquake_models.md
       - Gridded Hazard: domain_model/gridded_hazard_models.md
-      - Disaggregation (WIP): domain_model/disaggregation_models.md      
+      - Disaggregation: domain_model/disaggregation_models.md
   - CLI tools: 
       - cli/index.md
       - Aggregation CLI workflow: cli/aggregation_cli_workflow.md
