@@ -1,4 +1,4 @@
-"""Different query strategies for hazard curve retrieval."""
+"""Different query strategies for hazard curve and disaggregation aggregate retrieval."""
 
 import datetime as dt
 import itertools
@@ -7,9 +7,17 @@ from typing import Iterator, Optional
 
 import pyarrow.compute as pc
 
-from toshi_hazard_store.query.dataset_cache import get_dataset, get_dataset_vs30, get_dataset_vs30_nloc0
+from toshi_hazard_store.model.constraints import ProbabilityEnum
+from toshi_hazard_store.query.dataset_cache import (
+    get_dataset,
+    get_dataset_vs30,
+    get_dataset_vs30_nloc0,
+    get_disagg_aggr_dataset,
+    get_disagg_aggr_dataset_digest_vs30,
+    get_disagg_aggr_dataset_digest_vs30_nloc0,
+)
 from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
-from toshi_hazard_store.query.models import AggregatedHazard
+from toshi_hazard_store.query.models import AggregatedDisagg, AggregatedHazard
 
 log = logging.getLogger(__name__)
 
@@ -221,6 +229,231 @@ def get_hazard_curves_by_vs30_nloc0(
 
         t3 = dt.datetime.now()  # pragma: no cover
         log.debug(f"Executed dataset query for {count} curves in {(t3 - t0).total_seconds()} seconds.")
+
+    if dataset_exceptions:  # pragma: no branch
+        raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")
+
+
+# ---------------------------------------------------------------------------
+# Disaggregation aggregate strategies
+# ---------------------------------------------------------------------------
+
+
+def get_disagg_aggregates_naive(
+    location_codes: list[str],
+    vs30s: list[int],
+    hazard_model: str,
+    imts: list[str],
+    aggs: list[str],
+    target_aggrs: list[str],
+    probabilities: list[ProbabilityEnum],
+    bins_digest: str,
+    dataset_uri: Optional[str] = None,
+) -> Iterator[AggregatedDisagg]:
+    """
+    Retrieves aggregated disaggregations from the dataset using a single filter.
+
+    Args:
+      location_codes (list): List of location codes.
+      vs30s (list): List of VS30 values.
+      hazard_model: the hazard model id.
+      imts (list): List of intensity measure types.
+      aggs (list): List of aggregation types.
+      target_aggrs (list): List of target hazard-curve aggregation types.
+      probabilities (list): List of ProbabilityEnum members.
+      bins_digest: pre-computed bins compatibility digest.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_DISAGG_AGGR_URI env var.
+
+    Yields:
+      AggregatedDisagg: An object containing disaggregation aggregate data.
+    """
+    log.debug(f"> get_disagg_aggregates_naive() location_codes: {location_codes}")
+    t0 = dt.datetime.now()
+
+    dataset = get_disagg_aggr_dataset(dataset_uri)
+    nloc_001_locs = [downsample_code(loc, 0.001) for loc in location_codes]
+    prob_names = [p.name for p in probabilities]
+    flt = (
+        (pc.field("bins_digest") == bins_digest)
+        & (pc.field("aggr").isin(aggs))
+        & (pc.field("target_aggr").isin(target_aggrs))
+        & (pc.field("nloc_0").isin(get_hashes(location_codes, resolution=1)))
+        & (pc.field("nloc_001").isin(nloc_001_locs))
+        & (pc.field("imt").isin(imts))
+        & (pc.field("vs30").isin(vs30s))
+        & (pc.field("hazard_model_id") == hazard_model)
+        & (pc.field("probability").isin(prob_names))
+    )
+    log.debug(f"filter: {flt}")
+    table = dataset.to_table(filter=flt)
+
+    t1 = dt.datetime.now()
+    log.debug(f"to_table for filter took {(t1 - t0).total_seconds()} seconds.")
+
+    count = 0
+    df = table.to_pandas()
+    for row_dict in df.to_dict(orient="records"):
+        count += 1
+        row_dict["probability"] = ProbabilityEnum[row_dict["probability"]]
+        yield AggregatedDisagg.model_construct(**row_dict)
+
+    log.debug(f"Executed dataset query for {count} disaggs in {(dt.datetime.now() - t0).total_seconds()} seconds.")
+
+
+def get_disagg_aggregates_by_digest_vs30(
+    location_codes: list[str],
+    vs30s: list[int],
+    hazard_model: str,
+    imts: list[str],
+    aggs: list[str],
+    target_aggrs: list[str],
+    probabilities: list[ProbabilityEnum],
+    bins_digest: str,
+    dataset_uri: Optional[str] = None,
+) -> Iterator[AggregatedDisagg]:
+    """
+    Retrieves aggregated disaggregations using bins_digest and vs30 partition pruning.
+
+    Args:
+      location_codes (list): List of location codes.
+      vs30s (list): List of VS30 values.
+      hazard_model: the hazard model id.
+      imts (list): List of intensity measure types.
+      aggs (list): List of aggregation types.
+      target_aggrs (list): List of target hazard-curve aggregation types.
+      probabilities (list): List of ProbabilityEnum members.
+      bins_digest: pre-computed bins compatibility digest.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_DISAGG_AGGR_URI env var.
+
+    Yields:
+      AggregatedDisagg: An object containing disaggregation aggregate data.
+
+    Raises:
+      RuntimeWarning: describing any dataset partitions that could not be opened.
+    """
+    log.debug(f"> get_disagg_aggregates_by_digest_vs30({location_codes}, {vs30s},...)")
+    t0 = dt.datetime.now()
+
+    dataset_exceptions = []
+    nloc_001_locs = [downsample_code(loc, 0.001) for loc in location_codes]
+    prob_names = [p.name for p in probabilities]
+
+    for vs30 in vs30s:  # pragma: no branch
+        count = 0
+        try:
+            dataset = get_disagg_aggr_dataset_digest_vs30(bins_digest, vs30, dataset_uri)
+        except Exception:
+            dataset_exceptions.append(f"Failed to open dataset for bins_digest={bins_digest}, vs30={vs30}")
+            continue
+
+        flt = (
+            (pc.field("aggr").isin(aggs))
+            & (pc.field("target_aggr").isin(target_aggrs))
+            & (pc.field("nloc_0").isin(get_hashes(location_codes, resolution=1)))
+            & (pc.field("nloc_001").isin(nloc_001_locs))
+            & (pc.field("imt").isin(imts))
+            & (pc.field("hazard_model_id") == hazard_model)
+            & (pc.field("probability").isin(prob_names))
+        )
+        log.debug(f"filter: {flt}")
+        table = dataset.to_table(filter=flt)
+        t1 = dt.datetime.now()
+        log.debug(f"to_table for filter took {(t1 - t0).total_seconds()} seconds.")
+
+        df = table.to_pandas()
+        for row_dict in df.to_dict(orient="records"):
+            count += 1
+            row_dict["probability"] = ProbabilityEnum[row_dict["probability"]]
+            row_dict["bins_digest"] = bins_digest
+            row_dict["vs30"] = vs30
+            yield AggregatedDisagg.model_construct(**row_dict)
+
+        log.debug(f"Executed dataset query for {count} disaggs in {(dt.datetime.now() - t0).total_seconds()} seconds.")
+
+    if dataset_exceptions:  # pragma: no branch
+        raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")
+
+
+def get_disagg_aggregates_by_digest_vs30_nloc0(
+    location_codes: list[str],
+    vs30s: list[int],
+    hazard_model: str,
+    imts: list[str],
+    aggs: list[str],
+    target_aggrs: list[str],
+    probabilities: list[ProbabilityEnum],
+    bins_digest: str,
+    dataset_uri: Optional[str] = None,
+) -> Iterator[AggregatedDisagg]:
+    """
+    Retrieves aggregated disaggregations using bins_digest, vs30, and nloc_0 partition pruning.
+
+    Args:
+      location_codes (list): List of location codes.
+      vs30s (list): List of VS30 values.
+      hazard_model: the hazard model id.
+      imts (list): List of intensity measure types.
+      aggs (list): List of aggregation types.
+      target_aggrs (list): List of target hazard-curve aggregation types.
+      probabilities (list): List of ProbabilityEnum members.
+      bins_digest: pre-computed bins compatibility digest.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_DISAGG_AGGR_URI env var.
+
+    Yields:
+      AggregatedDisagg: An object containing disaggregation aggregate data.
+
+    Raises:
+      RuntimeWarning: describing any dataset partitions that could not be opened.
+    """
+    log.debug(f"> get_disagg_aggregates_by_digest_vs30_nloc0({location_codes}, {vs30s},...)")
+    t0 = dt.datetime.now()
+
+    dataset_exceptions = []
+    prob_names = [p.name for p in probabilities]
+
+    for hash_location_code in get_hashes(location_codes, 1):
+        log.debug("hash_key %s" % hash_location_code)
+        hash_locs = list(
+            filter(
+                lambda loc: downsample_code(loc, 1) == hash_location_code,
+                location_codes,
+            )
+        )
+        nloc_001_locs = [downsample_code(loc, 0.001) for loc in hash_locs]
+
+        count = 0
+
+        for hloc, vs30 in itertools.product(hash_locs, vs30s):
+            try:
+                dataset = get_disagg_aggr_dataset_digest_vs30_nloc0(bins_digest, vs30, hloc, dataset_uri)
+            except Exception as exc:
+                dataset_exceptions.append(str(exc))
+                continue
+
+            t1 = dt.datetime.now()
+            flt = (
+                (pc.field("aggr").isin(aggs))
+                & (pc.field("target_aggr").isin(target_aggrs))
+                & (pc.field("nloc_001").isin(nloc_001_locs))
+                & (pc.field("imt").isin(imts))
+                & (pc.field("hazard_model_id") == hazard_model)
+                & (pc.field("probability").isin(prob_names))
+            )
+            log.debug(f"filter: {flt}")
+            table = dataset.to_table(filter=flt)
+            t2 = dt.datetime.now()
+            log.debug(f"to_table for filter took {(t2 - t1).total_seconds()} seconds.")
+
+            df = table.to_pandas()
+            for row_dict in df.to_dict(orient="records"):
+                count += 1
+                row_dict["probability"] = ProbabilityEnum[row_dict["probability"]]
+                row_dict["bins_digest"] = bins_digest
+                row_dict["vs30"] = vs30
+                row_dict["nloc_0"] = downsample_code(hloc, 1.0)
+                yield AggregatedDisagg.model_construct(**row_dict)
+
+        log.debug(f"Executed dataset query for {count} disaggs in {(dt.datetime.now() - t0).total_seconds()} seconds.")
 
     if dataset_exceptions:  # pragma: no branch
         raise RuntimeWarning(f"Dataset errors: {dataset_exceptions}")

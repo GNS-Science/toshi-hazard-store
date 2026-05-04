@@ -2,6 +2,10 @@
 
 from dataclasses import dataclass
 
+from pydantic import BaseModel
+
+from toshi_hazard_store.model.constraints import ProbabilityEnum
+
 # Constants
 IMT_44_LVLS = [
     0.0001,
@@ -103,3 +107,47 @@ class AggregatedHazard:
         new_values = zip(IMT_44_LVLS, self.values)
         self.values = [IMTValue(*x) for x in new_values]
         return self
+
+
+class AggregatedDisagg(BaseModel):
+    """Row from the aggregate-disaggregation parquet dataset.
+
+    Attributes:
+        compatible_calc_id: ID of a compatible calculation for PSHA engine interoperability.
+        hazard_model_id: the NSHM hazard model identifier.
+        bins_digest: sha256[:16] compatibility key over sorted axes + bin centres.
+        nloc_001: location code at 0.001° resolution e.g. "-38.330~175.550".
+        nloc_0: location code at 1.0° resolution (partition key).
+        vs30: VS30 value in m/s.
+        imt: intensity measure type label e.g. 'PGA', 'SA(1.0)'.
+        target_aggr: hazard-curve aggregation the disagg was conditioned on e.g. 'mean'.
+        probability: the return-period probability as a ProbabilityEnum member.
+        imtl: IML at which the disagg was computed.
+        aggr: aggregation type across realisations e.g. 'mean', '0.1'.
+        disagg_bins: ordered map of axis name to list of bin-centre strings.
+        disagg_values: flattened C-order disaggregation array (use to_ndarray() to reshape).
+
+    Notes:
+        Constructed at query time via model_construct() (skips validators) for performance.
+        disagg_values is kept flat per project convention; reshape is opt-in via to_ndarray().
+    """
+
+    compatible_calc_id: str
+    hazard_model_id: str
+    bins_digest: str
+    nloc_001: str
+    nloc_0: str
+    vs30: int
+    imt: str
+    target_aggr: str
+    probability: ProbabilityEnum
+    imtl: float
+    aggr: str
+    disagg_bins: dict[str, list[str]]
+    disagg_values: list[float]
+
+    def to_ndarray(self):
+        """Reshape disagg_values into an N-D array with axes ordered by disagg_bins keys."""
+        from toshi_hazard_store.model.pyarrow.disagg_reshape import reshape_disagg_values
+
+        return reshape_disagg_values(self.disagg_values, self.disagg_bins)
