@@ -8,6 +8,7 @@ from typing import Iterator, Optional
 import pyarrow.compute as pc
 
 from toshi_hazard_store.model.constraints import ProbabilityEnum
+from toshi_hazard_store.model.hazard_models_pydantic import DisaggregationAggregate
 from toshi_hazard_store.query.dataset_cache import (
     get_dataset,
     get_dataset_vs30,
@@ -17,7 +18,7 @@ from toshi_hazard_store.query.dataset_cache import (
     get_disagg_aggr_dataset_digest_vs30_nloc0,
 )
 from toshi_hazard_store.query.hazard_query import downsample_code, get_hashes
-from toshi_hazard_store.query.models import AggregatedDisagg, AggregatedHazard
+from toshi_hazard_store.query.models import AggregatedHazard
 
 log = logging.getLogger(__name__)
 
@@ -249,7 +250,7 @@ def get_disagg_aggregates_naive(
     probabilities: list[ProbabilityEnum],
     bins_digest: str,
     dataset_uri: Optional[str] = None,
-) -> Iterator[AggregatedDisagg]:
+) -> Iterator[DisaggregationAggregate]:
     """
     Retrieves aggregated disaggregations from the dataset using a single filter.
 
@@ -265,7 +266,7 @@ def get_disagg_aggregates_naive(
       dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_DISAGG_AGGR_URI env var.
 
     Yields:
-      AggregatedDisagg: An object containing disaggregation aggregate data.
+      DisaggregationAggregate: An object containing disaggregation aggregate data.
     """
     log.debug(f"> get_disagg_aggregates_naive() location_codes: {location_codes}")
     t0 = dt.datetime.now()
@@ -295,7 +296,7 @@ def get_disagg_aggregates_naive(
     for row_dict in df.to_dict(orient="records"):
         count += 1
         row_dict["probability"] = ProbabilityEnum[row_dict["probability"]]
-        yield AggregatedDisagg.model_construct(**row_dict)
+        yield DisaggregationAggregate.model_construct(**row_dict)
 
     log.debug(f"Executed dataset query for {count} disaggs in {(dt.datetime.now() - t0).total_seconds()} seconds.")
 
@@ -310,7 +311,7 @@ def get_disagg_aggregates_by_digest_vs30(
     probabilities: list[ProbabilityEnum],
     bins_digest: str,
     dataset_uri: Optional[str] = None,
-) -> Iterator[AggregatedDisagg]:
+) -> Iterator[DisaggregationAggregate]:
     """
     Retrieves aggregated disaggregations using bins_digest and vs30 partition pruning.
 
@@ -326,7 +327,7 @@ def get_disagg_aggregates_by_digest_vs30(
       dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_DISAGG_AGGR_URI env var.
 
     Yields:
-      AggregatedDisagg: An object containing disaggregation aggregate data.
+      DisaggregationAggregate: An object containing disaggregation aggregate data.
 
     Raises:
       RuntimeWarning: describing any dataset partitions that could not be opened.
@@ -366,7 +367,7 @@ def get_disagg_aggregates_by_digest_vs30(
             row_dict["probability"] = ProbabilityEnum[row_dict["probability"]]
             row_dict["bins_digest"] = bins_digest
             row_dict["vs30"] = vs30
-            yield AggregatedDisagg.model_construct(**row_dict)
+            yield DisaggregationAggregate.model_construct(**row_dict)
 
         log.debug(f"Executed dataset query for {count} disaggs in {(dt.datetime.now() - t0).total_seconds()} seconds.")
 
@@ -384,7 +385,7 @@ def get_disagg_aggregates_by_digest_vs30_nloc0(
     probabilities: list[ProbabilityEnum],
     bins_digest: str,
     dataset_uri: Optional[str] = None,
-) -> Iterator[AggregatedDisagg]:
+) -> Iterator[DisaggregationAggregate]:
     """
     Retrieves aggregated disaggregations using bins_digest, vs30, and nloc_0 partition pruning.
 
@@ -400,7 +401,7 @@ def get_disagg_aggregates_by_digest_vs30_nloc0(
       dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_DISAGG_AGGR_URI env var.
 
     Yields:
-      AggregatedDisagg: An object containing disaggregation aggregate data.
+      DisaggregationAggregate: An object containing disaggregation aggregate data.
 
     Raises:
       RuntimeWarning: describing any dataset partitions that could not be opened.
@@ -451,7 +452,7 @@ def get_disagg_aggregates_by_digest_vs30_nloc0(
                 row_dict["bins_digest"] = bins_digest
                 row_dict["vs30"] = vs30
                 row_dict["nloc_0"] = downsample_code(hloc, 1.0)
-                yield AggregatedDisagg.model_construct(**row_dict)
+                yield DisaggregationAggregate.model_construct(**row_dict)
 
         log.debug(f"Executed dataset query for {count} disaggs in {(dt.datetime.now() - t0).total_seconds()} seconds.")
 

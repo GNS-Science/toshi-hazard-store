@@ -4,7 +4,7 @@ This package provides the main public interface for querying hazard data
 from parquet datasets. It includes:
 
 - Main query functions: get_hazard_curves, get_gridded_hazard, get_disagg_aggregates
-- Data models: AggregatedHazard, AggregatedDisagg, IMTValue
+- Data models: AggregatedHazard, DisaggregationAggregate, IMTValue
 - Location utilities: downsample_code, get_hashes
 
 """
@@ -15,6 +15,8 @@ from parquet datasets. It includes:
 # # Dataset cache accessors (for advanced use)
 # from .dataset_cache import get_dataset, get_dataset_vs30, get_dataset_vs30_nloc0, get_gridded_dataset
 
+from toshi_hazard_store.model.hazard_models_pydantic import DisaggregationAggregate
+
 # Main query functions
 from .datasets import get_disagg_aggregates, get_gridded_hazard, get_hazard_curves
 
@@ -22,7 +24,7 @@ from .datasets import get_disagg_aggregates, get_gridded_hazard, get_hazard_curv
 from .hazard_query import downsample_code, get_hashes
 
 # Data models
-from .models import AggregatedDisagg, AggregatedHazard, IMTValue
+from .models import AggregatedHazard, IMTValue
 
 __all__ = [
     # Main query functions
@@ -31,7 +33,7 @@ __all__ = [
     "get_disagg_aggregates",
     # Data models
     "AggregatedHazard",
-    "AggregatedDisagg",
+    "DisaggregationAggregate",
     "IMTValue",
     # Location utilities
     "downsample_code",

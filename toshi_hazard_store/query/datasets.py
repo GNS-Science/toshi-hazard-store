@@ -8,9 +8,10 @@ import pyarrow.compute as pc
 
 from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
+from toshi_hazard_store.model.hazard_models_pydantic import DisaggregationAggregate
 from toshi_hazard_store.model.revision_4.extract_disagg_hdf5 import _bins_digest_from_dict
 from toshi_hazard_store.query.dataset_cache import get_gridded_dataset
-from toshi_hazard_store.query.models import AggregatedDisagg, AggregatedHazard
+from toshi_hazard_store.query.models import AggregatedHazard
 from toshi_hazard_store.query.query_strategies import (
     get_disagg_aggregates_by_digest_vs30,
     get_disagg_aggregates_by_digest_vs30_nloc0,
@@ -164,7 +165,7 @@ def get_disagg_aggregates(
     disagg_bins: dict[str, list[str]],
     strategy: str = "naive",
     dataset_uri: Optional[str] = None,
-) -> Iterator[AggregatedDisagg]:
+) -> Iterator[DisaggregationAggregate]:
     """
     Retrieves aggregated disaggregations from the dataset.
 
@@ -189,7 +190,7 @@ def get_disagg_aggregates(
       dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_DISAGG_AGGR_URI env var.
 
     Yields:
-      AggregatedDisagg: An object containing the disaggregation aggregate data.
+      DisaggregationAggregate: An object containing the disaggregation aggregate data.
     Raises:
       RuntimeWarning: describing any dataset partitions that could not be opened.
     """

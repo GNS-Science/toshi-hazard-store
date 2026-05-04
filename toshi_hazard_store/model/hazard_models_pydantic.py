@@ -180,6 +180,12 @@ class DisaggregationAggregate(BaseModel):
             )
         return self
 
+    def to_ndarray(self):
+        """Reshape disagg_values into an N-D array with axes ordered by disagg_bins keys."""
+        from toshi_hazard_store.model.pyarrow.disagg_reshape import reshape_disagg_values
+
+        return reshape_disagg_values(self.disagg_values, self.disagg_bins)
+
     @staticmethod
     def pyarrow_schema() -> pa.schema:
         """A pyarrow schema for aggregate disaggregation datasets."""
