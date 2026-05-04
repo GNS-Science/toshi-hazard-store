@@ -41,7 +41,7 @@ def _bins_digest_from_dict(payload: dict[str, list[str]]) -> str:
     retain insertion order for reshape.
     """
     normalised = {name: sorted(payload[name]) for name in sorted(payload)}
-    serialised = json.dumps(normalised, sort_keys=True, separators=(',', ':'))
+    serialised = json.dumps(normalised, separators=(',', ':'))
     return hashlib.sha256(serialised.encode()).hexdigest()[:16]
 
 

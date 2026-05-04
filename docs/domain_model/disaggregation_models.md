@@ -32,7 +32,7 @@ The schema includes:
 - `imt` (string) - Intensity measure type (e.g., "PGA", "SA(1.0)")
 - `target_aggr` (string) - Hazard-curve aggregation the disagg was conditioned on (e.g., "mean")
 - `probability` (string) - Return-period probability as a `ProbabilityEnum` name (e.g., "_10_PCT_IN_50YRS")
-- `imtl` (float) - IML at which the disagg was computed
+- `imtl` (float) - Intensity measure level at which the disagg was computed
 - `aggr` (string) - Aggregation type across realisations (e.g., "mean", "0.1")
 - `disagg_bins` (map of string → list of string) - Ordered map of axis name to bin-centre strings; key order defines the axis order of `disagg_values`
 - `disagg_values` (list of float32) - Flattened C-order disaggregation array over `disagg_bins` axes
