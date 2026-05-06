@@ -103,3 +103,5 @@ class AggregatedHazard:
         new_values = zip(IMT_44_LVLS, self.values)
         self.values = [IMTValue(*x) for x in new_values]
         return self
+
+

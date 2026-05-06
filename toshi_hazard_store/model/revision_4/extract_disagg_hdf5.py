@@ -30,6 +30,21 @@ log = logging.getLogger(__name__)
 _QUERY_DIMS = frozenset(('imt', 'poe'))
 
 
+def _bins_digest_from_dict(payload: dict[str, list[str]]) -> str:
+    """Return a 16-hex-char sha256 digest over a normalised disagg_bins dict.
+
+    Both axis-name keys and per-axis value lists are sorted so that reordering is
+    irrelevant. Values must already be in the stringified form used by the parquet
+    ``disagg_bins`` map column so that the HDF5 import path and the query path
+    produce identical digests for compatible bin structures.
+    Sorting here is purely to make the digest order-invariant; caller-side dicts
+    retain insertion order for reshape.
+    """
+    normalised = {name: sorted(payload[name]) for name in sorted(payload)}
+    serialised = json.dumps(normalised, separators=(',', ':'))
+    return hashlib.sha256(serialised.encode()).hexdigest()[:16]
+
+
 def compute_bins_digest(disagg_rlzs) -> str:
     """Return a short sha256 hex digest over the bin centres in a disagg extract result.
 
@@ -40,9 +55,8 @@ def compute_bins_digest(disagg_rlzs) -> str:
     the stored ``disagg_bins`` map).
     """
     axes = [str(d) for d in disagg_rlzs.shape_descr if str(d) not in _QUERY_DIMS]
-    payload = {name: sorted(_stringify_bin_centers(getattr(disagg_rlzs, name))) for name in sorted(axes)}
-    serialised = json.dumps(payload, sort_keys=True, separators=(',', ':'))
-    return hashlib.sha256(serialised.encode()).hexdigest()[:16]
+    payload = {name: _stringify_bin_centers(getattr(disagg_rlzs, name)) for name in axes}
+    return _bins_digest_from_dict(payload)
 
 
 def _stringify_bin_centers(values) -> list[str]:

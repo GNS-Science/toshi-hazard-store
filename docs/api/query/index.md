@@ -6,6 +6,7 @@ The `toshi_hazard_store.query` package provides the main public interface for qu
 
 ```python
 from toshi_hazard_store import query
+from toshi_hazard_store.model.constraints import ProbabilityEnum
 
 # Query hazard curves
 curves = query.get_hazard_curves(
@@ -19,6 +20,28 @@ curves = query.get_hazard_curves(
 
 for curve in curves:
     print(f"{curve.imt} at {curve.nloc_001}: {curve.values}")
+
+# Query disaggregation aggregates
+disaggs = query.get_disagg_aggregates(
+    location_codes=["-41.300~174.800"],
+    vs30s=[400],
+    hazard_model="NSHM_v1.0.4",
+    imts=["PGA"],
+    aggs=["mean"],
+    target_aggrs=["mean"],
+    probabilities=[ProbabilityEnum._10_PCT_IN_50YRS],
+    disagg_bins={
+        "mag": ["5.5", "6.5", "7.5"],
+        "dist": ["10.0", "50.0", "100.0", "200.0"],
+        "eps": ["-1.0", "0.0", "1.0"],
+    },
+    strategy="d2"  # or "d1", "naive"
+)
+
+for disagg in disaggs:
+    print(f"{disagg.imt} at {disagg.nloc_001}, prob={disagg.probability.name}")
+    arr = disagg.to_ndarray()  # reshape to N-D array over disagg_bins axes
+    print(f"  shape: {arr.shape}")
 
 # Query gridded hazard
 gridded = query.get_gridded_hazard(

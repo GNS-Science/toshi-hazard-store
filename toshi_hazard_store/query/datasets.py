@@ -6,10 +6,16 @@ from typing import Iterator, Optional
 
 import pyarrow.compute as pc
 
+from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.model.gridded.gridded_hazard_pydantic import GriddedHazardPoeLevels
+from toshi_hazard_store.model.hazard_models_pydantic import DisaggregationAggregate
+from toshi_hazard_store.model.revision_4.extract_disagg_hdf5 import _bins_digest_from_dict
 from toshi_hazard_store.query.dataset_cache import get_gridded_dataset
 from toshi_hazard_store.query.models import AggregatedHazard
 from toshi_hazard_store.query.query_strategies import (
+    get_disagg_aggregates_by_digest_vs30,
+    get_disagg_aggregates_by_digest_vs30_nloc0,
+    get_disagg_aggregates_naive,
     get_hazard_curves_by_vs30,
     get_hazard_curves_by_vs30_nloc0,
     get_hazard_curves_naive,
@@ -146,3 +152,76 @@ def get_gridded_hazard(
         # yield GriddedHazardPoeLevels(**row_dict) # SLOW because of the expensive validators on
         # this Pydantic Model class.
         yield GriddedHazardPoeLevels.model_construct(**row_dict)  # FAST
+
+
+def get_disagg_aggregates(
+    location_codes: list[str],
+    vs30s: list[int],
+    hazard_model: str,
+    imts: list[str],
+    aggs: list[str],
+    target_aggrs: list[str],
+    probabilities: list[ProbabilityEnum],
+    disagg_bins: dict[str, list[str]],
+    strategy: str = "naive",
+    dataset_uri: Optional[str] = None,
+) -> Iterator[DisaggregationAggregate]:
+    """
+    Retrieves aggregated disaggregations from the dataset.
+
+    The optional `strategy` argument can be used to control how the query behaves:
+
+     - 'naive' (the default) lets pyarrow do its normal thing.
+     - 'd1' assumes the dataset is partitioned on `bins_digest, vs30`.
+     - 'd2' assumes the dataset is partitioned on `bins_digest, vs30, nloc_0` and acts accordingly.
+
+    Args:
+      location_codes (list): List of location codes.
+      vs30s (list): List of VS30 values.
+      hazard_model: the hazard model id.
+      imts (list): List of intensity measure types (e.g. 'PGA', 'SA(5.0)').
+      aggs (list): List of aggregation types.
+      target_aggrs (list): List of target hazard-curve aggregation types (e.g. 'mean', '0.5').
+      probabilities (list): List of ProbabilityEnum members.
+      disagg_bins: the bins dict defining the disaggregation topology. The bins compatibility
+          digest is computed internally from this dict.
+      strategy: which query strategy to use (options are `d1`, `d2`, `naive`).
+          Other values will use the `naive` strategy.
+      dataset_uri: optional URI for the dataset. Defaults to the THS_DATASET_DISAGG_AGGR_URI env var.
+
+    Yields:
+      DisaggregationAggregate: An object containing the disaggregation aggregate data.
+    Raises:
+      RuntimeWarning: describing any dataset partitions that could not be opened.
+    """
+    log.debug("> get_disagg_aggregates()")
+    t0 = dt.datetime.now()
+
+    count = 0
+    bins_digest = _bins_digest_from_dict(disagg_bins)
+
+    if strategy == "d2":
+        qfn = get_disagg_aggregates_by_digest_vs30_nloc0
+    elif strategy == "d1":
+        qfn = get_disagg_aggregates_by_digest_vs30
+    else:
+        qfn = get_disagg_aggregates_naive
+
+    deferred_warning = None
+    try:
+        for obj in qfn(  # pragma: no branch
+            location_codes, vs30s, hazard_model, imts, aggs, target_aggrs, probabilities, bins_digest, dataset_uri
+        ):
+            count += 1
+            yield obj
+    except RuntimeWarning as err:
+        if "Failed to open dataset" in str(err):
+            deferred_warning = err
+        else:
+            raise err  # pragma: no cover
+
+    t1 = dt.datetime.now()
+    log.info(f"Executed dataset query for {count} disaggs in {(t1 - t0).total_seconds()} seconds.")
+
+    if deferred_warning:  # pragma: no cover
+        raise deferred_warning

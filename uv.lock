@@ -10,7 +10,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-04-23T20:09:48.024946053Z"
+exclude-newer = "2026-04-27T21:52:08.984381697Z"
 exclude-newer-span = "P1W"
 
 [options.exclude-newer-package]
@@ -4979,7 +4979,7 @@ wheels = [
 
 [[package]]
 name = "toshi-hazard-store"
-version = "1.5.0"
+version = "2.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "geopandas" },
