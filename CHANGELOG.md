@@ -1,6 +1,11 @@
 # Changelog
 
-## [2.0.0] Unreleased
+## [2.0.1] Unreleased
+### Changed
+ - hatch-vcs rather than bump2version for versioning
+ - updated nzhsm-model version to allow disaggregation configs to be verified
+
+## [2.0.0] 2026-05-06
 
 ### Added
 - Import disaggregation realizations from OpenQuake
