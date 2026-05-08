@@ -1,6 +1,6 @@
 [project]
 name = "toshi-hazard-store"
-version = "2.0.0"
+dynamic = ["version"]
 
 homepage = "https://github.com/GNS-Science/toshi-hazard-store"
 description = "Library for saving and retrieving NZHSM openquake hazard results with convenience (uses pyarrow with parquet format)."
@@ -79,7 +79,6 @@ doc = [
 ]
 
 dev = [
-    "bump2version>=1.0.1",
     "ipython>=8.11.0",
     "matplotlib>=3.6.3",
     "moto>=4",
@@ -131,5 +130,11 @@ exclude-newer = "1 week"
 exclude-newer-package = {"nzshm-common" = false, "nzshm-model" = false, "nshm-toshi-client" = false}
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "toshi_hazard_store/_version.py"
