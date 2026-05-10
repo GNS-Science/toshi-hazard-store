@@ -19,7 +19,7 @@ uv run tox -e lint          # ruff check + mypy only
 ### Build & Release
 ```bash
 uv build
-bump2version patch   # updates pyproject.toml, __init__.py, creates git tag
+git tag vX.Y.Z       # replace X.Y.Z with the new version; version derived from tag by hatch-vcs
 git push && git push --tags   # triggers PyPI publish via GitHub Actions
 ```
 
@@ -111,7 +111,7 @@ Any new dependency that calls AWS at import time must be accounted for here.
 
 1. Ensure tests pass and `poetry run tox -e format,lint` passes
 2. Update `CHANGELOG.md` with version header (e.g. `## [1.4.1] 2026-02-24`)
-3. `bump2version patch` (or `minor`/`major`) — commits + tags automatically
+3. `git tag vX.Y.Z` (then `git push --tags`) — version is derived from the tag by hatch-vcs
 4. `git push && git push --tags` — GitHub Actions publishes to PyPI
 
 ## Documentation Conventions

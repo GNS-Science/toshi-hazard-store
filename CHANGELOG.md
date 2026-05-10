@@ -1,6 +1,18 @@
 # Changelog
 
-## [2.0.0] Unreleased
+## [2.0.1] 2026-05-11
+### Added
+- hatch-vcs for dynamic versioning from git tag (v*)
+- git hook to enforce git version tag has matching CHANGLOG entry
+
+### Changed
+- updated nzhsm-model version to allow disaggregation configs to be verified
+- `nzshm-model` updated to 0.15.2
+
+### Removed
+- bump2version dev dependency
+
+## [2.0.0] 2026-05-06
 
 ### Added
 - Import disaggregation realizations from OpenQuake
