@@ -3,6 +3,7 @@
 ## [2.0.1] 2026-05-11
 ### Added
 - hatch-vcs for dynamic versioning from git tag (v*)
+- git hook to enforce git version tag has matching CHANGLOG entry
 
 ### Changed
 - updated nzhsm-model version to allow disaggregation configs to be verified
