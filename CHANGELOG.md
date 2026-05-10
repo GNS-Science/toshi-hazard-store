@@ -1,9 +1,15 @@
 # Changelog
 
 ## [2.0.1] Unreleased
+### Added
+- hatch-vcs for dynamic versioning from git tag (v*)
+
 ### Changed
- - hatch-vcs rather than bump2version for versioning
- - updated nzhsm-model version to allow disaggregation configs to be verified
+- updated nzhsm-model version to allow disaggregation configs to be verified
+- `nzshm-model` updated to 0.15.2
+
+### Removed
+- bump2version dev dependency
 
 ## [2.0.0] 2026-05-06
 
