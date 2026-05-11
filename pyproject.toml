@@ -57,6 +57,13 @@ scripts = [
 ]
 
 [dependency-groups]
+oq-compat = [
+    "fiona>=1.9.5",
+    "networkx>=3.2.1",
+    "numba",
+    "openquake-engine==3.25.1",
+]
+
 doc = [
     "boto3",
     "click>=8.1.3",

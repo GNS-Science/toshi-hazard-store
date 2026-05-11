@@ -89,7 +89,10 @@ class OqHdf5Reader:
         """
         with h5py.File(self.path, 'r') as f:
             arr = f['hcurves-rlzs'][()]  # (n_sites, n_rlz, n_imts, n_levels)
-        return {f'rlz-{i}': arr[:, i, :, :] for i in range(arr.shape[1])}
+        n_rlz = arr.shape[1]
+        # Match OQ Extractor key format: zero-pad to at least 3 digits.
+        n_digits = max(3, len(str(n_rlz - 1)))
+        return {f'rlz-{i:0{n_digits}d}': arr[:, i, :, :] for i in range(n_rlz)}
 
     # ------------------------------------------------------------------
     # Logic-tree / realization accessors
