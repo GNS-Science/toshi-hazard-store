@@ -52,9 +52,16 @@ OQ_VERSIONS = [
     '3.25.1',
 ]
 
+_INPUT_DIR = REPO_ROOT / 'scripts/oq_input'
+
 _CALC_MODES = {
-    'classical': REPO_ROOT / 'scratch/hazard_input',
-    'disaggregation': REPO_ROOT / 'scratch/disagg_input',
+    'classical': _INPUT_DIR,
+    'disaggregation': _INPUT_DIR,
+}
+
+_CALC_JOB_INIS = {
+    'classical': 'job_classical.ini',
+    'disaggregation': 'job_disagg.ini',
 }
 
 DOCKER_IMAGE_PREFIX = 'openquake/engine'
@@ -95,7 +102,7 @@ def _pull_image(image: str, dry_run: bool) -> bool:
     return result.returncode == 0
 
 
-def _run_oq(version: str, mode: str, input_dir: Path, out_dir: Path, dry_run: bool) -> Path | None:
+def _run_oq(version: str, mode: str, input_dir: Path, job_ini: str, out_dir: Path, dry_run: bool) -> Path | None:
     """Run OQ inside the container and copy the resulting HDF5 to out_dir.
 
     Uses ``docker cp`` (host-side) rather than a bind-mount so container-user
@@ -124,9 +131,9 @@ def _run_oq(version: str, mode: str, input_dir: Path, out_dir: Path, dry_run: bo
         entrypoint = []
 
     if entrypoint == ['/bin/bash', '-c']:
-        oq_cmd = ['oq engine --run /job/job.ini']   # single string for bash -c entrypoint
+        oq_cmd = [f'oq engine --run /job/{job_ini}']  # single string for bash -c entrypoint
     else:
-        oq_cmd = ['bash', '-c', 'oq engine --run /job/job.ini']
+        oq_cmd = ['bash', '-c', f'oq engine --run /job/{job_ini}']
 
     run_cmd = [
         'docker', 'run',
@@ -186,7 +193,7 @@ def _write_manifest(
         'docker_image': image,
         'docker_image_digest': digest,
         'calc_mode': mode,
-        'job_ini_source': str(_CALC_MODES[mode].relative_to(REPO_ROOT) / 'job.ini'),
+        'job_ini_source': str(_CALC_MODES[mode].relative_to(REPO_ROOT) / _CALC_JOB_INIS[mode]),
         'generated_at': datetime.datetime.utcnow().isoformat() + 'Z',
         'hdf5_sha256': _sha256_file(hdf5_path),
         'hdf5_size_bytes': hdf5_path.stat().st_size,
@@ -215,6 +222,7 @@ def _fixture_needs_regen(fixture_dir: Path) -> bool:
 def regen_fixture(version: str, mode: str, force: bool, dry_run: bool) -> bool:
     """Regenerate one (version, mode) fixture. Returns True on success."""
     input_dir = _CALC_MODES[mode]
+    job_ini = _CALC_JOB_INIS[mode]
     if not input_dir.exists():
         log.error('Input directory not found: %s', input_dir)
         return False
@@ -237,7 +245,7 @@ def regen_fixture(version: str, mode: str, force: bool, dry_run: bool) -> bool:
     with tempfile.TemporaryDirectory(dir=fixture_dir) as tmp:
         tmp_path = Path(tmp)
         os.chmod(tmp_path, 0o777)  # container runs as non-root; mount point must be world-writable
-        hdf5 = _run_oq(version, mode, input_dir, tmp_path, dry_run)
+        hdf5 = _run_oq(version, mode, input_dir, job_ini, tmp_path, dry_run)
         if hdf5 is None:
             if dry_run:
                 log.info('[dry-run] skipping manifest write')
