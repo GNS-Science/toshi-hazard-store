@@ -99,7 +99,23 @@ special handling in `OqHdf5Reader.disagg_rlzs()`.
 
 ### Generating fixtures
 
-Prerequisites: Docker installed; `scratch/hazard_input/` and `scratch/disagg_input/` present.
+Prerequisites: Docker installed and `openquake/engine:<ver>` images pullable.
+
+OQ job inputs live in `scripts/oq_input/` (committed):
+
+```
+scripts/oq_input/
+  sources/          ← shared NSHM source model
+  gsim_model.xml    ← shared GSIM logic tree
+  job_classical.ini
+  job_disagg.ini
+  sites_classical.csv
+  sites_disagg.csv
+```
+
+Both calc modes mount this directory as `/job` inside the container and run
+the appropriate ini file.  `export_dir = /tmp` is set in both ini files so OQ
+can write CSV exports to `/tmp` without touching the read-only mount.
 
 ```bash
 uv run python scripts/regen_oq_fixtures.py --mode both
@@ -107,10 +123,16 @@ uv run python scripts/regen_oq_fixtures.py --mode both
 
 This will:
 1. Pull `openquake/engine:<ver>` for each version in `OQ_VERSIONS`.
-2. Run `oq engine --run job.ini` inside each container, once for classical and once for disaggregation.
-3. Write `tests/fixtures/oq_cross_version/{classical,disaggregation}/oq_<ver>/calc.hdf5`
-   alongside a `manifest.json` recording the image digest, generation timestamp and file checksum.
-4. Skip any (version, mode) pair whose `manifest.json` already exists and whose `hdf5_sha256` still matches.
+2. Detect the image entrypoint (older images use `/bin/bash -c`; newer use
+   `./oq-start.sh`) and build the docker CMD accordingly.
+3. Run `oq engine --run /job/job_{classical,disagg}.ini` inside the container.
+4. Use `docker cp` (host-side) to pull the resulting `calc_*.hdf5` out of the
+   stopped container — avoids all container-side write-permission issues.
+5. Write `tests/fixtures/oq_cross_version/{classical,disaggregation}/oq_<ver>/calc.hdf5`
+   alongside a `manifest.json` recording the image digest, generation timestamp
+   and file checksum.
+6. Skip any (version, mode) pair whose `manifest.json` already exists and whose
+   `hdf5_sha256` still matches.
 
 Flags:
 - `--version 3.25.1` — regenerate a single version

@@ -1,0 +1,11 @@
+{
+  "oq_version": "3.25.1",
+  "docker_image": "openquake/engine:3.25.1",
+  "docker_image_digest": "openquake/engine@sha256:22c9b32fba2aa0a124f19e93947259848046eeb93da105d153458f13f4049eed",
+  "calc_mode": "disaggregation",
+  "job_ini_source": "scripts/oq_input/job_disagg.ini",
+  "generated_at": "2026-05-11T23:06:15.335031Z",
+  "hdf5_sha256": "aaade9ed276538b9804172025487053af81c2c21d3a87737eead9175bdf63ca8",
+  "hdf5_size_bytes": 764161,
+  "host": "glacier.gns.cri.nz"
+}

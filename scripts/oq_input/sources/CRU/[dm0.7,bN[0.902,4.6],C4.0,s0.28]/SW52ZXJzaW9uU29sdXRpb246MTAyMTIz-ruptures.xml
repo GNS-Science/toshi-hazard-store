@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    investigation_time="1.0"
+    name="SW52ZXJzaW9uU29sdXRpb246MTAyMTIz"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <multiFaultSource id="SW52ZXJzaW9uU29sdXRpb246MTAyMTIz" name="SW52ZXJzaW9uU29sdXRpb246MTAyMTIz"/>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
