@@ -7,21 +7,12 @@ import numpy as np
 import numpy.typing as npt
 import pyarrow as pa
 
-try:  # pragma: no cover
-    import openquake  # noqa
-
-    HAVE_OQ = True
-except ImportError:  # pragma: no cover
-    HAVE_OQ = False
-
-if HAVE_OQ:  # pragma: no cover
-    from openquake.calculators.extract import Extractor
-
 from nzshm_common.location import CodedLocation
 
 from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.model.pyarrow.dataset_schema import get_disagg_realisation_schema
 from toshi_hazard_store.model.revision_4.extract_classical_hdf5 import build_nloc0_series, build_nloc_0_mapping
+from toshi_hazard_store.oq_import.h5py_reader import OqHdf5Reader, _DisaggExtract
 from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_mapper
 
 log = logging.getLogger(__name__)
@@ -45,7 +36,7 @@ def _bins_digest_from_dict(payload: dict[str, list[str]]) -> str:
     return hashlib.sha256(serialised.encode()).hexdigest()[:16]
 
 
-def compute_bins_digest(disagg_rlzs) -> str:
+def compute_bins_digest(disagg_rlzs: _DisaggExtract) -> str:
     """Return a short sha256 hex digest over the bin centres in a disagg extract result.
 
     The digest is a compatibility key: two disagg matrices with the same digest share identical
@@ -70,7 +61,7 @@ def _stringify_bin_centers(values) -> list[str]:
 
 
 def generate_disagg_record_batches(
-    extractor,
+    reader: OqHdf5Reader,
     imt: str,
     nloc_001_code: str,
     nloc_0_code: str,
@@ -99,7 +90,7 @@ def generate_disagg_record_batches(
     The source HDF5 is required to contain exactly one site, one IMT and one POE.
 
     Args:
-        extractor: OpenQuake Extractor instance.
+        reader: OqHdf5Reader instance.
         imt: the single IMT string to extract.
         nloc_001_code: location code at 0.001° resolution for the single site.
         nloc_0_code: location code at 1.0° resolution (partition key).
@@ -128,7 +119,7 @@ def generate_disagg_record_batches(
     schema = get_disagg_realisation_schema(use_64bit_values)
 
     log.debug(f'extracting imt={imt} kind={kind}')
-    disagg_data = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
+    disagg_data = reader.disagg_rlzs(kind)
 
     shape_descr = list(disagg_data.shape_descr)
     disagg_array: npt.NDArray = disagg_data.array  # shape: (dims..., n_rlz)
@@ -225,8 +216,8 @@ def disaggs_to_record_batch_reader(
     """
     log.info(f'disaggs_to_record_batch_reader: {hdf5_file}, {calculation_id}, {compatible_calc_id}, kind={kind}')
 
-    extractor = Extractor(str(hdf5_file))
-    oqparam = json.loads(extractor.get('oqparam').json)
+    reader = OqHdf5Reader(str(hdf5_file))
+    oqparam = reader.oqparam()
 
     if oqparam['calculation_mode'] != 'disaggregation':
         raise ValueError(f"calculation_mode is '{oqparam['calculation_mode']}', expected 'disaggregation'")
@@ -243,7 +234,7 @@ def disaggs_to_record_batch_reader(
     imtl = float(imls[0])
 
     # Build site record from the single-site sitecol.
-    df0 = extractor.get('sitecol').to_dframe()
+    df0 = reader.sitecol()
     if df0.shape[0] != 1:
         raise ValueError(f"sitecol must contain exactly one site, got {df0.shape[0]}")
     site_loc = CodedLocation(lat=df0.iloc[0].lat, lon=df0.iloc[0].lon, resolution=0.001)
@@ -254,16 +245,16 @@ def disaggs_to_record_batch_reader(
     nloc_0_idx_to_code = {idx: code for code, idx in nloc_0_map.items()}
     nloc_0_code = nloc_0_idx_to_code[nloc_0_series[0]]
 
-    rlz_map = build_rlz_mapper(extractor)
+    rlz_map = build_rlz_mapper(reader)
 
     # Compute bins_digest from a probe on the single site.
-    probe = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
+    probe = reader.disagg_rlzs(kind)
     bins_digest = compute_bins_digest(probe)
     log.debug(f'bins_digest: {bins_digest}')
 
     schema = get_disagg_realisation_schema(use_64bit_values)
     batches = generate_disagg_record_batches(
-        extractor=extractor,
+        reader=reader,
         imt=imt,
         nloc_001_code=site_loc.code,
         nloc_0_code=nloc_0_code,

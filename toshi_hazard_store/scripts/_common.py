@@ -1,8 +1,8 @@
 """Shared helpers for the NSHM import CLI scripts (``ths_rlz_import`` / ``ths_disagg_import``).
 
-Centralises openquake-availability handling, logging setup, AWS/API env defaults, the
-compatible-calc / producer-config managers, the ``producers`` click subcommand, and the
-input-validation preamble used by both ``store_hazard`` and ``store_disagg``.
+Centralises logging setup, AWS/API env defaults, the compatible-calc / producer-config managers,
+the ``producers`` click subcommand, and the input-validation preamble used by both
+``store_hazard`` and ``store_disagg``.
 """
 
 import json
@@ -19,16 +19,7 @@ from toshi_hazard_store.model.hazard_models_manager import (
     HazardCurveProducerConfigManager,
 )
 from toshi_hazard_store.oq_import import toshi_api_client
-
-try:
-    import openquake  # noqa
-
-    HAVE_OQ = True
-except ImportError:
-    HAVE_OQ = False
-
-if HAVE_OQ:
-    from toshi_hazard_store.oq_import.toshi_api_subtask import build_producers, generate_subtasks
+from toshi_hazard_store.oq_import.toshi_api_subtask import build_producers, generate_subtasks
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("botocore").setLevel(logging.INFO)
@@ -45,14 +36,6 @@ REGION = os.getenv("REGION", "ap-southeast-2")
 
 chc_manager = CompatibleHazardCalculationManager(pathlib.Path(STORAGE_FOLDER))
 hpc_manager = HazardCurveProducerConfigManager(pathlib.Path(STORAGE_FOLDER), chc_manager)
-
-
-def raise_if_no_openquake():
-    """Raises a RuntimeError if openquake is not installed."""
-    if not HAVE_OQ:
-        raise RuntimeError(
-            "openquake dependency is not installed, please use `toshi-hazard-store['openquake'] installer option`."
-        )
 
 
 def get_hazard_task_ids(query_res):
@@ -81,12 +64,9 @@ def prepare_store_inputs(
         The compatible hash digest of the OpenQuake job configuration.
 
     Raises:
-        RuntimeError: openquake not installed.
         FileNotFoundError: config_path or hdf5_path does not exist.
         ValueError: ecr_digest does not begin with ``"sha256:"``.
     """
-    raise_if_no_openquake()
-
     if not pathlib.Path(config_path).is_file():
         raise FileNotFoundError(f"config_path: `{config_path}` is not a file.")
     if not pathlib.Path(hdf5_path).is_file():

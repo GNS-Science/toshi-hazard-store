@@ -14,7 +14,7 @@ from nzshm_model.branch_registry import BranchRegistryEntry, identity_digest
 from .transform import Realization, parse_logic_tree_branches
 
 if TYPE_CHECKING:
-    from openquake.calculators.extract import Extractor
+    from toshi_hazard_store.oq_import.h5py_reader import OqHdf5Reader
 
 
 log = logging.getLogger(__name__)
@@ -37,16 +37,16 @@ def _get_gmcm_branch_from_element_text(gsim):
     return gmcm_branch_from_element_text(gsim)
 
 
-def build_rlz_mapper(extractor: "Extractor") -> dict[int, RealizationRecord]:
+def build_rlz_mapper(reader: "OqHdf5Reader") -> dict[int, RealizationRecord]:
     """Builds a realization mapper from an extractor.
 
     Args:
-        extractor (Extractor): An OpenQuake Extractor object.
+        reader (OqHdf5Reader): An OqHdf5Reader for an OpenQuake HDF5 file.
 
     Returns:
         dict[int, RealizationRecord]: A dictionary of realization records.
     """
-    source_branches, gsim_branches, realizations = parse_logic_tree_branches(extractor)
+    source_branches, gsim_branches, realizations = parse_logic_tree_branches(reader)
     gmm_map = build_rlz_gmm_map(gsim_branches)
     source_map = build_rlz_source_map(source_branches)
     rlz_map = build_rlz_map(realizations, source_map, gmm_map)

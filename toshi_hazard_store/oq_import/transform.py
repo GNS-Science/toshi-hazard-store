@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from openquake.calculators.extract import Extractor
+    from toshi_hazard_store.oq_import.h5py_reader import OqHdf5Reader
 
 CustomLocation = namedtuple("CustomLocation", "site_code lon lat")
 CustomHazardCurve = namedtuple("CustomHazardCurve", "loc poes")
@@ -18,8 +18,8 @@ class Realization:
     ordinal: int
 
 
-def parse_logic_tree_branches(extractor: 'Extractor') -> tuple[dict[str, str], dict[str, str], list[Realization]]:
-    """Parse the hazard logic tree from an OpenQuake Extractor.
+def parse_logic_tree_branches(reader: 'OqHdf5Reader') -> tuple[dict[str, str], dict[str, str], list[Realization]]:
+    """Parse the hazard logic tree from an OqHdf5Reader.
 
     This function will return dicts for the source and ground motion branches and a list of realizations
     that relate the source and ground motion branches.
@@ -32,7 +32,7 @@ def parse_logic_tree_branches(extractor: 'Extractor') -> tuple[dict[str, str], d
     source branches) or branch ids (for ground motion branches).
 
     Args:
-        extractor: the OpenQuake Extractor for an OpenQuake hdf5
+        reader: an OqHdf5Reader for an OpenQuake hdf5
 
     Returns:
         A tuple of (source_branches, gsim_branches, realizations) where
@@ -40,19 +40,10 @@ def parse_logic_tree_branches(extractor: 'Extractor') -> tuple[dict[str, str], d
             gsim_branches: {branch id: branch name}
             realizations: list[Realizations]
     """
-
-    full_lt = extractor.get('full_lt')
-    source_model_lt = full_lt.source_model_lt
-    gslt = full_lt.gsim_lt
-
-    # we don't use the ID, but keeping it as a dict key for symmetry with gsims
-    source_branches = {v.id: k for k, v in source_model_lt.branches.items()}
-
-    gsim_branches = {b.id: str(b.gsim) for b in gslt.branches}
-
+    source_branches = reader.source_branches()
+    gsim_branches = reader.gsim_branches()
     realizations = [
-        Realization(source_path=rlz.sm_lt_path, gsim_path=rlz.gsim_lt_path, ordinal=rlz.ordinal)
-        for rlz in full_lt.get_realizations()
+        Realization(source_path=r.source_path, gsim_path=r.gsim_path, ordinal=r.ordinal)
+        for r in reader.realizations()
     ]
-
     return source_branches, gsim_branches, realizations
