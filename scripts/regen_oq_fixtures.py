@@ -24,7 +24,7 @@ See docs/h5py_extractor_migration.md for more details.
 
 import argparse
 import datetime
-import glob
+import os
 import hashlib
 import json
 import logging
@@ -98,42 +98,78 @@ def _pull_image(image: str, dry_run: bool) -> bool:
 def _run_oq(version: str, mode: str, input_dir: Path, out_dir: Path, dry_run: bool) -> Path | None:
     """Run OQ inside the container and copy the resulting HDF5 to out_dir.
 
-    Returns the path to the copied HDF5, or None on failure.
+    Uses ``docker cp`` (host-side) rather than a bind-mount so container-user
+    write permissions on the output directory are never an issue.
+
+    Returns the path to the copied HDF5 (inside out_dir), or None on failure.
     """
+    import uuid
+
     image = f'{DOCKER_IMAGE_PREFIX}:{version}'
-    # The container runs oq engine, then copies the calc file to /out/.
-    # OQ writes calc files to ~/oqdata/calc_<id>.hdf5 inside the container.
+    container_name = f'oq-regen-{uuid.uuid4().hex[:8]}'
+
+    # Adapt CMD to the image's configured entrypoint.
+    # OQ 3.19–3.24: entrypoint = ["/bin/bash", "-c"] — CMD must be a single string
+    #   so the effective call is /bin/bash -c "oq engine --run /job/job.ini".
+    #   Passing ["bash", "-c", "oq engine ..."] would make bash treat "bash" as the
+    #   command string, silently starting and immediately exiting without running OQ.
+    # OQ 3.25+:     entrypoint = ["./oq-start.sh"] — pass CMD as separate tokens.
+    try:
+        ep_raw = subprocess.check_output(
+            ['docker', 'inspect', '--format', '{{json .Config.Entrypoint}}', image],
+            stderr=subprocess.DEVNULL,
+        )
+        entrypoint = json.loads(ep_raw.decode().strip())
+    except Exception:
+        entrypoint = []
+
+    if entrypoint == ['/bin/bash', '-c']:
+        oq_cmd = ['oq engine --run /job/job.ini']   # single string for bash -c entrypoint
+    else:
+        oq_cmd = ['bash', '-c', 'oq engine --run /job/job.ini']
+
     run_cmd = [
-        'docker', 'run', '--rm',
+        'docker', 'run',
+        '--name', container_name,
         '-v', f'{input_dir}:/job:ro',
-        '-v', f'{out_dir}:/out',
         image,
-        'bash', '-c',
-        'oq engine --run /job/job.ini && cp ~/oqdata/calc_*.hdf5 /out/ 2>/dev/null || '
-        'cp /root/oqdata/calc_*.hdf5 /out/ 2>/dev/null || '
-        'find / -name "calc_*.hdf5" -maxdepth 6 -exec cp {} /out/ \\; 2>/dev/null; '
-        'ls /out/',
-    ]
-    log.info('Running OQ %s %s', version, mode)
+    ] + oq_cmd
+    log.info('Running OQ %s %s (entrypoint: %s)', version, mode, entrypoint)
     if dry_run:
         print(f'[dry-run] {" ".join(run_cmd)}')
         return None
 
-    result = subprocess.run(run_cmd, capture_output=False)
+    result = subprocess.run(run_cmd)
+
+    hdf5_path = None
+    if result.returncode == 0:
+        # OQ writes to ~/oqdata/calc_<id>.hdf5 in the container.  Try the two
+        # known home paths; use docker cp (host user) so no container-side
+        # write permission is needed.  The trailing "/." copies contents of the
+        # directory, not the directory itself, directly into out_dir.
+        for oqdata in ['/home/openquake/oqdata', '/root/oqdata']:
+            cp = subprocess.run(
+                ['docker', 'cp', f'{container_name}:{oqdata}/.', str(out_dir)],
+                capture_output=True,
+            )
+            if cp.returncode == 0:
+                found = list(out_dir.glob('calc_*.hdf5'))
+                if found:
+                    hdf5_path = max(found, key=lambda p: p.stat().st_mtime)
+                    break
+
+    # Always remove the (now stopped) container.
+    subprocess.run(['docker', 'rm', container_name], capture_output=True)
+
     if result.returncode != 0:
         log.error('OQ run failed for %s/%s (exit %d)', version, mode, result.returncode)
         return None
-
-    # Find the produced HDF5 in out_dir.
-    hdf5_files = list(out_dir.glob('calc_*.hdf5'))
-    if not hdf5_files:
-        log.error('No calc_*.hdf5 found in %s after OQ run for %s/%s', out_dir, version, mode)
+    if hdf5_path is None:
+        log.error('No calc_*.hdf5 found for %s/%s', version, mode)
         return None
 
-    # Use the most-recently-modified one if there are multiple (shouldn't happen).
-    hdf5_src = max(hdf5_files, key=lambda p: p.stat().st_mtime)
     dest = out_dir / 'calc.hdf5'
-    hdf5_src.rename(dest)
+    hdf5_path.rename(dest)
     return dest
 
 
@@ -200,6 +236,7 @@ def regen_fixture(version: str, mode: str, force: bool, dry_run: bool) -> bool:
     # Use a temp dir inside fixture_dir so docker can write the HDF5 there.
     with tempfile.TemporaryDirectory(dir=fixture_dir) as tmp:
         tmp_path = Path(tmp)
+        os.chmod(tmp_path, 0o777)  # container runs as non-root; mount point must be world-writable
         hdf5 = _run_oq(version, mode, input_dir, tmp_path, dry_run)
         if hdf5 is None:
             if dry_run:
