@@ -158,3 +158,39 @@ with h5py.File('tests/fixtures/oq_cross_version/disaggregation/oq_3.25.1/calc.hd
     print(json.loads(f['oqparam'][()].decode())['calculation_mode'])
 "
 ```
+
+## Compatibility testing
+
+`tests/oq_import/test_extractor_compat.py` runs `OqHdf5Reader` and
+`openquake.calculators.extract.Extractor` side-by-side on the committed
+classical and disagg fixtures, asserting numerical and structural identity for
+every field consumed by the extraction pipeline (`oqparam`, `sitecol`,
+`hcurves_rlzs`, `realizations`, disagg probe, `bins_digest`, end-to-end
+RecordBatch output).
+
+The test is opt-in because it pulls `openquake-engine==3.25.1` (~200 MB).
+Normal `uv run pytest` skips all tests via a `HAVE_OQ` guard.
+
+### Running
+
+```bash
+uv run tox -e oq-compat
+```
+
+Or without tox:
+
+```bash
+uv sync --group oq-compat
+uv run pytest tests/oq_import/test_extractor_compat.py -v
+```
+
+### When to run
+
+- After any change to `toshi_hazard_store/oq_import/h5py_reader.py`.
+- After bumping the pinned OQ version in `[dependency-groups] oq-compat`
+  (`pyproject.toml`) — confirms our reader still matches the new reference.
+- Before releasing changes that touch `extract_classical_hdf5.py` or
+  `extract_disagg_hdf5.py`.
+
+A failure pinpoints the exact field that drifted; fix the reader (not the
+test) unless the OQ Extractor behaviour itself has changed.
