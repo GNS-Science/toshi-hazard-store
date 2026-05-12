@@ -27,12 +27,12 @@ import datetime
 import hashlib
 import json
 import logging
-import os
 import platform
 import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ DOCKER_IMAGE_PREFIX = 'openquake/engine'
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 
-def _sha256_file(path: Path) -> str:
+def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with open(path, 'rb') as f:
         for chunk in iter(lambda: f.read(1 << 20), b''):
@@ -77,7 +77,7 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def _docker_image_digest(image: str, dry_run: bool) -> str:
+def docker_image_digest(image: str, dry_run: bool) -> str:
     """Return the image digest via ``docker inspect`` after a pull."""
     if dry_run:
         return 'sha256:<dry-run>'
@@ -91,7 +91,7 @@ def _docker_image_digest(image: str, dry_run: bool) -> str:
         return f'{image} (inspect failed)'
 
 
-def _pull_image(image: str, dry_run: bool) -> bool:
+def pull_image(image: str, dry_run: bool) -> bool:
     """Pull a docker image. Returns True on success."""
     cmd = ['docker', 'pull', image]
     log.info('Pulling %s', image)
@@ -102,7 +102,7 @@ def _pull_image(image: str, dry_run: bool) -> bool:
     return result.returncode == 0
 
 
-def _run_oq(version: str, mode: str, input_dir: Path, job_ini: str, out_dir: Path, dry_run: bool) -> Path | None:
+def run_oq(version: str, mode: str, input_dir: Path, job_ini: str, out_dir: Path, dry_run: bool) -> Path | None:
     """Run OQ inside the container and copy the resulting HDF5 to out_dir.
 
     Uses ``docker cp`` (host-side) rather than a bind-mount so container-user
@@ -110,7 +110,6 @@ def _run_oq(version: str, mode: str, input_dir: Path, job_ini: str, out_dir: Pat
 
     Returns the path to the copied HDF5 (inside out_dir), or None on failure.
     """
-    import uuid
 
     image = f'{DOCKER_IMAGE_PREFIX}:{version}'
     container_name = f'oq-regen-{uuid.uuid4().hex[:8]}'
@@ -180,7 +179,7 @@ def _run_oq(version: str, mode: str, input_dir: Path, job_ini: str, out_dir: Pat
     return dest
 
 
-def _write_manifest(
+def write_manifest(
     fixture_dir: Path,
     version: str,
     mode: str,
@@ -194,8 +193,8 @@ def _write_manifest(
         'docker_image_digest': digest,
         'calc_mode': mode,
         'job_ini_source': str(_CALC_MODES[mode].relative_to(REPO_ROOT) / _CALC_JOB_INIS[mode]),
-        'generated_at': datetime.datetime.utcnow().isoformat() + 'Z',
-        'hdf5_sha256': _sha256_file(hdf5_path),
+        'generated_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'hdf5_sha256': sha256_file(hdf5_path),
         'hdf5_size_bytes': hdf5_path.stat().st_size,
         'host': platform.node(),
     }
@@ -203,7 +202,7 @@ def _write_manifest(
     log.info('Manifest written to %s', fixture_dir / 'manifest.json')
 
 
-def _fixture_needs_regen(fixture_dir: Path) -> bool:
+def fixture_needs_regen(fixture_dir: Path) -> bool:
     """True if the fixture is absent or its HDF5 hash no longer matches the manifest."""
     manifest_path = fixture_dir / 'manifest.json'
     hdf5_path = fixture_dir / 'calc.hdf5'
@@ -211,7 +210,7 @@ def _fixture_needs_regen(fixture_dir: Path) -> bool:
         return True
     try:
         manifest = json.loads(manifest_path.read_text())
-        return _sha256_file(hdf5_path) != manifest.get('hdf5_sha256', '')
+        return sha256_file(hdf5_path) != manifest.get('hdf5_sha256', '')
     except Exception:
         return True
 
@@ -228,24 +227,23 @@ def regen_fixture(version: str, mode: str, force: bool, dry_run: bool) -> bool:
         return False
 
     fixture_dir = FIXTURE_ROOT / mode / f'oq_{version}'
-    if not force and not _fixture_needs_regen(fixture_dir):
+    if not force and not fixture_needs_regen(fixture_dir):
         log.info('Skipping %s/%s — fixture exists and hash matches', version, mode)
         return True
 
     image = f'{DOCKER_IMAGE_PREFIX}:{version}'
 
-    if not _pull_image(image, dry_run):
+    if not pull_image(image, dry_run):
         log.error('Failed to pull %s', image)
         return False
 
-    image_digest = _docker_image_digest(image, dry_run)
+    image_digest = docker_image_digest(image, dry_run)
 
     fixture_dir.mkdir(parents=True, exist_ok=True)
     # Use a temp dir inside fixture_dir so docker can write the HDF5 there.
     with tempfile.TemporaryDirectory(dir=fixture_dir) as tmp:
         tmp_path = Path(tmp)
-        os.chmod(tmp_path, 0o777)  # container runs as non-root; mount point must be world-writable
-        hdf5 = _run_oq(version, mode, input_dir, job_ini, tmp_path, dry_run)
+        hdf5 = run_oq(version, mode, input_dir, job_ini, tmp_path, dry_run)
         if hdf5 is None:
             if dry_run:
                 log.info('[dry-run] skipping manifest write')
@@ -256,7 +254,7 @@ def regen_fixture(version: str, mode: str, force: bool, dry_run: bool) -> bool:
         shutil.move(str(hdf5), dest)
 
     if not dry_run:
-        _write_manifest(fixture_dir, version, mode, image, image_digest, fixture_dir / 'calc.hdf5')
+        write_manifest(fixture_dir, version, mode, image, image_digest, fixture_dir / 'calc.hdf5')
 
     return True
 

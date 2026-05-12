@@ -23,7 +23,7 @@ _SITECOL_FIELDS = ('sids', 'lon', 'lat', 'depth', 'vs30', 'vs30measured', 'z1pt0
 
 
 @dataclass
-class _RlzRecord:
+class RlzRecord:
     """A single realization record as produced by OqHdf5Reader.realizations()."""
 
     source_path: tuple
@@ -31,7 +31,7 @@ class _RlzRecord:
     ordinal: int
 
 
-class _DisaggExtract:
+class DisaggExtract:
     """Proxy for a disagg query result — mirrors the surface used by generate_disagg_record_batches."""
 
     def __init__(
@@ -121,7 +121,7 @@ class OqHdf5Reader:
             # ``branch`` column = sm_lt_path string, e.g. '[dmgeologic, tdTrue, ...]'
             return {str(i): row['branch'].decode() for i, row in enumerate(slt)}
 
-    def realizations(self) -> list[_RlzRecord]:
+    def realizations(self) -> list[RlzRecord]:
         """Reconstruct the realization list from ``full_lt/sm_data`` + ``full_lt/gsim_lt``.
 
         Ordering matches OQ enumeration for ``number_of_logic_tree_samples = 0``:
@@ -132,7 +132,7 @@ class OqHdf5Reader:
             glt = f['full_lt']['gsim_lt']
             gsim_ids = [row['branch'].decode() for row in glt]
             sm_data = f['full_lt']['sm_data']
-            rlzs: list[_RlzRecord] = []
+            rlzs: list[RlzRecord] = []
             ordinal = 0
             gsim_offset = 0
             for sm_row in sm_data:
@@ -140,7 +140,7 @@ class OqHdf5Reader:
                 n_samples = int(sm_row['samples'])
                 for j in range(n_samples):
                     rlzs.append(
-                        _RlzRecord(
+                        RlzRecord(
                             source_path=(sm_path,),
                             gsim_path=(gsim_ids[gsim_offset + j],),
                             ordinal=ordinal,
@@ -160,7 +160,7 @@ class OqHdf5Reader:
         site_idx: int = 0,
         imt_idx: int = 0,
         poe_idx: int = 0,
-    ) -> _DisaggExtract:
+    ) -> DisaggExtract:
         """Read ``disagg-rlzs/<kind>`` and return a probe-like object.
 
         The returned ``_DisaggExtract`` mirrors the Extractor probe surface used by
@@ -169,9 +169,6 @@ class OqHdf5Reader:
         - ``.shape_descr`` — axis names including ``'imt'`` and ``'poe'``
         - ``.extra`` — rlz label strings ``['rlzN', ...]`` in ``best_rlzs`` order
         - ``getattr(probe, axis_name)`` — bin centres (numeric axes) or labels (TRT)
-
-        Cross-version note: OQ < 3.24 stored disagg arrays without the separate trailing
-        rlz dimension; that variant is normalised here so callers see a consistent shape.
         """
         with h5py.File(self.path, 'r') as f:
             ds = f[f'disagg-rlzs/{kind}']
@@ -180,9 +177,6 @@ class OqHdf5Reader:
 
             kind_axes = kind.split('_')  # e.g. ['Mag', 'Dist']
             k = len(kind_axes)
-
-            # arr = self._normalise_disagg_shape(arr, k)
-            # arr is now guaranteed: (n_sites, *kind_bins, n_imt, n_poe, n_rlz)
 
             # Slice on site, preserve imt/poe as size-1 dims so the consumer can squeeze them.
             imt_sl = slice(imt_idx, imt_idx + 1)
@@ -206,4 +200,4 @@ class OqHdf5Reader:
 
             shape_descr = [ax.lower() for ax in kind_axes] + ['imt', 'poe']
 
-        return _DisaggExtract(array=sliced, shape_descr=shape_descr, extra=rlz_labels, bins=bins)
+        return DisaggExtract(array=sliced, shape_descr=shape_descr, extra=rlz_labels, bins=bins)

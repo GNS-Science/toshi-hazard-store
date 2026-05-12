@@ -36,7 +36,7 @@ def parse_logic_tree_branches(reader: 'OqHdf5Reader') -> tuple[dict[str, str], d
 
     Returns:
         A tuple of (source_branches, gsim_branches, realizations) where
-            source_branches: {branch id:branch name}
+            source_branches: {str(i): sm_lt_path_str}
             gsim_branches: {branch id: branch name}
             realizations: list[Realizations]
     """
