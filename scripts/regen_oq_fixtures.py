@@ -24,10 +24,10 @@ See docs/h5py_extractor_migration.md for more details.
 
 import argparse
 import datetime
-import os
 import hashlib
 import json
 import logging
+import os
 import platform
 import shutil
 import subprocess
