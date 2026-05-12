@@ -13,6 +13,7 @@ nav:
       - Configuration: configuration.md
   - Usage:
       - Usage: usage.md
+  - OpenQuake Compatibility: h5py_extractor_migration.md
   - Data Models:
       - Hazard Dataset overview: cli/hazard_dataset_overview.md
       - Hazard Metadata: domain_model/hazard_metadata.md
