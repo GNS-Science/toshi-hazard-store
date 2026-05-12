@@ -6,7 +6,6 @@ from typing import Dict, Iterator
 import numpy as np
 import numpy.typing as npt
 import pyarrow as pa
-
 from nzshm_common.location import CodedLocation
 
 from toshi_hazard_store.model.constraints import ProbabilityEnum

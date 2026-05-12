@@ -3,10 +3,9 @@ from typing import Dict, Iterable, List
 
 import numpy as np
 import pyarrow as pa
-
-from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_realisation_schema
 from nzshm_common.location import coded_location
 
+from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_realisation_schema
 from toshi_hazard_store.oq_import.h5py_reader import OqHdf5Reader
 from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_mapper
 

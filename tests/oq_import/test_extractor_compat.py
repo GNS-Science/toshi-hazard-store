@@ -71,14 +71,12 @@ def disagg_pair():
 # ── oqparam ───────────────────────────────────────────────────────────────────
 
 
-
 def test_oqparam_identical_classical(classical_pair):
     """oqparam dict from h5py reader equals OQ Extractor output exactly."""
     reader, extractor = classical_pair
     h5_oqp = reader.oqparam()
     oq_oqp = json.loads(extractor.get('oqparam').json)
     assert h5_oqp == oq_oqp
-
 
 
 def test_oqparam_identical_disagg(disagg_pair):
@@ -91,7 +89,6 @@ def test_oqparam_identical_disagg(disagg_pair):
 # ── sitecol ───────────────────────────────────────────────────────────────────
 
 
-
 def test_sitecol_classical(classical_pair):
     """sitecol lat/lon/vs30 identical to OQ Extractor."""
     reader, extractor = classical_pair
@@ -100,7 +97,6 @@ def test_sitecol_classical(classical_pair):
     assert np.allclose(h5_df['lat'].values, oq_df['lat'].values)
     assert np.allclose(h5_df['lon'].values, oq_df['lon'].values)
     assert np.allclose(h5_df['vs30'].values, oq_df['vs30'].values)
-
 
 
 def test_sitecol_disagg(disagg_pair):
@@ -115,7 +111,6 @@ def test_sitecol_disagg(disagg_pair):
 # ── hcurves_rlzs ─────────────────────────────────────────────────────────────
 
 
-
 def test_hcurves_rlzs_numerical_equality(classical_pair):
     """Per-rlz hazard curves match OQ Extractor for every rlz and every site."""
     reader, extractor = classical_pair
@@ -124,13 +119,10 @@ def test_hcurves_rlzs_numerical_equality(classical_pair):
     oq_keys = [k for k in oq_rlzs if 'rlz-' in k]
     assert set(h5_rlzs.keys()) == set(oq_keys), 'rlz key sets differ'
     for key in oq_keys:
-        assert np.allclose(h5_rlzs[key], oq_rlzs[key], rtol=1e-5), (
-            f'hcurves_rlzs mismatch for {key}'
-        )
+        assert np.allclose(h5_rlzs[key], oq_rlzs[key], rtol=1e-5), f'hcurves_rlzs mismatch for {key}'
 
 
 # ── realizations ──────────────────────────────────────────────────────────────
-
 
 
 def test_realizations_ordinals_and_paths(classical_pair):
@@ -148,7 +140,6 @@ def test_realizations_ordinals_and_paths(classical_pair):
 # ── disagg probe ─────────────────────────────────────────────────────────────
 
 
-
 def test_disagg_shape_descr_and_extra(disagg_pair):
     """shape_descr and rlz label order identical to OQ Extractor probe."""
     reader, extractor, kind, imt = disagg_pair
@@ -156,7 +147,6 @@ def test_disagg_shape_descr_and_extra(disagg_pair):
     probe_oq = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
     assert probe_h5.shape_descr == [str(d) for d in probe_oq.shape_descr]
     assert probe_h5.extra == list(probe_oq.extra)
-
 
 
 def test_disagg_bin_centres(disagg_pair):
@@ -174,10 +164,7 @@ def test_disagg_bin_centres(disagg_pair):
         if isinstance(oq_decoded[0], str):
             assert h5_decoded == oq_decoded, f'bin labels mismatch for axis {ax}'
         else:
-            assert np.allclose(h5_decoded, oq_decoded, rtol=1e-5), (
-                f'bin centres mismatch for axis {ax}'
-            )
-
+            assert np.allclose(h5_decoded, oq_decoded, rtol=1e-5), f'bin centres mismatch for axis {ax}'
 
 
 def test_disagg_array_numerical_equality(disagg_pair):
@@ -188,7 +175,6 @@ def test_disagg_array_numerical_equality(disagg_pair):
     assert np.allclose(probe_h5.array, probe_oq.array, rtol=1e-5), (
         f'disagg array mismatch: max abs diff = {np.max(np.abs(probe_h5.array - probe_oq.array)):.3e}'
     )
-
 
 
 def test_bins_digest_exact_equality(disagg_pair):
@@ -202,7 +188,6 @@ def test_bins_digest_exact_equality(disagg_pair):
 
 
 # ── End-to-end pipeline ───────────────────────────────────────────────────────
-
 
 
 def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
@@ -233,15 +218,10 @@ def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
     probe_oq = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
     # Squeeze imt/poe dims, move rlz to front.
     oq_arr = probe_oq.array  # (*kind_bins, imt=1, poe=1, n_rlz)
-    oq_arr = np.squeeze(oq_arr, axis=tuple(
-        i for i, s in enumerate(oq_arr.shape[:-1]) if s == 1
-    ))  # (*kind_bins, n_rlz)
+    oq_arr = np.squeeze(oq_arr, axis=tuple(i for i, s in enumerate(oq_arr.shape[:-1]) if s == 1))  # (*kind_bins, n_rlz)
     oq_arr = np.moveaxis(oq_arr, -1, 0)  # (n_rlz, *kind_bins)
     n_rlz = oq_arr.shape[0]
-    oq_ref = {
-        list(probe_oq.extra)[i]: oq_arr[i].ravel().astype(np.float32)
-        for i in range(n_rlz)
-    }
+    oq_ref = {list(probe_oq.extra)[i]: oq_arr[i].ravel().astype(np.float32) for i in range(n_rlz)}
 
     # Compare per rlz.
     rlz_col = batch.column('rlz').to_pylist()
@@ -250,8 +230,7 @@ def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
         h5_vals = np.asarray(row_vals, dtype=np.float32)
         oq_vals = oq_ref[rlz_label]
         assert np.allclose(h5_vals, oq_vals, rtol=1e-5), (
-            f'disagg_values mismatch for {rlz_label}: '
-            f'max abs diff = {np.max(np.abs(h5_vals - oq_vals)):.3e}'
+            f'disagg_values mismatch for {rlz_label}: max abs diff = {np.max(np.abs(h5_vals - oq_vals)):.3e}'
         )
 
     # disagg_bins: axis names and bin-centre strings must be identical across all rows.
@@ -263,7 +242,5 @@ def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
             [ax.lower() for ax in kind.split('_')],
         ):
             assert ax_name == expected_ax
-            expected_strs = extract_disagg_hdf5._stringify_bin_centers(
-                getattr(probe_h5, ax_name)
-            )
+            expected_strs = extract_disagg_hdf5._stringify_bin_centers(getattr(probe_h5, ax_name))
             assert bin_strs == expected_strs, f'bin strings mismatch for axis {ax_name}'

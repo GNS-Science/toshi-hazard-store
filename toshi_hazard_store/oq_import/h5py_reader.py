@@ -41,10 +41,10 @@ class _DisaggExtract:
         extra: list[str],
         bins: dict[str, Any],
     ) -> None:
-        self.array = array          # shape: (*kind_bins, imt=1, poe=1, n_rlz)
+        self.array = array  # shape: (*kind_bins, imt=1, poe=1, n_rlz)
         self.shape_descr = shape_descr  # e.g. ['mag', 'dist', 'imt', 'poe']
-        self.extra = extra          # rlz labels e.g. ['rlz4', 'rlz11', ...]
-        self._bins = bins           # {axis_name: bin_centres_array_or_list}
+        self.extra = extra  # rlz labels e.g. ['rlz4', 'rlz11', ...]
+        self._bins = bins  # {axis_name: bin_centres_array_or_list}
 
     def __getattr__(self, name: str) -> Any:
         # Allows getattr(probe, 'mag'), getattr(probe, 'trt'), etc.
@@ -176,7 +176,7 @@ class OqHdf5Reader:
         with h5py.File(self.path, 'r') as f:
             ds = f[f'disagg-rlzs/{kind}']
             arr = ds[()]  # shape: (n_sites, *kind_axes, n_imt, n_poe, n_rlz)  [OQ >= 3.24]
-                          # or:    (n_sites, *kind_axes, n_imt, n_poe)          [OQ <  3.24, rlz merged into poe]
+            # or:    (n_sites, *kind_axes, n_imt, n_poe)          [OQ <  3.24, rlz merged into poe]
 
             kind_axes = kind.split('_')  # e.g. ['Mag', 'Dist']
             k = len(kind_axes)
@@ -243,3 +243,16 @@ class OqHdf5Reader:
             f'disagg-rlzs array has unexpected ndim={arr.ndim} '
             f'(expected {expected_ndim} or {expected_ndim - 1} for n_kind_axes={n_kind_axes})'
         )
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filename')
+    parser.add_argument('mode', choices=['classical', 'disaggregation'])
+    args = parser.parse_args()
+    hdf5_filepath = Path(args.filename)
+
+    reader = OqHdf5Reader(hdf5_filepath)
+
+    if args.mode

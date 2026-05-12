@@ -43,7 +43,6 @@ def parse_logic_tree_branches(reader: 'OqHdf5Reader') -> tuple[dict[str, str], d
     source_branches = reader.source_branches()
     gsim_branches = reader.gsim_branches()
     realizations = [
-        Realization(source_path=r.source_path, gsim_path=r.gsim_path, ordinal=r.ordinal)
-        for r in reader.realizations()
+        Realization(source_path=r.source_path, gsim_path=r.gsim_path, ordinal=r.ordinal) for r in reader.realizations()
     ]
     return source_branches, gsim_branches, realizations

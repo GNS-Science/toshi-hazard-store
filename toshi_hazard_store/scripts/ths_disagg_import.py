@@ -14,8 +14,8 @@ import click
 
 from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
-from toshi_hazard_store.oq_import import toshi_api_client
 from toshi_hazard_store.model.revision_4 import extract_disagg_hdf5
+from toshi_hazard_store.oq_import import toshi_api_client
 from toshi_hazard_store.oq_import.toshi_api_subtask import build_disaggregations, generate_subtasks
 from toshi_hazard_store.scripts._common import (
     API_KEY,

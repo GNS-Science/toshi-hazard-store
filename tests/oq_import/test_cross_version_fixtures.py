@@ -12,9 +12,9 @@ directory is absent or empty, the parametrize list is [] and pytest reports
 """
 
 import json
-import numpy as np
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from toshi_hazard_store.model.constraints import ProbabilityEnum
@@ -35,18 +35,13 @@ def _discover_fixture_dirs(mode: str) -> list[Path]:
     root = _FIXTURE_ROOT / mode
     if not root.exists():
         return []
-    return sorted(
-        d for d in root.glob('oq_*')
-        if (d / 'manifest.json').exists() and (d / 'calc.hdf5').exists()
-    )
+    return sorted(d for d in root.glob('oq_*') if (d / 'manifest.json').exists() and (d / 'calc.hdf5').exists())
 
 
 # ── Classical ──────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize(
-    'fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name
-)
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
 def test_classical_extraction_cross_version(fixture_dir):
     """Schema, row count and curve values are sane across all OQ versions."""
     manifest = json.loads((fixture_dir / 'manifest.json').read_text())
@@ -61,9 +56,7 @@ def test_classical_extraction_cross_version(fixture_dir):
         config_digest='cfg-abc123',
     )
 
-    assert reader.schema.equals(get_hazard_realisation_schema()), (
-        f'[OQ {oq_ver}] schema mismatch'
-    )
+    assert reader.schema.equals(get_hazard_realisation_schema()), f'[OQ {oq_ver}] schema mismatch'
 
     batches = list(reader)
     assert len(batches) > 0, f'[OQ {oq_ver}] no batches yielded'
@@ -80,9 +73,7 @@ def test_classical_extraction_cross_version(fixture_dir):
 # ── Disaggregation ─────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize(
-    'fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name
-)
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name)
 def test_disagg_extraction_cross_version(fixture_dir):
     """Schema, row count and disagg values are sane across all OQ versions."""
     manifest = json.loads((fixture_dir / 'manifest.json').read_text())
@@ -115,9 +106,7 @@ def test_disagg_extraction_cross_version(fixture_dir):
         kind=kind,
     )
 
-    assert reader.schema.equals(get_disagg_realisation_schema()), (
-        f'[OQ {oq_ver}] schema mismatch'
-    )
+    assert reader.schema.equals(get_disagg_realisation_schema()), f'[OQ {oq_ver}] schema mismatch'
 
     probe = reader_h5.disagg_rlzs(kind)
     n_rlz = len(probe.extra)
@@ -125,16 +114,12 @@ def test_disagg_extraction_cross_version(fixture_dir):
 
     batches = list(reader)
     total_rows = sum(b.num_rows for b in batches)
-    assert total_rows == n_rlz, (
-        f'[OQ {oq_ver}] expected {n_rlz} rows, got {total_rows}'
-    )
+    assert total_rows == n_rlz, f'[OQ {oq_ver}] expected {n_rlz} rows, got {total_rows}'
 
     for batch in batches:
         values_col = batch.column('disagg_values')
         for i in range(batch.num_rows):
             arr = np.asarray(values_col[i].as_py(), dtype=np.float64)
-            assert len(arr) == n_cells_per_rlz, (
-                f'[OQ {oq_ver}] disagg_values length {len(arr)} != {n_cells_per_rlz}'
-            )
+            assert len(arr) == n_cells_per_rlz, f'[OQ {oq_ver}] disagg_values length {len(arr)} != {n_cells_per_rlz}'
             assert np.all(np.isfinite(arr)), f'[OQ {oq_ver}] non-finite disagg values'
             assert arr.sum() > 0, f'[OQ {oq_ver}] all-zero disagg row'
