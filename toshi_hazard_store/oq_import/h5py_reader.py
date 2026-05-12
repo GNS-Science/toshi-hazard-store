@@ -181,7 +181,7 @@ class OqHdf5Reader:
             kind_axes = kind.split('_')  # e.g. ['Mag', 'Dist']
             k = len(kind_axes)
 
-            arr = self._normalise_disagg_shape(arr, k)
+            # arr = self._normalise_disagg_shape(arr, k)
             # arr is now guaranteed: (n_sites, *kind_bins, n_imt, n_poe, n_rlz)
 
             # Slice on site, preserve imt/poe as size-1 dims so the consumer can squeeze them.
@@ -207,52 +207,3 @@ class OqHdf5Reader:
             shape_descr = [ax.lower() for ax in kind_axes] + ['imt', 'poe']
 
         return _DisaggExtract(array=sliced, shape_descr=shape_descr, extra=rlz_labels, bins=bins)
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _normalise_disagg_shape(arr: np.ndarray, n_kind_axes: int) -> np.ndarray:
-        """Ensure disagg array always has a separate trailing rlz axis.
-
-        OQ < 3.24 stored spec=rlzs results without a distinct trailing rlz dimension;
-        instead, the rlz count was merged into the poe axis.  This can be detected
-        by comparing the actual ndim to the expected ndim for the post-3.24 layout:
-        ``1 (site) + n_kind_axes + 1 (imt) + 1 (poe) + 1 (rlz) = n_kind_axes + 4``.
-
-        If the array has one fewer dimension, it matches the old layout; we insert a
-        unit rlz axis at the end so downstream code sees a consistent shape.
-        Note: when the old layout folds rlzs into the poe slot, the array contains
-        the raw conditional disaggregation matrices (not normalised per rlz); the
-        caller must be aware that the values may differ from the post-3.24 convention.
-        """
-        expected_ndim = n_kind_axes + 4  # site + kind_axes + imt + poe + rlz
-        if arr.ndim == expected_ndim:
-            return arr  # modern layout: already correct
-        if arr.ndim == expected_ndim - 1:
-            log.warning(
-                'disagg-rlzs array has %d dims (expected %d): '
-                'looks like OQ <3.24 layout where rlz count is in the poe axis. '
-                'Inserting a trailing unit axis — values may differ from OQ >=3.24.',
-                arr.ndim,
-                expected_ndim,
-            )
-            return arr[..., np.newaxis]
-        raise ValueError(
-            f'disagg-rlzs array has unexpected ndim={arr.ndim} '
-            f'(expected {expected_ndim} or {expected_ndim - 1} for n_kind_axes={n_kind_axes})'
-        )
-
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('filename')
-    parser.add_argument('mode', choices=['classical', 'disaggregation'])
-    args = parser.parse_args()
-    hdf5_filepath = Path(args.filename)
-
-    reader = OqHdf5Reader(hdf5_filepath)
-
-    if args.mode
