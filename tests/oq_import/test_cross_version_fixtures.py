@@ -123,3 +123,220 @@ def test_disagg_extraction_cross_version(fixture_dir):
             assert len(arr) == n_cells_per_rlz, f'[OQ {oq_ver}] disagg_values length {len(arr)} != {n_cells_per_rlz}'
             assert np.all(np.isfinite(arr)), f'[OQ {oq_ver}] non-finite disagg values'
             assert arr.sum() > 0, f'[OQ {oq_ver}] all-zero disagg row'
+
+
+# ── Reader-correctness invariant tests (classical) ─────────────────────────────
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
+def test_classical_imt_axis_matches_stored_attrs(fixture_dir):
+    """IMTs returned by the reader pipeline match the axis labels stored in hcurves-rlzs attrs.
+
+    Catches the case where OQ changes the IMT storage order while the reader
+    still applies sorted(hazard_imtls.keys()), silently permuting the imt axis.
+    """
+    import h5py
+
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    hdf5 = fixture_dir / 'calc.hdf5'
+
+    reader = OqHdf5Reader(str(hdf5))
+    oqparam = reader.oqparam()
+    hazard_imtls = oqparam.get('hazard_imtls') or oqparam.get('intensity_measure_types_and_levels', {})
+    reader_imts = sorted(list(hazard_imtls.keys()))  # mirrors extract_classical_hdf5.py
+
+    with h5py.File(hdf5, 'r') as f:
+        stored_imts = json.loads(f['hcurves-rlzs'].attrs['json'])['imt']
+
+    assert reader_imts == stored_imts, (
+        f'[OQ {oq_ver}] IMT axis mismatch: reader {reader_imts} != stored {stored_imts}'
+    )
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
+def test_classical_rlz_curves_match_raw_hdf5(fixture_dir):
+    """Per-rlz curves from OqHdf5Reader are bitwise-equal to raw HDF5 slices for a sample of rlzs.
+
+    Picks a few rlzs with non-zero curves (all-zero rlzs are not diagnostic).
+    Catches rlz key → axis-index mapping errors and axis transpositions in
+    hcurves-rlzs without any floating-point tolerance.
+    """
+    import h5py
+
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    hdf5 = fixture_dir / 'calc.hdf5'
+
+    reader = OqHdf5Reader(str(hdf5))
+    rlzs_dict = reader.hcurves_rlzs()  # {rlz-NNN: (n_sites, n_imts, n_levels)}
+    n_rlz = len(rlzs_dict)
+    n_digits = max(3, len(str(n_rlz - 1)))
+
+    with h5py.File(hdf5, 'r') as f:
+        raw_cube = f['hcurves-rlzs'][()]  # (n_sites, n_rlz, n_imts, n_levels)
+
+    # Sample first, middle and last of non-zero rlzs — all-zero rlzs are not diagnostic.
+    non_zero = [i for i in range(n_rlz) if raw_cube[:, i, :, :].sum() > 0]
+    assert non_zero, f'[OQ {oq_ver}] all rlzs have zero hazard curves — fixture is degenerate'
+    n_sample = min(3, len(non_zero))
+    step = max(1, len(non_zero) // n_sample)
+    sample_ordinals = non_zero[::step][:n_sample]
+
+    for i in sample_ordinals:
+        key = f'rlz-{i:0{n_digits}d}'
+        expected = raw_cube[:, i, :, :]  # (n_sites, n_imts, n_levels)
+        actual = rlzs_dict[key]
+        assert np.array_equal(actual, expected), (
+            f'[OQ {oq_ver}] rlz ordinal {i} ({key}) does not match raw HDF5 slice — '
+            f'rlz key/index mapping or axis order is wrong. '
+            f'max diff: {np.abs(actual - expected).max():.3e}'
+        )
+
+
+# ── Reader-correctness invariant tests (disaggregation) ───────────────────────
+
+
+def _disagg_kind(fixture_dir: Path) -> str:
+    """Return the first Mag+Dist disagg kind available in this fixture."""
+    reader = OqHdf5Reader(str(fixture_dir / 'calc.hdf5'))
+    kinds = reader.oqparam().get('disagg_outputs', [])
+    return next((k for k in kinds if 'Mag' in k and 'Dist' in k), kinds[0])
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name)
+def test_disagg_shape_descr_matches_stored_attrs(fixture_dir):
+    """Reader's shape_descr for disagg matches the axis names stored in the dataset attrs.
+
+    Catches re-ordering of axes inside disagg-rlzs/<kind> and wrong axis parsing
+    from the kind string.
+    """
+    import h5py
+
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    hdf5 = fixture_dir / 'calc.hdf5'
+    kind = _disagg_kind(fixture_dir)
+
+    with h5py.File(hdf5, 'r') as f:
+        ds_attrs = f[f'disagg-rlzs/{kind}'].attrs
+        if 'shape_descr' not in ds_attrs:
+            pytest.skip(f'[OQ {oq_ver}] disagg-rlzs has no shape_descr attr — OQ < 3.24')
+        raw = ds_attrs['shape_descr']
+        stored_axes = [v.decode() if isinstance(v, bytes) else str(v) for v in raw]
+
+    probe = OqHdf5Reader(str(hdf5)).disagg_rlzs(kind)
+    reader_shape_descr = probe.shape_descr  # e.g. ['trt', 'mag', 'dist', 'eps', 'imt', 'poe']
+
+    # Drop 'site_id' (sliced out by the reader) and 'Z' (rlz axis, surfaced via .extra).
+    expected = [a.lower() for a in stored_axes if a not in ('site_id', 'Z')]
+
+    assert reader_shape_descr == expected, (
+        f'[OQ {oq_ver}] disagg shape_descr mismatch: reader {reader_shape_descr} != stored {expected}'
+    )
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name)
+def test_disagg_bin_edge_count_matches_axis_sizes(fixture_dir):
+    """For each numeric kind-axis: n_bin_edges == axis_size + 1.
+
+    Catches the case where OQ starts storing bin centres instead of edges (or
+    vice versa), which would make our midpoint calculation wrong and produce
+    bin labels shifted by half a bin width.
+    """
+    import h5py
+
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    hdf5 = fixture_dir / 'calc.hdf5'
+    kind = _disagg_kind(fixture_dir)
+
+    # Axes are encoded in the kind string — no need for shape_descr attr.
+    kind_axes = kind.split('_')  # e.g. ['TRT', 'Mag', 'Dist', 'Eps']
+    with h5py.File(hdf5, 'r') as f:
+        ds = f[f'disagg-rlzs/{kind}']
+        for pos, ax_name in enumerate(kind_axes, start=1):
+            axis_size = ds.shape[pos]
+            if ax_name in f['disagg-bins']:
+                edges = f[f'disagg-bins/{ax_name}'][()]
+                # Only numeric axes use the edges→midpoints convention;
+                # string/categorical axes (e.g. TRT) store labels directly.
+                if edges.ndim == 1 and edges.dtype.kind in ('f', 'u', 'i'):
+                    n_midpoints = len(edges) - 1
+                    assert n_midpoints == axis_size, (
+                        f'[OQ {oq_ver}] disagg-bins/{ax_name}: '
+                        f'n_edges={len(edges)} → n_midpoints={n_midpoints} != axis_size={axis_size}. '
+                        f'OQ may have switched from edges to centres.'
+                    )
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name)
+def test_disagg_rlz_slices_match_raw_hdf5(fixture_dir):
+    """Per-rlz disagg slices match raw HDF5, and .extra labels match best_rlzs ordinals.
+
+    The Z axis in disagg-rlzs is indexed by best_rlzs[site_idx] ordering, not by
+    rlz ordinal. Verifies:
+    1. probe.array column j is bitwise-equal to raw_cube[..., j] for a sample of
+       non-zero rlz positions.
+    2. probe.extra[j] correctly translates position j to ordinal via best_rlzs.
+
+    Catches Z-axis position mis-mapping and best_rlzs → label translation errors.
+    """
+    import h5py
+
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    hdf5 = fixture_dir / 'calc.hdf5'
+    kind = _disagg_kind(fixture_dir)
+
+    probe = OqHdf5Reader(str(hdf5)).disagg_rlzs(kind)  # default site_idx=0, imt_idx=0, poe_idx=0
+
+    with h5py.File(hdf5, 'r') as f:
+        raw = f[f'disagg-rlzs/{kind}'][()]  # (n_sites, *kind_axes, n_imt, n_poe, n_rlz)
+        best_rlzs = f['best_rlzs'][()]      # (n_sites, n_rlz)
+
+    expected_full = raw[0, ..., 0:1, 0:1, :]  # site=0, imt=0:1, poe=0:1 → (*kind_axes, 1, 1, n_rlz)
+    assert probe.array.shape == expected_full.shape, (
+        f'[OQ {oq_ver}] disagg probe shape {probe.array.shape} != expected {expected_full.shape}'
+    )
+
+    # Sample non-zero rlz positions along the Z axis (last).
+    rlz_sums = expected_full.reshape(-1, expected_full.shape[-1]).sum(axis=0)
+    non_zero = [j for j in range(rlz_sums.shape[0]) if rlz_sums[j] > 0]
+    assert non_zero, f'[OQ {oq_ver}] all disagg rlz columns are zero — fixture is degenerate'
+    n_sample = min(3, len(non_zero))
+    step = max(1, len(non_zero) // n_sample)
+    sample_positions = non_zero[::step][:n_sample]
+
+    for j in sample_positions:
+        expected_slice = expected_full[..., j]
+        actual_slice = probe.array[..., j]
+        assert np.array_equal(actual_slice, expected_slice), (
+            f'[OQ {oq_ver}] disagg Z position {j} does not match raw slice — '
+            f'Z-axis mapping or array layout is wrong. '
+            f'max diff: {np.abs(actual_slice - expected_slice).max():.3e}'
+        )
+        expected_label = f'rlz{int(best_rlzs[0, j])}'
+        assert probe.extra[j] == expected_label, (
+            f'[OQ {oq_ver}] disagg .extra[{j}]={probe.extra[j]!r} != {expected_label!r} '
+            f'from best_rlzs — label translation is wrong.'
+        )
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name)
+def test_disagg_best_rlzs_valid_ordinals(fixture_dir):
+    """best_rlzs entries are valid rlz ordinals in [0, n_rlz) with no duplicates per site.
+
+    Catches the case where OQ changes the semantics of best_rlzs (e.g., storing
+    weights instead of ordinals, or 1-based indexing).
+    """
+    import h5py
+
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    hdf5 = fixture_dir / 'calc.hdf5'
+
+    with h5py.File(hdf5, 'r') as f:
+        n_rlz = f['weights'].shape[0]
+        best = f['best_rlzs'][()]  # (n_sites, n_rlz)
+
+    assert best.min() >= 0, f'[OQ {oq_ver}] best_rlzs has negative ordinals'
+    assert best.max() < n_rlz, f'[OQ {oq_ver}] best_rlzs max={best.max()} >= n_rlz={n_rlz}'
+    for site_idx in range(best.shape[0]):
+        assert len(set(best[site_idx])) == n_rlz, (
+            f'[OQ {oq_ver}] best_rlzs[{site_idx}] has duplicate ordinals — expected a permutation of 0..{n_rlz - 1}'
+        )

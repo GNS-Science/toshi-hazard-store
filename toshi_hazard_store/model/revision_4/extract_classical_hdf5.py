@@ -45,12 +45,13 @@ def generate_rlz_record_batches(
     rlz_map = build_rlz_mapper(reader)
 
     # get the site index values
-    nloc_001_locations, site_vs30s = [], []
     df0 = reader.sitecol()
-    for row in df0.itertuples(index=False):
-        site_loc = coded_location.CodedLocation(lat=row.lat, lon=row.lon, resolution=0.001)
-        nloc_001_locations.append(site_loc)  # locations in OG order
-        site_vs30s.append(row.vs30)  # site_vs30 in OG order
+    lats: List[float] = df0['lat'].tolist()
+    lons: List[float] = df0['lon'].tolist()
+    site_vs30s: List[float] = df0['vs30'].tolist()
+    nloc_001_locations = [
+        coded_location.CodedLocation(lat=lat, lon=lon, resolution=0.001) for lat, lon in zip(lats, lons)
+    ]
 
     nloc_0_map = build_nloc_0_mapping(nloc_001_locations)
     nloc_0_series = build_nloc0_series(nloc_001_locations, nloc_0_map)
