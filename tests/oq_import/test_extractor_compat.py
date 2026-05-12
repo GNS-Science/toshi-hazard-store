@@ -41,7 +41,7 @@ _DISAGG_HDF5 = (
     / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTI4NDUy/calc_1.hdf5'
 )
 
-_REQUIRE_OQ = pytest.mark.skipif(
+pytestmark = pytest.mark.skipif(
     not HAVE_OQ,
     reason='openquake-engine not installed — run: uv run tox -e oq-compat',
 )
@@ -71,7 +71,7 @@ def disagg_pair():
 # ── oqparam ───────────────────────────────────────────────────────────────────
 
 
-@_REQUIRE_OQ
+
 def test_oqparam_identical_classical(classical_pair):
     """oqparam dict from h5py reader equals OQ Extractor output exactly."""
     reader, extractor = classical_pair
@@ -80,7 +80,7 @@ def test_oqparam_identical_classical(classical_pair):
     assert h5_oqp == oq_oqp
 
 
-@_REQUIRE_OQ
+
 def test_oqparam_identical_disagg(disagg_pair):
     reader, extractor, kind, imt = disagg_pair
     h5_oqp = reader.oqparam()
@@ -91,7 +91,7 @@ def test_oqparam_identical_disagg(disagg_pair):
 # ── sitecol ───────────────────────────────────────────────────────────────────
 
 
-@_REQUIRE_OQ
+
 def test_sitecol_classical(classical_pair):
     """sitecol lat/lon/vs30 identical to OQ Extractor."""
     reader, extractor = classical_pair
@@ -102,7 +102,7 @@ def test_sitecol_classical(classical_pair):
     assert np.allclose(h5_df['vs30'].values, oq_df['vs30'].values)
 
 
-@_REQUIRE_OQ
+
 def test_sitecol_disagg(disagg_pair):
     reader, extractor, kind, imt = disagg_pair
     h5_df = reader.sitecol()
@@ -115,7 +115,7 @@ def test_sitecol_disagg(disagg_pair):
 # ── hcurves_rlzs ─────────────────────────────────────────────────────────────
 
 
-@_REQUIRE_OQ
+
 def test_hcurves_rlzs_numerical_equality(classical_pair):
     """Per-rlz hazard curves match OQ Extractor for every rlz and every site."""
     reader, extractor = classical_pair
@@ -132,7 +132,7 @@ def test_hcurves_rlzs_numerical_equality(classical_pair):
 # ── realizations ──────────────────────────────────────────────────────────────
 
 
-@_REQUIRE_OQ
+
 def test_realizations_ordinals_and_paths(classical_pair):
     """Realization ordinals, source paths and GSIM paths identical to OQ Extractor."""
     reader, extractor = classical_pair
@@ -148,7 +148,7 @@ def test_realizations_ordinals_and_paths(classical_pair):
 # ── disagg probe ─────────────────────────────────────────────────────────────
 
 
-@_REQUIRE_OQ
+
 def test_disagg_shape_descr_and_extra(disagg_pair):
     """shape_descr and rlz label order identical to OQ Extractor probe."""
     reader, extractor, kind, imt = disagg_pair
@@ -158,7 +158,7 @@ def test_disagg_shape_descr_and_extra(disagg_pair):
     assert probe_h5.extra == list(probe_oq.extra)
 
 
-@_REQUIRE_OQ
+
 def test_disagg_bin_centres(disagg_pair):
     """Bin centres for every kind axis identical to OQ Extractor probe."""
     reader, extractor, kind, imt = disagg_pair
@@ -179,7 +179,7 @@ def test_disagg_bin_centres(disagg_pair):
             )
 
 
-@_REQUIRE_OQ
+
 def test_disagg_array_numerical_equality(disagg_pair):
     """Disagg probability array numerically identical to OQ Extractor probe."""
     reader, extractor, kind, imt = disagg_pair
@@ -190,7 +190,7 @@ def test_disagg_array_numerical_equality(disagg_pair):
     )
 
 
-@_REQUIRE_OQ
+
 def test_bins_digest_exact_equality(disagg_pair):
     """compute_bins_digest produces the same 16-char hex string for both probes."""
     reader, extractor, kind, imt = disagg_pair
@@ -204,7 +204,7 @@ def test_bins_digest_exact_equality(disagg_pair):
 # ── End-to-end pipeline ───────────────────────────────────────────────────────
 
 
-@_REQUIRE_OQ
+
 def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
     """disaggs_to_record_batch_reader disagg_values and disagg_bins match OQ reference.
 
