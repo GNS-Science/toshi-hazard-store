@@ -47,10 +47,10 @@ def generate_rlz_record_batches(
     # get the site index values
     nloc_001_locations, site_vs30s = [], []
     df0 = reader.sitecol()
-    for idx in range(df0.shape[0]):
-        site_loc = coded_location.CodedLocation(lat=df0.iloc[idx].lat, lon=df0.iloc[idx].lon, resolution=0.001)
+    for row in df0.itertuples(index=False):
+        site_loc = coded_location.CodedLocation(lat=row.lat, lon=row.lon, resolution=0.001)
         nloc_001_locations.append(site_loc)  # locations in OG order
-        site_vs30s.append(df0.iloc[idx].vs30)  # site_vs30 in OG order
+        site_vs30s.append(row.vs30)  # site_vs30 in OG order
 
     nloc_0_map = build_nloc_0_mapping(nloc_001_locations)
     nloc_0_series = build_nloc0_series(nloc_001_locations, nloc_0_map)
