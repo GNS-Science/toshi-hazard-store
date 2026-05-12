@@ -11,13 +11,13 @@ from nzshm_common.location import CodedLocation
 from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.model.pyarrow.dataset_schema import get_disagg_realisation_schema
 from toshi_hazard_store.model.revision_4.extract_classical_hdf5 import build_nloc0_series, build_nloc_0_mapping
-from toshi_hazard_store.oq_import.h5py_reader import OqHdf5Reader, _DisaggExtract
+from toshi_hazard_store.oq_import.h5py_reader import OqHdf5Reader, DisaggExtract
 from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_mapper
 
 log = logging.getLogger(__name__)
 
 # Axes that are always squeezed (we fix them via query parameters).
-_QUERY_DIMS = frozenset(('imt', 'poe'))
+_QUERY_DIMS = ('imt', 'poe')
 
 
 def _bins_digest_from_dict(payload: dict[str, list[str]]) -> str:
@@ -35,7 +35,7 @@ def _bins_digest_from_dict(payload: dict[str, list[str]]) -> str:
     return hashlib.sha256(serialised.encode()).hexdigest()[:16]
 
 
-def compute_bins_digest(disagg_rlzs: _DisaggExtract) -> str:
+def compute_bins_digest(disagg_rlzs: DisaggExtract) -> str:
     """Return a short sha256 hex digest over the bin centres in a disagg extract result.
 
     The digest is a compatibility key: two disagg matrices with the same digest share identical
