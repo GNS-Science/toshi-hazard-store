@@ -3,9 +3,8 @@
 We use our own extractor to obtain data from OpenQuake hdf5 files, rather than using the `openquake.calculators.extract.Extractor`
 
 `openquake.calculators.extract.Extractor` drifts between OQ minor versions. A
-the version matrix test showed that OQ 3.20–3.23 use an older `spec=rlzs` convention (the rlz
-count appears in the `poe` axis instead of as a trailing dimension), while OQ 3.24+ use the
-expected trailing-dimension convention. Because the Extractor API is unstable, any new OQ
+the version matrix test showed that OQ 3.20–3.23 collapses the poe dimension for disaggregations if there is only one poe (which is typical for our use)
+while OQ 3.24+ includes all degenerate dimensions. Because the Extractor API is unstable, any new OQ
 minor release could silently break the extraction code.
 
 The OQ HDF5 **file** layout is more stable. We replaced the Extractor with direct h5py
