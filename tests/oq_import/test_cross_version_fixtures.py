@@ -148,9 +148,7 @@ def test_classical_imt_axis_matches_stored_attrs(fixture_dir):
     with h5py.File(hdf5, 'r') as f:
         stored_imts = json.loads(f['hcurves-rlzs'].attrs['json'])['imt']
 
-    assert reader_imts == stored_imts, (
-        f'[OQ {oq_ver}] IMT axis mismatch: reader {reader_imts} != stored {stored_imts}'
-    )
+    assert reader_imts == stored_imts, f'[OQ {oq_ver}] IMT axis mismatch: reader {reader_imts} != stored {stored_imts}'
 
 
 @pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
@@ -288,7 +286,7 @@ def test_disagg_rlz_slices_match_raw_hdf5(fixture_dir):
 
     with h5py.File(hdf5, 'r') as f:
         raw = f[f'disagg-rlzs/{kind}'][()]  # (n_sites, *kind_axes, n_imt, n_poe, n_rlz)
-        best_rlzs = f['best_rlzs'][()]      # (n_sites, n_rlz)
+        best_rlzs = f['best_rlzs'][()]  # (n_sites, n_rlz)
 
     expected_full = raw[0, ..., 0:1, 0:1, :]  # site=0, imt=0:1, poe=0:1 → (*kind_axes, 1, 1, n_rlz)
     assert probe.array.shape == expected_full.shape, (
