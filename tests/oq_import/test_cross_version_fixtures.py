@@ -26,6 +26,8 @@ from toshi_hazard_store.model.revision_4 import extract_classical_hdf5, extract_
 from toshi_hazard_store.oq_import.h5py_reader import OqHdf5Reader
 
 _FIXTURE_ROOT = Path(__file__).parent.parent / 'fixtures/oq_cross_version'
+_REF_CLASSICAL_HDF5 = _FIXTURE_ROOT / 'classical' / 'oq_3.25.1' / 'calc.hdf5'
+_REF_DISAGG_HDF5 = _FIXTURE_ROOT / 'disaggregation' / 'oq_3.25.1' / 'calc.hdf5'
 
 _HAZARD_MODEL_ID = 'TEST_MODEL_v0'
 _TARGET_AGGR = 'mean'
@@ -337,4 +339,182 @@ def test_disagg_best_rlzs_valid_ordinals(fixture_dir):
     for site_idx in range(best.shape[0]):
         assert len(set(best[site_idx])) == n_rlz, (
             f'[OQ {oq_ver}] best_rlzs[{site_idx}] has duplicate ordinals — expected a permutation of 0..{n_rlz - 1}'
+        )
+
+
+# ── OqHdf5Reader method tests — cross-version vs 3.25.1 reference ─────────────
+#
+# These tests exercise every public method of OqHdf5Reader against all 7 OQ
+# version fixtures, using oq_3.25.1 as the reference.  3.25.1 compares against
+# itself (trivial self-check).  Where values drift legitimately across engine
+# versions (hcurves, disagg arrays), structure is checked instead; numerical
+# accuracy vs a version's own HDF5 is covered by the reader-correctness tests
+# above. Structural checks + existing per-version slice tests together provide
+# complete coverage.
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
+def test_oqhdf5reader_oqparam_classical(fixture_dir):
+    """oqparam keys consumed by extract_classical_hdf5 are present and consistent across OQ versions."""
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    reader = OqHdf5Reader(str(fixture_dir / 'calc.hdf5'))
+    oqparam = reader.oqparam()
+
+    assert oqparam.get('calculation_mode') == 'classical', f'[OQ {oq_ver}] calculation_mode'
+
+    hazard_imtls = oqparam.get('hazard_imtls') or oqparam.get('intensity_measure_types_and_levels')
+    assert hazard_imtls, f'[OQ {oq_ver}] neither hazard_imtls nor intensity_measure_types_and_levels present'
+    assert len(hazard_imtls) > 0, f'[OQ {oq_ver}] hazard_imtls is empty'
+
+    ref_oqparam = OqHdf5Reader(str(_REF_CLASSICAL_HDF5)).oqparam()
+    ref_imtls = ref_oqparam.get('hazard_imtls') or ref_oqparam.get('intensity_measure_types_and_levels')
+    assert sorted(hazard_imtls.keys()) == sorted(ref_imtls.keys()), (
+        f'[OQ {oq_ver}] IMT keys differ from reference: {sorted(hazard_imtls.keys())} != {sorted(ref_imtls.keys())}'
+    )
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name)
+def test_oqhdf5reader_oqparam_disagg(fixture_dir):
+    """oqparam keys consumed by extract_disagg_hdf5 are present and consistent across OQ versions."""
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    reader = OqHdf5Reader(str(fixture_dir / 'calc.hdf5'))
+    oqparam = reader.oqparam()
+
+    assert oqparam.get('calculation_mode') == 'disaggregation', f'[OQ {oq_ver}] calculation_mode'
+
+    ref_oqparam = OqHdf5Reader(str(_REF_DISAGG_HDF5)).oqparam()
+
+    disagg_outputs = oqparam.get('disagg_outputs', [])
+    assert disagg_outputs == ref_oqparam.get('disagg_outputs', []), (
+        f'[OQ {oq_ver}] disagg_outputs mismatch: {disagg_outputs}'
+    )
+
+    iml_disagg = oqparam.get('iml_disagg', {})
+    assert sorted(iml_disagg.keys()) == sorted(ref_oqparam.get('iml_disagg', {}).keys()), (
+        f'[OQ {oq_ver}] iml_disagg IMT keys differ from reference'
+    )
+    assert len(next(iter(iml_disagg.values()))) == 1, (
+        f'[OQ {oq_ver}] iml_disagg must have exactly one IML per IMT'
+    )
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
+def test_oqhdf5reader_sitecol(fixture_dir):
+    """sitecol() returns the same lat/lon/vs30 as the reference — same sites.csv across all OQ versions."""
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    df = OqHdf5Reader(str(fixture_dir / 'calc.hdf5')).sitecol()
+    ref_df = OqHdf5Reader(str(_REF_CLASSICAL_HDF5)).sitecol()
+
+    assert df.shape == ref_df.shape, f'[OQ {oq_ver}] sitecol shape {df.shape} != ref {ref_df.shape}'
+    assert list(df['lat']) == list(ref_df['lat']), f'[OQ {oq_ver}] sitecol lat mismatch'
+    assert list(df['lon']) == list(ref_df['lon']), f'[OQ {oq_ver}] sitecol lon mismatch'
+    assert list(df['vs30']) == list(ref_df['vs30']), f'[OQ {oq_ver}] sitecol vs30 mismatch'
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
+def test_oqhdf5reader_hcurves_rlzs_structure(fixture_dir):
+    """hcurves_rlzs() returns the same key set and per-key shapes as the reference.
+
+    Values drift is too large relative on meaningful PoEs across OQ engine versions —
+    Numerical accuracy is verified per-version by test_classical_rlz_curves_match_raw_hdf5.
+    """
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    rlzs = OqHdf5Reader(str(fixture_dir / 'calc.hdf5')).hcurves_rlzs()
+    ref_rlzs = OqHdf5Reader(str(_REF_CLASSICAL_HDF5)).hcurves_rlzs()
+
+    assert set(rlzs.keys()) == set(ref_rlzs.keys()), (
+        f'[OQ {oq_ver}] hcurves_rlzs key set differs from reference'
+    )
+    for key in ref_rlzs:
+        assert rlzs[key].shape == ref_rlzs[key].shape, (
+            f'[OQ {oq_ver}] hcurves_rlzs[{key}] shape {rlzs[key].shape} != ref {ref_rlzs[key].shape}'
+        )
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
+def test_oqhdf5reader_gsim_branches(fixture_dir):
+    """gsim_branches() returns the same branch IDs and equivalent uncertainty strings.
+
+    Branch IDs are identical across all OQ versions.  Uncertainty string values
+    differ only in whitespace (OQ 3.25 added spaces around = in GSIM params);
+    comparison is done after stripping all whitespace.
+    """
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    branches = OqHdf5Reader(str(fixture_dir / 'calc.hdf5')).gsim_branches()
+    ref_branches = OqHdf5Reader(str(_REF_CLASSICAL_HDF5)).gsim_branches()
+
+    assert set(branches.keys()) == set(ref_branches.keys()), (
+        f'[OQ {oq_ver}] gsim_branches key set differs from reference'
+    )
+    for key in ref_branches:
+        assert branches[key].replace(' ', '') == ref_branches[key].replace(' ', ''), (
+            f'[OQ {oq_ver}] gsim_branches[{key!r}] content mismatch after whitespace normalisation'
+        )
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
+def test_oqhdf5reader_source_branches(fixture_dir):
+    """source_branches() returns an identical dict across all OQ versions."""
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    branches = OqHdf5Reader(str(fixture_dir / 'calc.hdf5')).source_branches()
+    ref_branches = OqHdf5Reader(str(_REF_CLASSICAL_HDF5)).source_branches()
+
+    assert branches == ref_branches, (
+        f'[OQ {oq_ver}] source_branches differs from reference'
+    )
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
+def test_oqhdf5reader_realizations(fixture_dir):
+    """realizations() returns the same ordinals, source paths and gsim paths across all OQ versions."""
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    rlzs = OqHdf5Reader(str(fixture_dir / 'calc.hdf5')).realizations()
+    ref_rlzs = OqHdf5Reader(str(_REF_CLASSICAL_HDF5)).realizations()
+
+    assert len(rlzs) == len(ref_rlzs), (
+        f'[OQ {oq_ver}] realizations count {len(rlzs)} != ref {len(ref_rlzs)}'
+    )
+    for r, ref_r in zip(rlzs, ref_rlzs):
+        assert r.ordinal == ref_r.ordinal, f'[OQ {oq_ver}] ordinal mismatch at position {r.ordinal}'
+        assert r.source_path == ref_r.source_path, (
+            f'[OQ {oq_ver}] source_path mismatch at ordinal {r.ordinal}'
+        )
+        assert r.gsim_path == ref_r.gsim_path, (
+            f'[OQ {oq_ver}] gsim_path mismatch at ordinal {r.ordinal}'
+        )
+
+
+@pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name)
+def test_oqhdf5reader_disagg_rlzs_structure(fixture_dir):
+    """disagg_rlzs() returns a DisaggExtract with the same structure as the reference.
+
+    Values drift 22-382× relative across OQ engine versions — too large for
+    cross-version numerical comparison.  Numerical accuracy is verified
+    per-version by test_disagg_rlz_slices_match_raw_hdf5.
+    """
+    oq_ver = json.loads((fixture_dir / 'manifest.json').read_text())['oq_version']
+    reader = OqHdf5Reader(str(fixture_dir / 'calc.hdf5'))
+    kinds = reader.oqparam().get('disagg_outputs', [])
+    kind = next((k for k in kinds if 'Mag' in k and 'Dist' in k), kinds[0])
+
+    probe = reader.disagg_rlzs(kind)
+    ref_probe = OqHdf5Reader(str(_REF_DISAGG_HDF5)).disagg_rlzs(kind)
+
+    assert probe.array.shape == ref_probe.array.shape, (
+        f'[OQ {oq_ver}] DisaggExtract.array.shape {probe.array.shape} != ref {ref_probe.array.shape}'
+    )
+    assert probe.shape_descr == ref_probe.shape_descr, (
+        f'[OQ {oq_ver}] DisaggExtract.shape_descr {probe.shape_descr} != ref {ref_probe.shape_descr}'
+    )
+    assert len(probe.extra) == len(ref_probe.extra), (
+        f'[OQ {oq_ver}] DisaggExtract.extra length {len(probe.extra)} != ref {len(ref_probe.extra)}'
+    )
+    for label in probe.extra:
+        assert label.startswith('rlz'), f'[OQ {oq_ver}] extra label {label!r} not in rlzN format'
+    kind_axes = [ax.lower() for ax in kind.split('_')]
+    for ax in kind_axes:
+        test_bins = getattr(probe, ax)
+        ref_bins = getattr(ref_probe, ax)
+        assert len(test_bins) == len(ref_bins), (
+            f'[OQ {oq_ver}] DisaggExtract.{ax} bin count {len(test_bins)} != ref {len(ref_bins)}'
         )
