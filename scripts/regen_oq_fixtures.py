@@ -198,19 +198,86 @@ def write_manifest(
         'hdf5_size_bytes': hdf5_path.stat().st_size,
         'host': platform.node(),
     }
+    for key, fname in (
+        ('extractor_snapshot_npz_sha256', 'extractor_snapshot.npz'),
+        ('extractor_snapshot_json_sha256', 'extractor_snapshot.json'),
+    ):
+        snap_path = fixture_dir / fname
+        if snap_path.exists():
+            manifest[key] = sha256_file(snap_path)
     (fixture_dir / 'manifest.json').write_text(json.dumps(manifest, indent=2))
     log.info('Manifest written to %s', fixture_dir / 'manifest.json')
 
 
+def run_extractor_snapshot(version: str, mode: str, hdf5_path: Path, out_dir: Path, dry_run: bool) -> bool:
+    """Run extract_snapshot.py inside the same OQ engine container and docker-cp the results.
+
+    Writes extractor_snapshot.npz and extractor_snapshot.json into out_dir.
+    Uses a named container (no --rm) so docker cp can retrieve the files before removal.
+    Returns True on success.
+    """
+    image = f'{DOCKER_IMAGE_PREFIX}:{version}'
+    container_name = f'oq-snap-{uuid.uuid4().hex[:8]}'
+    snap_out = '/tmp/snap_out'
+    scripts_dir = REPO_ROOT / 'scripts'
+
+    cmd = [
+        'docker', 'run',
+        '--name', container_name,
+        '--entrypoint', 'bash',
+        '-v', f'{hdf5_path.parent}:/input:ro',
+        '-v', f'{scripts_dir}:/snap:ro',
+        image,
+        '-c',
+        f'mkdir -p {snap_out} && python /snap/extract_snapshot.py /input/{hdf5_path.name} {mode} {snap_out}',
+    ]
+    log.info('Running Extractor snapshot for %s/%s', version, mode)
+    if dry_run:
+        print(f'[dry-run] {" ".join(cmd)}')
+        return True
+
+    result = subprocess.run(cmd)
+
+    ok = True
+    if result.returncode == 0:
+        for fname in ('extractor_snapshot.npz', 'extractor_snapshot.json'):
+            cp = subprocess.run(
+                ['docker', 'cp', f'{container_name}:{snap_out}/{fname}', str(out_dir / fname)],
+                capture_output=True,
+            )
+            if cp.returncode != 0:
+                log.error('Failed to copy %s for %s/%s: %s', fname, version, mode, cp.stderr.decode())
+                ok = False
+    else:
+        log.error('Extractor snapshot failed for %s/%s (exit %d)', version, mode, result.returncode)
+        ok = False
+
+    subprocess.run(['docker', 'rm', container_name], capture_output=True)
+    return ok
+
+
 def fixture_needs_regen(fixture_dir: Path) -> bool:
-    """True if the fixture is absent or its HDF5 hash no longer matches the manifest."""
+    """True if the fixture is absent, its HDF5 hash no longer matches the manifest,
+    or either Extractor snapshot file is missing or has an unexpected hash.
+    """
     manifest_path = fixture_dir / 'manifest.json'
     hdf5_path = fixture_dir / 'calc.hdf5'
     if not manifest_path.exists() or not hdf5_path.exists():
         return True
     try:
         manifest = json.loads(manifest_path.read_text())
-        return sha256_file(hdf5_path) != manifest.get('hdf5_sha256', '')
+        if sha256_file(hdf5_path) != manifest.get('hdf5_sha256', ''):
+            return True
+        # Check snapshot files if the manifest records them.
+        for key, fname in (
+            ('extractor_snapshot_npz_sha256', 'extractor_snapshot.npz'),
+            ('extractor_snapshot_json_sha256', 'extractor_snapshot.json'),
+        ):
+            if key in manifest:
+                snap_path = fixture_dir / fname
+                if not snap_path.exists() or sha256_file(snap_path) != manifest[key]:
+                    return True
+        return False
     except Exception:
         return True
 
@@ -252,6 +319,12 @@ def regen_fixture(version: str, mode: str, force: bool, dry_run: bool) -> bool:
         # Move the HDF5 out of the temp dir.
         dest = fixture_dir / 'calc.hdf5'
         shutil.move(str(hdf5), dest)
+
+    # Run the Extractor snapshot step in a second container with the same image.
+    snap_ok = run_extractor_snapshot(version, mode, fixture_dir / 'calc.hdf5', fixture_dir, dry_run)
+    if not snap_ok and not dry_run:
+        log.warning('Extractor snapshot step failed for %s/%s — calc.hdf5 was kept', version, mode)
+        return False
 
     if not dry_run:
         write_manifest(fixture_dir, version, mode, image, image_digest, fixture_dir / 'calc.hdf5')

@@ -4,8 +4,10 @@
   "docker_image_digest": "openquake/engine@sha256:1ceb1bb1dcf581f911d6f76a69bb2180b5bf7ccc27c6136db6b24a8075787920",
   "calc_mode": "disaggregation",
   "job_ini_source": "scripts/oq_input/job_disagg.ini",
-  "generated_at": "2026-05-11T21:54:58.604434Z",
-  "hdf5_sha256": "0d14176824e2ae21e4227cf487bbff625fd189b84db0e566091167e849934a38",
+  "generated_at": "2026-05-14T22:49:16.351469+00:00",
+  "hdf5_sha256": "351fffeea023a41276a31cf06cdac0508b27c8dd0a2661058ffd7f37ce5f7ca5",
   "hdf5_size_bytes": 747824,
-  "host": "glacier.gns.cri.nz"
+  "host": "glacier.gns.cri.nz",
+  "extractor_snapshot_npz_sha256": "8233cf1f430849921f7d68e54f810f397e1495597de8e88af2552c876c1b3719",
+  "extractor_snapshot_json_sha256": "f7ac4f6f2d85f1797841fa5c2b746e15c62e1bc3e3bb27206a1bfaa417fc6801"
 }

@@ -99,12 +99,25 @@ Flags:
 - `--force` — overwrite existing fixtures
 - `--dry-run` — print docker commands without running them
 
+### Extractor snapshots
+
+Each fixture directory also contains two pre-baked snapshot files captured from the canonical OQ `Extractor` running inside the same Docker image that produced `calc.hdf5`:
+
+| File | Contents |
+|---|---|
+| `extractor_snapshot.npz` | Numpy arrays: `sitecol__lat/lon/vs30`, per-rlz `hcurves_rlzs__rlz_NNN` (classical), `disagg__array` (disagg). Load with `np.load(..., allow_pickle=False)`. |
+| `extractor_snapshot.json` | Non-array metadata: `oqparam_json`, `realizations`, `hcurves_rlzs_keys`, disagg `kind`/`imt`/`shape_descr`/`rlz_labels`/`disagg_bins`. |
+
+The snapshot is the within-version numerical ground truth consumed by `tests/oq_import/test_extractor_snapshot_cross_version.py` — no host-side OQ install needed at test time.  `manifest.json` records `extractor_snapshot_npz_sha256` and `extractor_snapshot_json_sha256` for integrity checking.
+
+Snapshots are generated automatically by `regen_oq_fixtures.py` (a second `docker run` step after the OQ calculation).  If snapshots are missing (e.g. for fixtures created before this feature), the corresponding tests skip with an actionable message.
+
 ### Adding a new OQ version
 
 1. Append the version string to `OQ_VERSIONS` in `scripts/regen_oq_fixtures.py`.
 2. Run `uv run python scripts/regen_oq_fixtures.py --mode both --version <new_ver>`.
-3. Commit the new `calc.hdf5` + `manifest.json`.
-4. Run `uv run pytest tests/oq_import/test_cross_version_fixtures.py -v` — new tests are auto-discovered from the fixture directory.
+3. Commit the new `calc.hdf5`, `extractor_snapshot.npz`, `extractor_snapshot.json`, and `manifest.json`.
+4. Run `uv run pytest tests/oq_import/test_cross_version_fixtures.py tests/oq_import/test_extractor_snapshot_cross_version.py -v` — new tests are auto-discovered from the fixture directory.
 
 ### Inspecting a fixture by hand
 
@@ -119,9 +132,11 @@ with h5py.File('tests/fixtures/oq_cross_version/disaggregation/oq_3.25.1/calc.hd
 
 ## Compatibility testing
 
-`tests/oq_import/test_extractor_compat.py` runs `OqHdf5Reader` and `openquake.calculators.extract.Extractor` side-by-side on the committed classical and disagg fixtures, asserting numerical and structural identity for every field consumed by the extraction pipeline (`oqparam`, `sitecol`, `hcurves_rlzs`, `realizations`, disagg probe, `bins_digest`, end-to-end RecordBatch output).
+Two complementary suites compare `OqHdf5Reader` against the canonical OQ `Extractor`:
 
-The test is opt-in because it pulls `openquake-engine==3.25.1` (~200 MB). Normal `uv run pytest` skips all tests via a `HAVE_OQ` guard.
+**`tests/oq_import/test_extractor_compat.py`** — runs `OqHdf5Reader` and `openquake.calculators.extract.Extractor` live, side-by-side on the committed classical and disagg fixtures, asserting numerical and structural identity for every field including `bins_digest` and end-to-end RecordBatch output.  Opt-in because it pulls `openquake-engine==3.25.1` (~200 MB); normal `uv run pytest` skips all tests via a `HAVE_OQ` guard.
+
+**`tests/oq_import/test_extractor_snapshot_cross_version.py`** — compares `OqHdf5Reader` against the pre-baked Extractor snapshots for all seven OQ versions.  No host-side OQ install needed; runs in normal `uv run pytest`.  Covers `oqparam`, `sitecol`, `realizations`, `hcurves_rlzs` (classical), and `disagg_rlzs` (disaggregation) for each version.  Tests skip gracefully if a snapshot is absent.
 
 ### Running
 

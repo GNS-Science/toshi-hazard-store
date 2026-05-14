@@ -1,0 +1,288 @@
+{
+  "disagg_bins": {
+    "dist": [
+      2.5,
+      7.5,
+      12.5,
+      17.5,
+      25.0,
+      35.0,
+      45.0,
+      55.0,
+      70.0,
+      90.0,
+      120.0,
+      160.0,
+      200.0,
+      240.0,
+      290.0,
+      350.0,
+      440.0
+    ],
+    "eps": [
+      -3.75,
+      -3.25,
+      -2.75,
+      -2.25,
+      -1.75,
+      -1.25,
+      -0.75,
+      -0.25,
+      0.25,
+      0.75,
+      1.25,
+      1.75,
+      2.25,
+      2.75,
+      3.25,
+      3.75
+    ],
+    "mag": [
+      6.8965499999999995,
+      7.09645,
+      7.29635,
+      7.49625,
+      7.696149999999999,
+      7.89605,
+      8.09595,
+      8.29585,
+      8.49575,
+      8.69565
+    ],
+    "trt": [
+      "Active Shallow Crust"
+    ]
+  },
+  "imt": "SA(1.5)",
+  "kind": "TRT_Mag_Dist_Eps",
+  "mode": "disaggregation",
+  "npz_keys": [
+    "sitecol__lat",
+    "sitecol__lon",
+    "sitecol__vs30",
+    "disagg__array"
+  ],
+  "oqparam_json": "{\n\"base_path\": \"/job\",\n\"inputs\": {\n\"job_ini\": \"/job/job_disagg.ini\",\n\"source_model_logic_tree\": \"/job/sources/sources.xml\",\n\"site_model\": [\"/job/sites_disagg.csv\"],\n\"gsim_logic_tree\": \"/job/gsim_model.xml\"},\n\"random_seed\": 25,\n\"calculation_mode\": \"disaggregation\",\n\"ps_grid_spacing\": 30.0,\n\"description\": \"disaggregation task: 1\",\n\"number_of_logic_tree_samples\": 0,\n\"rupture_mesh_spacing\": 4.0,\n\"width_of_mfd_bin\": 0.1,\n\"complex_fault_mesh_spacing\": 10.0,\n\"area_source_discretization\": 10.0,\n\"reference_vs30_type\": \"measured\",\n\"reference_vs30_value\": 400.0,\n\"reference_depth_to_1pt0km_per_sec\": 356.0,\n\"reference_depth_to_2pt5km_per_sec\": 1.3,\n\"investigation_time\": 1.0,\n\"truncation_level\": 4.0,\n\"maximum_distance\": {\n\"Active Shallow Crust\": [[4.0, 0], [5.0, 100.0], [6.0, 200.0], [9.5, 300.0]],\n\"Subduction Interface\": [[5.0, 0], [6.0, 200.0], [10, 500.0]],\n\"Subduction Intraslab\": [[5.0, 0], [6.0, 200.0], [10, 500.0]],\n\"default\": [[5.0, 0], [6.0, 200.0], [10, 500.0]]},\n\"export_dir\": \"/tmp\",\n\"disagg_outputs\": [\"TRT_Mag_Dist_Eps\"],\n\"mag_bin_width\": 0.1999,\n\"coordinate_bin_width\": 5.0,\n\"num_epsilon_bins\": 16,\n\"disagg_bin_edges\": {\n\"dist\": [0.0, 5.0, 10.0, 15.0, 20.0, 30.0, 40.0, 50.0, 60.0, 80.0, 100.0, 140.0, 180.0, 220.0, 260.0, 320.0, 380.0, 500.0]},\n\"iml_disagg\": {\n\"SA(1.5)\": [0.09430373844545828]},\n\"exports\": [\"\"],\n\"individual_rlzs\": 1,\n\"hazard_imtls\": {\n\"SA(1.5)\": [0.09430373844545828]},\n\"pointsource_distance\": {\n\"default\": 40.0},\n\"req_site_params\": [\"backarc\", \"vs30\", \"vs30measured\", \"z1pt0\", \"z2pt5\"],\n\"all_cost_types\": [],\n\"minimum_asset_loss\": {}}",
+  "realizations": [
+    {
+      "gsim_lt_path": [
+        "gA0"
+      ],
+      "ordinal": 0,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gB0"
+      ],
+      "ordinal": 1,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gC0"
+      ],
+      "ordinal": 2,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gD0"
+      ],
+      "ordinal": 3,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gE0"
+      ],
+      "ordinal": 4,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gF0"
+      ],
+      "ordinal": 5,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gG0"
+      ],
+      "ordinal": 6,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gH0"
+      ],
+      "ordinal": 7,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gI0"
+      ],
+      "ordinal": 8,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gJ0"
+      ],
+      "ordinal": 9,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gK0"
+      ],
+      "ordinal": 10,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gL0"
+      ],
+      "ordinal": 11,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gM0"
+      ],
+      "ordinal": 12,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gN0"
+      ],
+      "ordinal": 13,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gO0"
+      ],
+      "ordinal": 14,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gP0"
+      ],
+      "ordinal": 15,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gQ0"
+      ],
+      "ordinal": 16,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gR0"
+      ],
+      "ordinal": 17,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gS0"
+      ],
+      "ordinal": 18,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gT0"
+      ],
+      "ordinal": 19,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    },
+    {
+      "gsim_lt_path": [
+        "gU0"
+      ],
+      "ordinal": 20,
+      "sm_lt_path": [
+        "SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ=="
+      ]
+    }
+  ],
+  "rlz_labels": [
+    "rlz13",
+    "rlz9",
+    "rlz4",
+    "rlz18",
+    "rlz7",
+    "rlz15",
+    "rlz16",
+    "rlz0",
+    "rlz8",
+    "rlz12",
+    "rlz19",
+    "rlz1",
+    "rlz6",
+    "rlz14",
+    "rlz10",
+    "rlz5",
+    "rlz3",
+    "rlz17",
+    "rlz20",
+    "rlz11",
+    "rlz2"
+  ],
+  "shape_descr": [
+    "trt",
+    "mag",
+    "dist",
+    "eps",
+    "imt",
+    "poe"
+  ]
+}
