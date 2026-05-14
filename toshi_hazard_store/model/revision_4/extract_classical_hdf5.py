@@ -40,6 +40,8 @@ def generate_rlz_record_batches(
     producer_digest: str,
     config_digest: str,
 ) -> pa.RecordBatch:
+    # hcurves_rlzs() keys are in rlz ordinal order — no Z-position remapping needed.
+    # (contrast with disagg_rlzs() where the Z axis follows best_rlzs, not ordinal order)
     rlzs = reader.hcurves_rlzs()
     rlz_keys = [k for k in rlzs.keys() if 'rlz-' in k]
     rlz_map = build_rlz_mapper(reader)

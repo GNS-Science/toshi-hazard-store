@@ -110,8 +110,7 @@ def generate_disagg_record_batches(
     dict_type = pa.dictionary(pa.int8(), pa.string(), False)
     bins_map_type = pa.map_(pa.string(), pa.list_(pa.string()))
 
-    # rlzN → ordinal mapping, and per-ordinal digest lookups.
-    ordinal_by_label: Dict[str, int] = {f'rlz{ordinal}': ordinal for ordinal in rlz_map}
+    # Per-ordinal digest lookups (keyed by rlz ordinal, not Z position).
     sources_by_ordinal = {o: r.sources.hash_digest for o, r in rlz_map.items()}
     gmms_by_ordinal = {o: r.gmms.hash_digest for o, r in rlz_map.items()}
 
@@ -137,9 +136,11 @@ def generate_disagg_record_batches(
     n_rlz = disagg_array.shape[0]
     per_rlz_flat = disagg_array.reshape(n_rlz, -1).astype(vtype)
 
-    # Resolve rlz labels and digests.
-    rlz_labels = list(disagg_data.extra)  # e.g. ['rlz4', 'rlz11', ...]
-    ordinals = [ordinal_by_label[lbl] for lbl in rlz_labels]
+    # Resolve rlz labels and provenance digests.
+    # disagg_data.rlz_labels[z] = 'rlzN' where N is the rlz ordinal at Z position z
+    # (best_rlzs order — NOT ordinal order; contrast with hcurves_rlzs() which is ordinal order).
+    rlz_labels = disagg_data.rlz_labels
+    ordinals = disagg_data.rlz_ordinals  # integer ordinal per Z position
     sources_list = [sources_by_ordinal[o] for o in ordinals]
     gmms_list = [gmms_by_ordinal[o] for o in ordinals]
 

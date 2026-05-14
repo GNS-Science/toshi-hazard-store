@@ -111,7 +111,7 @@ def test_disagg_extraction_cross_version(fixture_dir):
     assert reader.schema.equals(get_disagg_realisation_schema()), f'[OQ {oq_ver}] schema mismatch'
 
     probe = reader_h5.disagg_rlzs(kind)
-    n_rlz = len(probe.extra)
+    n_rlz = len(probe.rlz_labels)
     n_cells_per_rlz = probe.array.size // n_rlz
 
     batches = list(reader)
@@ -225,7 +225,7 @@ def test_disagg_shape_descr_matches_stored_attrs(fixture_dir):
     probe = OqHdf5Reader(str(hdf5)).disagg_rlzs(kind)
     reader_shape_descr = probe.shape_descr  # e.g. ['trt', 'mag', 'dist', 'eps', 'imt', 'poe']
 
-    # Drop 'site_id' (sliced out by the reader) and 'Z' (rlz axis, surfaced via .extra).
+    # Drop 'site_id' (sliced out by the reader) and 'Z' (rlz axis, surfaced via .rlz_labels).
     expected = [a.lower() for a in stored_axes if a not in ('site_id', 'Z')]
 
     assert reader_shape_descr == expected, (
@@ -268,13 +268,13 @@ def test_disagg_bin_edge_count_matches_axis_sizes(fixture_dir):
 
 @pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name)
 def test_disagg_rlz_slices_match_raw_hdf5(fixture_dir):
-    """Per-rlz disagg slices match raw HDF5, and .extra labels match best_rlzs ordinals.
+    """Per-rlz disagg slices match raw HDF5, and .rlz_labels match best_rlzs ordinals.
 
     The Z axis in disagg-rlzs is indexed by best_rlzs[site_idx] ordering, not by
     rlz ordinal. Verifies:
     1. probe.array column j is bitwise-equal to raw_cube[..., j] for a sample of
        non-zero rlz positions.
-    2. probe.extra[j] correctly translates position j to ordinal via best_rlzs.
+    2. probe.rlz_labels[j] correctly translates position j to ordinal via best_rlzs.
 
     Catches Z-axis position mis-mapping and best_rlzs → label translation errors.
     """
@@ -312,8 +312,8 @@ def test_disagg_rlz_slices_match_raw_hdf5(fixture_dir):
             f'max diff: {np.abs(actual_slice - expected_slice).max():.3e}'
         )
         expected_label = f'rlz{int(best_rlzs[0, j])}'
-        assert probe.extra[j] == expected_label, (
-            f'[OQ {oq_ver}] disagg .extra[{j}]={probe.extra[j]!r} != {expected_label!r} '
+        assert probe.rlz_labels[j] == expected_label, (
+            f'[OQ {oq_ver}] disagg .rlz_labels[{j}]={probe.rlz_labels[j]!r} != {expected_label!r} '
             f'from best_rlzs — label translation is wrong.'
         )
 
@@ -506,10 +506,10 @@ def test_oqhdf5reader_disagg_rlzs_structure(fixture_dir):
     assert probe.shape_descr == ref_probe.shape_descr, (
         f'[OQ {oq_ver}] DisaggExtract.shape_descr {probe.shape_descr} != ref {ref_probe.shape_descr}'
     )
-    assert len(probe.extra) == len(ref_probe.extra), (
-        f'[OQ {oq_ver}] DisaggExtract.extra length {len(probe.extra)} != ref {len(ref_probe.extra)}'
+    assert len(probe.rlz_labels) == len(ref_probe.rlz_labels), (
+        f'[OQ {oq_ver}] DisaggExtract.rlz_labels length {len(probe.rlz_labels)} != ref {len(ref_probe.rlz_labels)}'
     )
-    for label in probe.extra:
+    for label in probe.rlz_labels:
         assert label.startswith('rlz'), f'[OQ {oq_ver}] extra label {label!r} not in rlzN format'
     kind_axes = [ax.lower() for ax in kind.split('_')]
     for ax in kind_axes:

@@ -146,7 +146,7 @@ def test_disagg_shape_descr_and_extra(disagg_pair):
     probe_h5 = reader.disagg_rlzs(kind)
     probe_oq = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
     assert probe_h5.shape_descr == [str(d) for d in probe_oq.shape_descr]
-    assert probe_h5.extra == list(probe_oq.extra)
+    assert probe_h5.rlz_labels == list(probe_oq.extra)
 
 
 def test_disagg_bin_centres(disagg_pair):
@@ -221,6 +221,7 @@ def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
     oq_arr = np.squeeze(oq_arr, axis=tuple(i for i, s in enumerate(oq_arr.shape[:-1]) if s == 1))  # (*kind_bins, n_rlz)
     oq_arr = np.moveaxis(oq_arr, -1, 0)  # (n_rlz, *kind_bins)
     n_rlz = oq_arr.shape[0]
+    # probe_oq.extra = OQ Extractor's rlz labels (same convention as DisaggExtract.rlz_labels)
     oq_ref = {list(probe_oq.extra)[i]: oq_arr[i].ravel().astype(np.float32) for i in range(n_rlz)}
 
     # Compare per rlz.

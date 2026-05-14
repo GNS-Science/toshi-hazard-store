@@ -151,7 +151,7 @@ def test_record_count_matches_shape(disagg_hdf5_info, probability):
 
     # Determine expected shape from a probe.
     probe = reader_h5.disagg_rlzs(kind)
-    n_rlz = len(probe.extra)
+    n_rlz = len(probe.rlz_labels)
     n_cells_per_rlz = probe.array.size // n_rlz
 
     sitecol_df = reader_h5.sitecol()

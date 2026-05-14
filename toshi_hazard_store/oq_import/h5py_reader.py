@@ -32,19 +32,33 @@ class RlzRecord:
 
 
 class DisaggExtract:
-    """Proxy for a disagg query result — mirrors the surface used by generate_disagg_record_batches."""
+    """Proxy for a disagg query result — mirrors the surface used by generate_disagg_record_batches.
+
+    **Ordering note**: the Z axis of ``disagg-rlzs/<kind>`` is NOT in rlz ordinal order.
+    OQ stores disagg results in ``best_rlzs[site_idx]`` order — the realizations closest to
+    the mean hazard curve, in the order OQ selected them (empirically verified via ``poe4``).
+    ``rlz_labels[z]`` gives the string label (``'rlzN'``) for the rlz whose data is at Z
+    position z; ``rlz_ordinals[z]`` gives the integer ordinal N directly.
+
+    This is the opposite of ``hcurves_rlzs()``, whose keys ARE in ordinal order.
+    """
 
     def __init__(
         self,
         array: np.ndarray,
         shape_descr: list[str],
-        extra: list[str],
+        rlz_labels: list[str],
         bins: dict[str, Any],
     ) -> None:
         self.array = array  # shape: (*kind_bins, imt=1, poe=1, n_rlz)
         self.shape_descr = shape_descr  # e.g. ['mag', 'dist', 'imt', 'poe']
-        self.extra = extra  # rlz labels e.g. ['rlz4', 'rlz11', ...]
+        self.rlz_labels = rlz_labels  # 'rlzN' per Z position in best_rlzs order
         self._bins = bins  # {axis_name: bin_centres_array_or_list}
+
+    @property
+    def rlz_ordinals(self) -> list[int]:
+        """Integer ordinal for each Z position: ``int(rlz_labels[z][3:])`` for each z."""
+        return [int(lbl[3:]) for lbl in self.rlz_labels]
 
     def __getattr__(self, name: str) -> Any:
         # Allows getattr(probe, 'mag'), getattr(probe, 'trt'), etc.
@@ -86,6 +100,11 @@ class OqHdf5Reader:
 
         ``hcurves-rlzs`` shape is ``(n_sites, n_rlz, n_imts, n_levels)``; this method slices
         along the rlz axis and returns one 3-D array per realization.
+
+        Keys are zero-padded rlz ordinal strings (``'rlz-000'``, ``'rlz-001'``, …) **in ordinal
+        order**: ``'rlz-NNN'`` corresponds to column N (axis 1) of ``hcurves-rlzs``, matching
+        ``realizations()[N].ordinal``.  This is the opposite of ``disagg_rlzs()``, whose Z axis
+        follows ``best_rlzs`` order rather than ordinal order.
         """
         with h5py.File(self.path, 'r') as f:
             arr = f['hcurves-rlzs'][()]  # (n_sites, n_rlz, n_imts, n_levels)
@@ -126,7 +145,8 @@ class OqHdf5Reader:
 
         Ordering matches OQ enumeration for ``number_of_logic_tree_samples = 0``:
         for each source model in declaration order, iterate the next ``samples`` gsim
-        branches (also in declaration order).
+        branches (also in declaration order). Note that these may not be the order in which
+        realizations are stored in the hdf5.
         """
         with h5py.File(self.path, 'r') as f:
             glt = f['full_lt']['gsim_lt']
@@ -161,13 +181,12 @@ class OqHdf5Reader:
         imt_idx: int = 0,
         poe_idx: int = 0,
     ) -> DisaggExtract:
-        """Read ``disagg-rlzs/<kind>`` and return a probe-like object.
+        """Read ``disagg-rlzs/<kind>`` and return a :class:`DisaggExtract`.
 
-        The returned ``_DisaggExtract`` mirrors the Extractor probe surface used by
-        ``generate_disagg_record_batches``:
         - ``.array`` — shape ``(*kind_bins, imt=1, poe=1, n_rlz)``
         - ``.shape_descr`` — axis names including ``'imt'`` and ``'poe'``
-        - ``.extra`` — rlz label strings ``['rlzN', ...]`` in ``best_rlzs`` order
+        - ``.rlz_labels`` — ``'rlzN'`` per Z position; N is the rlz ordinal at that position
+        - ``.rlz_ordinals`` — integer ordinal per Z position (same info as rlz_labels)
         - ``getattr(probe, axis_name)`` — bin centres (numeric axes) or labels (TRT)
         """
         with h5py.File(self.path, 'r') as f:
@@ -184,7 +203,7 @@ class OqHdf5Reader:
             idx = (site_idx,) + (slice(None),) * k + (imt_sl, poe_sl, slice(None))
             sliced = arr[idx]  # shape: (*kind_bins, 1, 1, n_rlz)
 
-            # rlz labels from best_rlzs ordering
+            # rlz labels from best_rlzs ordering (NOT ordinal order — see class docstring)
             best = f['best_rlzs'][site_idx]
             rlz_labels = [f'rlz{int(i)}' for i in best]
 
@@ -200,4 +219,4 @@ class OqHdf5Reader:
 
             shape_descr = [ax.lower() for ax in kind_axes] + ['imt', 'poe']
 
-        return DisaggExtract(array=sliced, shape_descr=shape_descr, extra=rlz_labels, bins=bins)
+        return DisaggExtract(array=sliced, shape_descr=shape_descr, rlz_labels=rlz_labels, bins=bins)
