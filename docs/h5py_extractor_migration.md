@@ -80,6 +80,8 @@ of each rlz in the disagg result in descending-weight order.
 
 ### Generating fixtures
 
+A developer may want to generate new fixtures when either new functionallity is added to `OqHdf5Reader` that reads features not present in the existing fixtures or they want to support new versions of OpenQuake.
+
 Prerequisites: Docker installed and `openquake/engine:<ver>` images pullable.
 
 OQ job inputs live in `scripts/oq_input/` (committed):
