@@ -393,9 +393,7 @@ def test_oqhdf5reader_oqparam_disagg(fixture_dir):
     assert sorted(iml_disagg.keys()) == sorted(ref_oqparam.get('iml_disagg', {}).keys()), (
         f'[OQ {oq_ver}] iml_disagg IMT keys differ from reference'
     )
-    assert len(next(iter(iml_disagg.values()))) == 1, (
-        f'[OQ {oq_ver}] iml_disagg must have exactly one IML per IMT'
-    )
+    assert len(next(iter(iml_disagg.values()))) == 1, f'[OQ {oq_ver}] iml_disagg must have exactly one IML per IMT'
 
 
 @pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
@@ -422,9 +420,7 @@ def test_oqhdf5reader_hcurves_rlzs_structure(fixture_dir):
     rlzs = OqHdf5Reader(str(fixture_dir / 'calc.hdf5')).hcurves_rlzs()
     ref_rlzs = OqHdf5Reader(str(_REF_CLASSICAL_HDF5)).hcurves_rlzs()
 
-    assert set(rlzs.keys()) == set(ref_rlzs.keys()), (
-        f'[OQ {oq_ver}] hcurves_rlzs key set differs from reference'
-    )
+    assert set(rlzs.keys()) == set(ref_rlzs.keys()), f'[OQ {oq_ver}] hcurves_rlzs key set differs from reference'
     for key in ref_rlzs:
         assert rlzs[key].shape == ref_rlzs[key].shape, (
             f'[OQ {oq_ver}] hcurves_rlzs[{key}] shape {rlzs[key].shape} != ref {ref_rlzs[key].shape}'
@@ -459,9 +455,7 @@ def test_oqhdf5reader_source_branches(fixture_dir):
     branches = OqHdf5Reader(str(fixture_dir / 'calc.hdf5')).source_branches()
     ref_branches = OqHdf5Reader(str(_REF_CLASSICAL_HDF5)).source_branches()
 
-    assert branches == ref_branches, (
-        f'[OQ {oq_ver}] source_branches differs from reference'
-    )
+    assert branches == ref_branches, f'[OQ {oq_ver}] source_branches differs from reference'
 
 
 @pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('classical'), ids=lambda d: d.name)
@@ -471,17 +465,11 @@ def test_oqhdf5reader_realizations(fixture_dir):
     rlzs = OqHdf5Reader(str(fixture_dir / 'calc.hdf5')).realizations()
     ref_rlzs = OqHdf5Reader(str(_REF_CLASSICAL_HDF5)).realizations()
 
-    assert len(rlzs) == len(ref_rlzs), (
-        f'[OQ {oq_ver}] realizations count {len(rlzs)} != ref {len(ref_rlzs)}'
-    )
+    assert len(rlzs) == len(ref_rlzs), f'[OQ {oq_ver}] realizations count {len(rlzs)} != ref {len(ref_rlzs)}'
     for r, ref_r in zip(rlzs, ref_rlzs):
         assert r.ordinal == ref_r.ordinal, f'[OQ {oq_ver}] ordinal mismatch at position {r.ordinal}'
-        assert r.source_path == ref_r.source_path, (
-            f'[OQ {oq_ver}] source_path mismatch at ordinal {r.ordinal}'
-        )
-        assert r.gsim_path == ref_r.gsim_path, (
-            f'[OQ {oq_ver}] gsim_path mismatch at ordinal {r.ordinal}'
-        )
+        assert r.source_path == ref_r.source_path, f'[OQ {oq_ver}] source_path mismatch at ordinal {r.ordinal}'
+        assert r.gsim_path == ref_r.gsim_path, f'[OQ {oq_ver}] gsim_path mismatch at ordinal {r.ordinal}'
 
 
 @pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name)
