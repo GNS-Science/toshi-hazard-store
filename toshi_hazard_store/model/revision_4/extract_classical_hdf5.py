@@ -1,24 +1,12 @@
-import json
 import logging
 from typing import Dict, Iterable, List
 
 import numpy as np
 import pyarrow as pa
-
-from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_realisation_schema
-
-try:  # pragma: no cover
-    import openquake  # noqa
-
-    HAVE_OQ = True
-except ImportError:  # pragma: no cover
-    HAVE_OQ = False
-
-if HAVE_OQ:  # pragma: no cover
-    from openquake.calculators.extract import Extractor
-
 from nzshm_common.location import coded_location
 
+from toshi_hazard_store.model.pyarrow.dataset_schema import get_hazard_realisation_schema
+from toshi_hazard_store.oq_import.h5py_reader import OqHdf5Reader
 from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_mapper
 
 log = logging.getLogger(__name__)
@@ -45,37 +33,32 @@ def build_nloc0_series(nloc_001_locations: List[coded_location.CodedLocation], n
 
 
 def generate_rlz_record_batches(
-    extractor,
+    reader: OqHdf5Reader,
     imtl_keys: Iterable[str],
     calculation_id: str,
     compatible_calc_id: str,
     producer_digest: str,
     config_digest: str,
 ) -> pa.RecordBatch:
-    rlzs = extractor.get('hcurves?kind=rlzs', asdict=True)
+    # hcurves_rlzs() keys are in rlz ordinal order — no Z-position remapping needed.
+    # (contrast with disagg_rlzs() where the Z axis follows best_rlzs, not ordinal order)
+    rlzs = reader.hcurves_rlzs()
     rlz_keys = [k for k in rlzs.keys() if 'rlz-' in k]
-    rlz_map = build_rlz_mapper(extractor)
+    rlz_map = build_rlz_mapper(reader)
 
     # get the site index values
-    nloc_001_locations, site_vs30s = [], []
-    df0 = extractor.get('sitecol').to_dframe()
-    for idx in range(df0.shape[0]):
-        site_loc = coded_location.CodedLocation(lat=df0.iloc[idx].lat, lon=df0.iloc[idx].lon, resolution=0.001)
-        nloc_001_locations.append(site_loc)  # locations in OG order
-        site_vs30s.append(df0.iloc[idx].vs30)  # site_vs30 in OG orderß
-
-    #
-    # >>> extractor.get('sitecol')
-    # <ArrayWrapper(19480,)>
-    # >>> extractor.get('sitecol').to_dframe()
-    #         sids      lon     lat  depth  backarc    vs30  vs30measured  z1pt0  z2pt5
-    # 0          0  176.121 -39.289    0.0        0  1000.0         False    8.0    0.4
-    # 1          1  176.110 -39.289    0.0        0  1000.0         False    8.0    0.4
+    df0 = reader.sitecol()
+    lats: List[float] = df0['lat'].tolist()
+    lons: List[float] = df0['lon'].tolist()
+    site_vs30s: List[float] = df0['vs30'].tolist()
+    nloc_001_locations = [
+        coded_location.CodedLocation(lat=lat, lon=lon, resolution=0.001) for lat, lon in zip(lats, lons)
+    ]
 
     nloc_0_map = build_nloc_0_mapping(nloc_001_locations)
     nloc_0_series = build_nloc0_series(nloc_001_locations, nloc_0_map)
 
-    # build the has digest dict arrays
+    # build the hash digest dict arrays
     sources_digests = [r.sources.hash_digest for i, r in rlz_map.items()]
     gmms_digests = [r.gmms.hash_digest for i, r in rlz_map.items()]
 
@@ -160,45 +143,19 @@ def rlzs_to_record_batch_reader(
         f'{hdf5_file}, {calculation_id}, {compatible_calc_id}, {producer_digest}, {config_digest}'
     )
 
-    extractor = Extractor(str(hdf5_file))
-    oqparam = json.loads(extractor.get('oqparam').json)
+    reader = OqHdf5Reader(str(hdf5_file))
+    oqparam = reader.oqparam()
     assert oqparam['calculation_mode'] == 'classical', "calculation_mode is not 'classical'"
 
-    # vs30 = int(oqparam['reference_vs30_value'])  # this is not set for site_specific
-
-    # get the IMT props
-    # imtls = oqparam['hazard_imtls']  # dict of imt and the levels used at each imt e.g {'PGA': [0.011. 0.222]}
-    oq = extractor.dstore['oqparam']  # old skool way
-    imtl_keys = sorted(list(oq.imtls.keys()))
+    # Resolve IMT keys; older OQ versions may use a different key name.
+    hazard_imtls = oqparam.get('hazard_imtls') or oqparam.get('intensity_measure_types_and_levels', {})
+    imtl_keys = sorted(list(hazard_imtls.keys()))
 
     schema = get_hazard_realisation_schema(use_64bit_values)
 
     batches = generate_rlz_record_batches(
-        extractor, imtl_keys, calculation_id, compatible_calc_id, producer_digest, config_digest
+        reader, imtl_keys, calculation_id, compatible_calc_id, producer_digest, config_digest
     )
 
     record_batch_reader = pa.RecordBatchReader.from_batches(schema, batches)
     return record_batch_reader
-
-
-# if __name__ == '__main__':
-
-#     from toshi_hazard_store.model.pyarrow import pyarrow_dataset
-
-#     WORKING = Path('/GNSDATA/LIB/toshi-hazard-store/WORKING')
-#     GT_FOLDER = WORKING / "R2VuZXJhbFRhc2s6MTMyODQxNA=="
-#     subtasks = GT_FOLDER / "subtasks"
-#     assert subtasks.is_dir()
-
-#     OUTPUT_FOLDER = WORKING / "ARROW" / "DIRECT_CLASSIC"
-
-#     rlz_count = 0
-#     for hdf5_file in subtasks.glob('**/*.hdf5'):
-#         print(hdf5_file.parent.name)
-#         model_generator = rlzs_to_record_batch_reader(
-#             hdf5_file, calculation_id=hdf5_file.parent.name, compatible_calc_fk="A_A", producer_config_fk="A_B"
-#         )
-#         pyarrow_dataset.append_models_to_dataset(model_generator, OUTPUT_FOLDER)
-#         # # log.info(f"Produced {model_count} source models from {subtask_info.hazard_calc_id} in {GT_FOLDER}")
-#         lof.infi(f"processed all models in {hdf5_file.parent.name}")
-#         break

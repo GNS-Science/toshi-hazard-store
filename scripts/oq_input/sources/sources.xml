@@ -1,0 +1,14 @@
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="Combined">
+    <logicTreeBranchingLevel branchingLevelID="1">
+      <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="CRU">
+        <logicTreeBranch branchID="SW52ZXJzaW9uU29sdXRpb25Ocm1sOjEwMjE1MQ==">
+          <uncertaintyModel>	CRU/[dm0.7,bN[0.902,4.6],C4.0,s0.28]/SW52ZXJzaW9uU29sdXRpb246MTAyMTIz-ruptures.xml
+	CRU/[dm0.7,bN[0.902,4.6],C4.0,s0.28]/SW52ZXJzaW9uU29sdXRpb246MTAyMTIz-ruptures_sections.xml
+</uncertaintyModel>
+          <uncertaintyWeight>1.0</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
+    </logicTreeBranchingLevel>
+  </logicTree>
+</nrml>

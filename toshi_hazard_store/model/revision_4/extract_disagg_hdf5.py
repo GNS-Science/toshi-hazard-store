@@ -4,30 +4,19 @@ import logging
 from typing import Dict, Iterator
 
 import numpy as np
-import numpy.typing as npt
 import pyarrow as pa
-
-try:  # pragma: no cover
-    import openquake  # noqa
-
-    HAVE_OQ = True
-except ImportError:  # pragma: no cover
-    HAVE_OQ = False
-
-if HAVE_OQ:  # pragma: no cover
-    from openquake.calculators.extract import Extractor
-
 from nzshm_common.location import CodedLocation
 
 from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.model.pyarrow.dataset_schema import get_disagg_realisation_schema
 from toshi_hazard_store.model.revision_4.extract_classical_hdf5 import build_nloc0_series, build_nloc_0_mapping
+from toshi_hazard_store.oq_import.h5py_reader import DisaggExtract, OqHdf5Reader
 from toshi_hazard_store.oq_import.parse_oq_realizations import build_rlz_mapper
 
 log = logging.getLogger(__name__)
 
 # Axes that are always squeezed (we fix them via query parameters).
-_QUERY_DIMS = frozenset(('imt', 'poe'))
+_QUERY_DIMS = ('imt', 'poe')
 
 
 def _bins_digest_from_dict(payload: dict[str, list[str]]) -> str:
@@ -45,7 +34,7 @@ def _bins_digest_from_dict(payload: dict[str, list[str]]) -> str:
     return hashlib.sha256(serialised.encode()).hexdigest()[:16]
 
 
-def compute_bins_digest(disagg_rlzs) -> str:
+def compute_bins_digest(disagg_rlzs: DisaggExtract) -> str:
     """Return a short sha256 hex digest over the bin centres in a disagg extract result.
 
     The digest is a compatibility key: two disagg matrices with the same digest share identical
@@ -70,7 +59,7 @@ def _stringify_bin_centers(values) -> list[str]:
 
 
 def generate_disagg_record_batches(
-    extractor,
+    reader: OqHdf5Reader,
     imt: str,
     nloc_001_code: str,
     nloc_0_code: str,
@@ -88,9 +77,10 @@ def generate_disagg_record_batches(
     imtl: float,
     use_64bit_values: bool,
 ) -> Iterator[pa.RecordBatch]:
-    """Yield a single RecordBatch containing one row per realisation.
+    """Yield one RecordBatch per realisation (1 row each).
 
-    Each row carries the flattened disaggregation array for that rlz in the
+    Mirrors ``extract_classical_hdf5.generate_rlz_record_batches``'s per-rlz pattern.
+    Each batch carries the flattened disaggregation array for that rlz in the
     ``disagg_values`` list column, plus an ordered ``disagg_bins`` map
     (``{axis_name: [bin_centre_str, ...]}``) whose key order defines the axis
     order of ``disagg_values``. Bin centres are stringified uniformly (bytes
@@ -99,7 +89,7 @@ def generate_disagg_record_batches(
     The source HDF5 is required to contain exactly one site, one IMT and one POE.
 
     Args:
-        extractor: OpenQuake Extractor instance.
+        reader: OqHdf5Reader instance.
         imt: the single IMT string to extract.
         nloc_001_code: location code at 0.001° resolution for the single site.
         nloc_0_code: location code at 1.0° resolution (partition key).
@@ -120,72 +110,49 @@ def generate_disagg_record_batches(
     dict_type = pa.dictionary(pa.int8(), pa.string(), False)
     bins_map_type = pa.map_(pa.string(), pa.list_(pa.string()))
 
-    # rlzN → ordinal mapping, and per-ordinal digest lookups.
-    ordinal_by_label: Dict[str, int] = {f'rlz{ordinal}': ordinal for ordinal in rlz_map}
+    # Per-ordinal digest lookups (keyed by rlz ordinal, not Z position).
     sources_by_ordinal = {o: r.sources.hash_digest for o, r in rlz_map.items()}
     gmms_by_ordinal = {o: r.gmms.hash_digest for o, r in rlz_map.items()}
 
     schema = get_disagg_realisation_schema(use_64bit_values)
 
     log.debug(f'extracting imt={imt} kind={kind}')
-    disagg_data = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
+    disagg_dict = reader.disagg_rlzs(kind)
 
-    shape_descr = list(disagg_data.shape_descr)
-    disagg_array: npt.NDArray = disagg_data.array  # shape: (dims..., n_rlz)
+    first = next(iter(disagg_dict.values()))
+    shape_descr = [d for d in first.shape_descr if d not in _QUERY_DIMS]
 
-    # Squeeze imt and poe axes (both fixed to 1 by the query).
-    for dim_name in _QUERY_DIMS:
-        if dim_name in shape_descr:
-            axis = shape_descr.index(dim_name)
-            disagg_array = np.squeeze(disagg_array, axis=axis)
-            shape_descr.pop(axis)
+    # Bin metadata is constant across all rlzs — build once before the loop.
+    disagg_bins: Dict[str, list] = {str(dim): _stringify_bin_centers(getattr(first, str(dim))) for dim in shape_descr}
+    zero = np.zeros(1, dtype=np.int8)
 
-    # The trailing axis is rlz (not listed in shape_descr). Move it to the front so each
-    # row's disagg grid is contiguous; shape_descr then describes the remaining phys dims.
-    disagg_array = np.moveaxis(disagg_array, -1, 0)  # shape (n_rlz, <phys dims...>)
+    for rlz_key, entry in disagg_dict.items():
+        ordinal = int(rlz_key.split('-')[1])
+        flat = entry.array[..., 0, 0].ravel().astype(vtype)
 
-    n_rlz = disagg_array.shape[0]
-    per_rlz_flat = disagg_array.reshape(n_rlz, -1).astype(vtype)
-
-    # Resolve rlz labels and digests.
-    rlz_labels = list(disagg_data.extra)  # e.g. ['rlz4', 'rlz11', ...]
-    ordinals = [ordinal_by_label[lbl] for lbl in rlz_labels]
-    sources_list = [sources_by_ordinal[o] for o in ordinals]
-    gmms_list = [gmms_by_ordinal[o] for o in ordinals]
-
-    # Build {axis_name: [bin_centre_str, ...]} in shape_descr order. Dict insertion order
-    # is preserved through pyarrow's map encoding, so readers recover the axis order from
-    # the map keys. Identical across rows in the batch; parquet compresses the repetition.
-    disagg_bins: Dict[str, list] = {
-        str(dim): _stringify_bin_centers(getattr(disagg_data, str(dim))) for dim in shape_descr
-    }
-
-    zeros = np.zeros(n_rlz, dtype=np.int8)
-    vs30_arr = np.full(n_rlz, int(vs30), dtype=np.int32)
-
-    yield pa.RecordBatch.from_arrays(
-        [
-            pa.array([compatible_calc_id] * n_rlz, type=pa.string()),
-            pa.DictionaryArray.from_arrays(zeros, [hazard_model_id]),
-            pa.DictionaryArray.from_arrays(zeros, [producer_digest]),
-            pa.DictionaryArray.from_arrays(zeros, [config_digest]),
-            pa.array([calculation_id] * n_rlz, type=pa.string()),
-            pa.DictionaryArray.from_arrays(zeros, [bins_digest]),
-            pa.array([nloc_001_code] * n_rlz, type=pa.string()),
-            pa.array([nloc_0_code] * n_rlz, type=pa.string()),
-            vs30_arr,
-            pa.DictionaryArray.from_arrays(zeros, [imt]),
-            pa.DictionaryArray.from_arrays(zeros, [target_aggr]),
-            pa.DictionaryArray.from_arrays(zeros, [probability.name]),
-            pa.array([float(imtl)] * n_rlz, type=pa_imtl_type),
-            pa.array(rlz_labels, type=pa.string()).dictionary_encode().cast(dict_type),
-            pa.array(sources_list, type=pa.string()).dictionary_encode().cast(dict_type),
-            pa.array(gmms_list, type=pa.string()).dictionary_encode().cast(dict_type),
-            pa.array([disagg_bins] * n_rlz, type=bins_map_type),
-            pa.array(per_rlz_flat.tolist(), type=pa.list_(pa_vtype)),
-        ],
-        schema=schema,
-    )
+        yield pa.RecordBatch.from_arrays(
+            [
+                pa.array([compatible_calc_id], type=pa.string()),
+                pa.DictionaryArray.from_arrays(zero, [hazard_model_id]),
+                pa.DictionaryArray.from_arrays(zero, [producer_digest]),
+                pa.DictionaryArray.from_arrays(zero, [config_digest]),
+                pa.array([calculation_id], type=pa.string()),
+                pa.DictionaryArray.from_arrays(zero, [bins_digest]),
+                pa.array([nloc_001_code], type=pa.string()),
+                pa.array([nloc_0_code], type=pa.string()),
+                pa.array([int(vs30)], type=pa.int32()),
+                pa.DictionaryArray.from_arrays(zero, [imt]),
+                pa.DictionaryArray.from_arrays(zero, [target_aggr]),
+                pa.DictionaryArray.from_arrays(zero, [probability.name]),
+                pa.array([float(imtl)], type=pa_imtl_type),
+                pa.array([rlz_key], type=pa.string()).dictionary_encode().cast(dict_type),
+                pa.array([sources_by_ordinal[ordinal]], type=pa.string()).dictionary_encode().cast(dict_type),
+                pa.array([gmms_by_ordinal[ordinal]], type=pa.string()).dictionary_encode().cast(dict_type),
+                pa.array([disagg_bins], type=bins_map_type),
+                pa.array([flat.tolist()], type=pa.list_(pa_vtype)),
+            ],
+            schema=schema,
+        )
 
 
 def disaggs_to_record_batch_reader(
@@ -225,8 +192,8 @@ def disaggs_to_record_batch_reader(
     """
     log.info(f'disaggs_to_record_batch_reader: {hdf5_file}, {calculation_id}, {compatible_calc_id}, kind={kind}')
 
-    extractor = Extractor(str(hdf5_file))
-    oqparam = json.loads(extractor.get('oqparam').json)
+    reader = OqHdf5Reader(str(hdf5_file))
+    oqparam = reader.oqparam()
 
     if oqparam['calculation_mode'] != 'disaggregation':
         raise ValueError(f"calculation_mode is '{oqparam['calculation_mode']}', expected 'disaggregation'")
@@ -243,7 +210,7 @@ def disaggs_to_record_batch_reader(
     imtl = float(imls[0])
 
     # Build site record from the single-site sitecol.
-    df0 = extractor.get('sitecol').to_dframe()
+    df0 = reader.sitecol()
     if df0.shape[0] != 1:
         raise ValueError(f"sitecol must contain exactly one site, got {df0.shape[0]}")
     site_loc = CodedLocation(lat=df0.iloc[0].lat, lon=df0.iloc[0].lon, resolution=0.001)
@@ -254,16 +221,16 @@ def disaggs_to_record_batch_reader(
     nloc_0_idx_to_code = {idx: code for code, idx in nloc_0_map.items()}
     nloc_0_code = nloc_0_idx_to_code[nloc_0_series[0]]
 
-    rlz_map = build_rlz_mapper(extractor)
+    rlz_map = build_rlz_mapper(reader)
 
-    # Compute bins_digest from a probe on the single site.
-    probe = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
+    # Compute bins_digest from any single entry (bins are shared across all entries).
+    probe = next(iter(reader.disagg_rlzs(kind).values()))
     bins_digest = compute_bins_digest(probe)
     log.debug(f'bins_digest: {bins_digest}')
 
     schema = get_disagg_realisation_schema(use_64bit_values)
     batches = generate_disagg_record_batches(
-        extractor=extractor,
+        reader=reader,
         imt=imt,
         nloc_001_code=site_loc.code,
         nloc_0_code=nloc_0_code,

@@ -25,21 +25,17 @@ import os
 import click
 
 from toshi_hazard_store.model.pyarrow import pyarrow_dataset
+from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
 from toshi_hazard_store.oq_import import toshi_api_client
+from toshi_hazard_store.oq_import.toshi_api_subtask import build_realisations, generate_subtasks
 from toshi_hazard_store.scripts._common import (
     API_KEY,
     API_URL,
-    HAVE_OQ,
     chc_manager,
     get_hazard_task_ids,
     prepare_store_inputs,
     producers,
-    raise_if_no_openquake,
 )
-
-if HAVE_OQ:
-    from toshi_hazard_store.model.revision_4 import extract_classical_hdf5
-    from toshi_hazard_store.oq_import.toshi_api_subtask import build_realisations, generate_subtasks
 
 log = logging.getLogger(__name__)
 
@@ -152,8 +148,6 @@ def extract(
     - pull the configs and check we have a compatible producer config\n
     - optionally, create any new producer configs
     """
-    raise_if_no_openquake()
-
     headers = {"x-api-key": API_KEY}
     gtapi = toshi_api_client.ApiClient(API_URL, None, with_schema_validation=False, headers=headers)
 

@@ -153,9 +153,7 @@ def get_disagg_aggr_dataset(dataset_uri: Optional[str] = None) -> ds.Dataset:
 
 
 @lru_cache(maxsize=3)
-def get_disagg_aggr_dataset_digest_vs30(
-    bins_digest: str, vs30: int, dataset_uri: Optional[str] = None
-) -> ds.Dataset:
+def get_disagg_aggr_dataset_digest_vs30(bins_digest: str, vs30: int, dataset_uri: Optional[str] = None) -> ds.Dataset:
     """
     Cache the disaggregation aggregate dataset for a given bins_digest and vs30.
 

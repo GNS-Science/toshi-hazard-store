@@ -22,6 +22,7 @@ classifiers=[
 requires-python = ">=3.10,<4.0"
 dependencies = [
     "geopandas>=1.1.2",
+    "h5py>=3.10",
     "lancedb>0.27.10",
     "matplotlib>=3.10.8",
     "nshm-toshi-client>=1.0.1",
@@ -49,13 +50,6 @@ ths_rlz_import = 'toshi_hazard_store.scripts.ths_rlz_import:main'
 ths_rlz_sanity = 'toshi_hazard_store.scripts.ths_rlz_sanity:main'
 
 [project.optional-dependencies]
-openquake = [
-    "fiona>=1.9.5",
-    "networkx>=3.2.1",
-    "numba",
-    "pydantic-to-pyarrow>=0.1.6",
-    "openquake-engine>=3.20.1",
-]
 scripts = [
     "boto3",
     "click>=8.1.3",
@@ -63,6 +57,13 @@ scripts = [
 ]
 
 [dependency-groups]
+oq-compat = [
+    "fiona>=1.9.5",
+    "networkx>=3.2.1",
+    "numba",
+    "openquake-engine==3.25.1",
+]
+
 doc = [
     "boto3",
     "click>=8.1.3",

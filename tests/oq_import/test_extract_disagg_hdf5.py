@@ -1,27 +1,17 @@
 """Tests for disaggregation extraction from OpenQuake HDF5 files.
 
-Requires an OpenQuake disaggregation HDF5 file at the committed fixture path.
-Tests are skipped when OpenQuake is not installed.
+Requires the committed disagg fixture HDF5.  Uses OqHdf5Reader directly —
+no openquake-engine dependency needed.
 """
 
-import json
 from pathlib import Path
 
 import pytest
 
-try:
-    import openquake  # noqa
-
-    HAVE_OQ = True
-except ImportError:
-    HAVE_OQ = False
-
-if HAVE_OQ:
-    from openquake.calculators.extract import Extractor
-
 from toshi_hazard_store.model.constraints import ProbabilityEnum
 from toshi_hazard_store.model.pyarrow.dataset_schema import get_disagg_realisation_schema
 from toshi_hazard_store.model.revision_4 import extract_disagg_hdf5
+from toshi_hazard_store.oq_import.h5py_reader import OqHdf5Reader
 
 _DISAGG_HDF5_PATH = (
     Path(__file__).parent.parent
@@ -31,15 +21,14 @@ _DISAGG_HDF5_PATH = (
 _HAZARD_MODEL_ID = 'TEST_MODEL_v0'
 _TARGET_AGGR = 'mean'
 
-_REQUIRE_OQ = pytest.mark.skipif(not HAVE_OQ, reason="openquake not installed")
-
 
 @pytest.fixture(scope='module')
 def disagg_hdf5_info():
     """Return (path, kind, imts) for the committed disagg fixture."""
-    oqp = json.loads(Extractor(str(_DISAGG_HDF5_PATH)).get('oqparam').json)
+    reader = OqHdf5Reader(str(_DISAGG_HDF5_PATH))
+    oqp = reader.oqparam()
     imts = list(oqp['iml_disagg'].keys())
-    kinds = oqp['disagg_outputs']
+    kinds = oqp.get('disagg_outputs', [])
     kind = next((k for k in kinds if 'Mag' in k and 'Dist' in k), kinds[0])
     return _DISAGG_HDF5_PATH, kind, imts
 
@@ -49,24 +38,22 @@ def probability():
     return ProbabilityEnum._2_PCT_IN_50YRS
 
 
-@_REQUIRE_OQ
 def test_compute_bins_digest_deterministic(disagg_hdf5_info):
     """compute_bins_digest returns the same value on repeated calls."""
     hdf5_path, kind, imts = disagg_hdf5_info
-    extractor = Extractor(str(hdf5_path))
-    probe = extractor.get(f'disagg?kind={kind}&imt={imts[0]}&site_id=0&poe_id=0&spec=rlzs')
+    reader = OqHdf5Reader(str(hdf5_path))
+    probe = next(iter(reader.disagg_rlzs(kind).values()))
     digest1 = extract_disagg_hdf5.compute_bins_digest(probe)
     digest2 = extract_disagg_hdf5.compute_bins_digest(probe)
     assert digest1 == digest2
     assert len(digest1) == 16
 
 
-@_REQUIRE_OQ
 def test_compute_bins_digest_order_insensitive(disagg_hdf5_info):
     """Digest is stable under shape_descr axis reordering and per-axis value reordering."""
     hdf5_path, kind, imts = disagg_hdf5_info
-    extractor = Extractor(str(hdf5_path))
-    probe = extractor.get(f'disagg?kind={kind}&imt={imts[0]}&site_id=0&poe_id=0&spec=rlzs')
+    reader = OqHdf5Reader(str(hdf5_path))
+    probe = next(iter(reader.disagg_rlzs(kind).values()))
 
     reversed_axes = list(reversed(list(probe.shape_descr)))
     first_bin_axis = next(str(d) for d in probe.shape_descr if str(d) not in ('imt', 'poe'))
@@ -83,7 +70,6 @@ def test_compute_bins_digest_order_insensitive(disagg_hdf5_info):
     assert extract_disagg_hdf5.compute_bins_digest(probe) == extract_disagg_hdf5.compute_bins_digest(_Reordered())
 
 
-@_REQUIRE_OQ
 def test_disaggs_to_record_batch_reader_smoke(disagg_hdf5_info, probability, tmp_path):
     """Reader yields at least one batch conforming to the disagg schema."""
     hdf5_path, kind, imts = disagg_hdf5_info
@@ -108,7 +94,29 @@ def test_disaggs_to_record_batch_reader_smoke(disagg_hdf5_info, probability, tmp
         assert batch.num_rows > 0
 
 
-@_REQUIRE_OQ
+def test_one_batch_per_rlz(disagg_hdf5_info, probability):
+    """Reader yields exactly one 1-row batch per realization, mirroring extract_classical_hdf5."""
+    hdf5_path, kind, imts = disagg_hdf5_info
+    reader_h5 = OqHdf5Reader(str(hdf5_path))
+    n_rlz = len(reader_h5.disagg_rlzs(kind))
+
+    reader = extract_disagg_hdf5.disaggs_to_record_batch_reader(
+        hdf5_file=str(hdf5_path),
+        calculation_id='test-calc-id',
+        compatible_calc_id='compat-0',
+        producer_digest='sha256:' + 'a' * 64,
+        config_digest='cfg-abc123',
+        probability=probability,
+        hazard_model_id=_HAZARD_MODEL_ID,
+        target_aggr=_TARGET_AGGR,
+        kind=kind,
+    )
+    batches = list(reader)
+    assert len(batches) == n_rlz, f'expected {n_rlz} batches (one per rlz), got {len(batches)}'
+    for batch in batches:
+        assert batch.num_rows == 1, f'expected 1 row per batch, got {batch.num_rows}'
+
+
 def test_probability_column_populated(disagg_hdf5_info, probability):
     """Every row carries the user-supplied probability name."""
     hdf5_path, kind, imts = disagg_hdf5_info
@@ -129,12 +137,11 @@ def test_probability_column_populated(disagg_hdf5_info, probability):
         assert unique_probs == [probability.name]
 
 
-@_REQUIRE_OQ
 def test_disagg_bins_column_populated(disagg_hdf5_info, probability):
     """Every row carries a disagg_bins map whose keys match the HDF5 shape_descr order."""
     hdf5_path, kind, imts = disagg_hdf5_info
-    extractor = Extractor(str(hdf5_path))
-    probe = extractor.get(f'disagg?kind={kind}&imt={imts[0]}&site_id=0&poe_id=0&spec=rlzs')
+    reader_h5 = OqHdf5Reader(str(hdf5_path))
+    probe = next(iter(reader_h5.disagg_rlzs(kind).values()))
     expected_axes = [str(d) for d in probe.shape_descr if d not in ('imt', 'poe')]
 
     reader = extract_disagg_hdf5.disaggs_to_record_batch_reader(
@@ -160,18 +167,17 @@ def test_disagg_bins_column_populated(disagg_hdf5_info, probability):
                 assert all(isinstance(x, str) for x in v)
 
 
-@_REQUIRE_OQ
 def test_record_count_matches_shape(disagg_hdf5_info, probability):
     """Total rows == n_sites * n_rlz; each row's disagg_values has product(dim_sizes) entries."""
     hdf5_path, kind, imts = disagg_hdf5_info
-    extractor = Extractor(str(hdf5_path))
+    reader_h5 = OqHdf5Reader(str(hdf5_path))
 
     # Determine expected shape from a probe.
-    probe = extractor.get(f'disagg?kind={kind}&imt={imts[0]}&site_id=0&poe_id=0&spec=rlzs')
-    n_rlz = len(probe.extra)
-    n_cells_per_rlz = probe.array.size // n_rlz
+    probe_dict = reader_h5.disagg_rlzs(kind)
+    n_rlz = len(probe_dict)
+    n_cells_per_rlz = next(iter(probe_dict.values())).array.size
 
-    sitecol_df = extractor.get('sitecol').to_dframe()
+    sitecol_df = reader_h5.sitecol()
     n_sites = sitecol_df.shape[0]
 
     expected_rows = n_sites * n_rlz
@@ -203,11 +209,9 @@ def test_record_count_matches_shape(disagg_hdf5_info, probability):
     assert total_rows == expected_rows
 
 
-@_REQUIRE_OQ
 def test_wrong_calculation_mode_raises(disagg_hdf5_info, probability):
     """Reader raises ValueError when the HDF5 is not a disaggregation calc."""
     hdf5_path, kind, _ = disagg_hdf5_info
-    # Use the classical fixture from the oq_import suite if it exists.
     classical_path = (
         Path(__file__).parent.parent
         / 'fixtures/oq_import/openquake_hdf5_archive-T3BlbnF1YWtlSGF6YXJkVGFzazo2OTMxODkz/calc_1.hdf5'
@@ -230,7 +234,6 @@ def test_wrong_calculation_mode_raises(disagg_hdf5_info, probability):
         )
 
 
-@_REQUIRE_OQ
 def test_invalid_kind_raises(disagg_hdf5_info, probability):
     """Reader raises ValueError when the requested kind is not in the HDF5."""
     hdf5_path, kind, _ = disagg_hdf5_info
@@ -250,11 +253,11 @@ def test_invalid_kind_raises(disagg_hdf5_info, probability):
         )
 
 
-@_REQUIRE_OQ
 def test_new_columns_populated(disagg_hdf5_info, probability):
     """hazard_model_id, target_aggr and imtl columns carry the caller-supplied / HDF5 values."""
     hdf5_path, kind, _ = disagg_hdf5_info
-    oqp = json.loads(Extractor(str(hdf5_path)).get('oqparam').json)
+    reader_h5 = OqHdf5Reader(str(hdf5_path))
+    oqp = reader_h5.oqparam()
     expected_imtl = float(next(iter(oqp['iml_disagg'].values()))[0])
 
     reader = extract_disagg_hdf5.disaggs_to_record_batch_reader(
