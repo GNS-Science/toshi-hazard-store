@@ -141,18 +141,24 @@ def test_realizations_ordinals_and_paths(classical_pair):
 
 
 def test_disagg_shape_descr_and_extra(disagg_pair):
-    """shape_descr and rlz label order identical to OQ Extractor probe."""
+    """shape_descr identical to OQ Extractor; dict keys match OQ rlz labels (normalised format)."""
     reader, extractor, kind, imt = disagg_pair
-    probe_h5 = reader.disagg_rlzs(kind)
+    probe_h5_dict = reader.disagg_rlzs(kind)
+    probe_h5 = next(iter(probe_h5_dict.values()))
     probe_oq = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
     assert probe_h5.shape_descr == [str(d) for d in probe_oq.shape_descr]
-    assert probe_h5.rlz_labels == list(probe_oq.extra)
+    # OQ uses 'rlzN' (no hyphen, no padding); our keys are 'rlz-NNN'. Normalise OQ labels.
+    n_rlz = len(probe_h5_dict)
+    n_digits = max(3, len(str(n_rlz - 1)))
+    oq_ordinals = [int(str(lbl)[3:]) for lbl in probe_oq.extra]
+    expected_keys = [f'rlz-{o:0{n_digits}d}' for o in oq_ordinals]
+    assert list(probe_h5_dict.keys()) == expected_keys
 
 
 def test_disagg_bin_centres(disagg_pair):
     """Bin centres for every kind axis identical to OQ Extractor probe."""
     reader, extractor, kind, imt = disagg_pair
-    probe_h5 = reader.disagg_rlzs(kind)
+    probe_h5 = next(iter(reader.disagg_rlzs(kind).values()))
     probe_oq = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
     for ax in kind.split('_'):
         ax_lo = ax.lower()
@@ -168,19 +174,21 @@ def test_disagg_bin_centres(disagg_pair):
 
 
 def test_disagg_array_numerical_equality(disagg_pair):
-    """Disagg probability array numerically identical to OQ Extractor probe."""
+    """Disagg probability array numerically identical to OQ Extractor probe (all rlzs)."""
     reader, extractor, kind, imt = disagg_pair
-    probe_h5 = reader.disagg_rlzs(kind)
+    probe_h5_dict = reader.disagg_rlzs(kind)
     probe_oq = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
-    assert np.allclose(probe_h5.array, probe_oq.array, rtol=1e-5), (
-        f'disagg array mismatch: max abs diff = {np.max(np.abs(probe_h5.array - probe_oq.array)):.3e}'
+    # Reconstruct (*kind_bins, 1, 1, n_rlz) by stacking per-rlz arrays along the last axis.
+    h5_arr = np.stack([e.array for e in probe_h5_dict.values()], axis=-1)
+    assert np.allclose(h5_arr, probe_oq.array, rtol=1e-5), (
+        f'disagg array mismatch: max abs diff = {np.max(np.abs(h5_arr - probe_oq.array)):.3e}'
     )
 
 
 def test_bins_digest_exact_equality(disagg_pair):
     """compute_bins_digest produces the same 16-char hex string for both probes."""
     reader, extractor, kind, imt = disagg_pair
-    probe_h5 = reader.disagg_rlzs(kind)
+    probe_h5 = next(iter(reader.disagg_rlzs(kind).values()))
     probe_oq = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
     digest_h5 = extract_disagg_hdf5.compute_bins_digest(probe_h5)
     digest_oq = extract_disagg_hdf5.compute_bins_digest(probe_oq)
@@ -214,15 +222,17 @@ def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
     assert len(h5_batches) == 1
     batch = h5_batches[0]
 
-    # Build reference: {rlz_label: flattened_array} from OQ probe.
+    # Build reference: {rlz_key: flattened_array} from OQ probe (keys in our 'rlz-NNN' format).
     probe_oq = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
     # Squeeze imt/poe dims, move rlz to front.
     oq_arr = probe_oq.array  # (*kind_bins, imt=1, poe=1, n_rlz)
     oq_arr = np.squeeze(oq_arr, axis=tuple(i for i, s in enumerate(oq_arr.shape[:-1]) if s == 1))  # (*kind_bins, n_rlz)
     oq_arr = np.moveaxis(oq_arr, -1, 0)  # (n_rlz, *kind_bins)
     n_rlz = oq_arr.shape[0]
-    # probe_oq.extra = OQ Extractor's rlz labels (same convention as DisaggExtract.rlz_labels)
-    oq_ref = {list(probe_oq.extra)[i]: oq_arr[i].ravel().astype(np.float32) for i in range(n_rlz)}
+    # OQ uses 'rlzN'; normalise to our 'rlz-NNN' format for keying the reference dict.
+    oq_ordinals = [int(str(lbl)[3:]) for lbl in probe_oq.extra]
+    n_digits = max(3, len(str(max(oq_ordinals))))
+    oq_ref = {f'rlz-{oq_ordinals[i]:0{n_digits}d}': oq_arr[i].ravel().astype(np.float32) for i in range(n_rlz)}
 
     # Compare per rlz.
     rlz_col = batch.column('rlz').to_pylist()
@@ -236,7 +246,7 @@ def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
 
     # disagg_bins: axis names and bin-centre strings must be identical across all rows.
     bins_col = batch.column('disagg_bins').to_pylist()
-    probe_h5 = reader.disagg_rlzs(kind)
+    probe_h5 = next(iter(reader.disagg_rlzs(kind).values()))
     for row_bins in bins_col:
         for (ax_name, bin_strs), expected_ax in zip(
             row_bins,

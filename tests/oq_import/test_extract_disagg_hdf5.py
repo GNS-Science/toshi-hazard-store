@@ -42,7 +42,7 @@ def test_compute_bins_digest_deterministic(disagg_hdf5_info):
     """compute_bins_digest returns the same value on repeated calls."""
     hdf5_path, kind, imts = disagg_hdf5_info
     reader = OqHdf5Reader(str(hdf5_path))
-    probe = reader.disagg_rlzs(kind)
+    probe = next(iter(reader.disagg_rlzs(kind).values()))
     digest1 = extract_disagg_hdf5.compute_bins_digest(probe)
     digest2 = extract_disagg_hdf5.compute_bins_digest(probe)
     assert digest1 == digest2
@@ -53,7 +53,7 @@ def test_compute_bins_digest_order_insensitive(disagg_hdf5_info):
     """Digest is stable under shape_descr axis reordering and per-axis value reordering."""
     hdf5_path, kind, imts = disagg_hdf5_info
     reader = OqHdf5Reader(str(hdf5_path))
-    probe = reader.disagg_rlzs(kind)
+    probe = next(iter(reader.disagg_rlzs(kind).values()))
 
     reversed_axes = list(reversed(list(probe.shape_descr)))
     first_bin_axis = next(str(d) for d in probe.shape_descr if str(d) not in ('imt', 'poe'))
@@ -118,7 +118,7 @@ def test_disagg_bins_column_populated(disagg_hdf5_info, probability):
     """Every row carries a disagg_bins map whose keys match the HDF5 shape_descr order."""
     hdf5_path, kind, imts = disagg_hdf5_info
     reader_h5 = OqHdf5Reader(str(hdf5_path))
-    probe = reader_h5.disagg_rlzs(kind)
+    probe = next(iter(reader_h5.disagg_rlzs(kind).values()))
     expected_axes = [str(d) for d in probe.shape_descr if d not in ('imt', 'poe')]
 
     reader = extract_disagg_hdf5.disaggs_to_record_batch_reader(
@@ -150,9 +150,9 @@ def test_record_count_matches_shape(disagg_hdf5_info, probability):
     reader_h5 = OqHdf5Reader(str(hdf5_path))
 
     # Determine expected shape from a probe.
-    probe = reader_h5.disagg_rlzs(kind)
-    n_rlz = len(probe.rlz_labels)
-    n_cells_per_rlz = probe.array.size // n_rlz
+    probe_dict = reader_h5.disagg_rlzs(kind)
+    n_rlz = len(probe_dict)
+    n_cells_per_rlz = next(iter(probe_dict.values())).array.size
 
     sitecol_df = reader_h5.sitecol()
     n_sites = sitecol_df.shape[0]

@@ -110,9 +110,9 @@ def test_disagg_extraction_cross_version(fixture_dir):
 
     assert reader.schema.equals(get_disagg_realisation_schema()), f'[OQ {oq_ver}] schema mismatch'
 
-    probe = reader_h5.disagg_rlzs(kind)
-    n_rlz = len(probe.rlz_labels)
-    n_cells_per_rlz = probe.array.size // n_rlz
+    probe_dict = reader_h5.disagg_rlzs(kind)
+    n_rlz = len(probe_dict)
+    n_cells_per_rlz = next(iter(probe_dict.values())).array.size
 
     batches = list(reader)
     total_rows = sum(b.num_rows for b in batches)
@@ -222,10 +222,10 @@ def test_disagg_shape_descr_matches_stored_attrs(fixture_dir):
         raw = ds_attrs['shape_descr']
         stored_axes = [v.decode() if isinstance(v, bytes) else str(v) for v in raw]
 
-    probe = OqHdf5Reader(str(hdf5)).disagg_rlzs(kind)
+    probe = next(iter(OqHdf5Reader(str(hdf5)).disagg_rlzs(kind).values()))
     reader_shape_descr = probe.shape_descr  # e.g. ['trt', 'mag', 'dist', 'eps', 'imt', 'poe']
 
-    # Drop 'site_id' (sliced out by the reader) and 'Z' (rlz axis, surfaced via .rlz_labels).
+    # Drop 'site_id' (sliced out by the reader) and 'Z' (rlz axis, now the dict key).
     expected = [a.lower() for a in stored_axes if a not in ('site_id', 'Z')]
 
     assert reader_shape_descr == expected, (
@@ -268,15 +268,15 @@ def test_disagg_bin_edge_count_matches_axis_sizes(fixture_dir):
 
 @pytest.mark.parametrize('fixture_dir', _discover_fixture_dirs('disaggregation'), ids=lambda d: d.name)
 def test_disagg_rlz_slices_match_raw_hdf5(fixture_dir):
-    """Per-rlz disagg slices match raw HDF5, and .rlz_labels match best_rlzs ordinals.
+    """Per-rlz disagg dict entries match raw HDF5 and keys encode best_rlzs ordinals.
 
     The Z axis in disagg-rlzs is indexed by best_rlzs[site_idx] ordering, not by
     rlz ordinal. Verifies:
-    1. probe.array column j is bitwise-equal to raw_cube[..., j] for a sample of
+    1. dict entry j's array is bitwise-equal to raw_cube[..., j] for a sample of
        non-zero rlz positions.
-    2. probe.rlz_labels[j] correctly translates position j to ordinal via best_rlzs.
+    2. dict key at position j is 'rlz-NNN' where NNN is the ordinal from best_rlzs[0, j].
 
-    Catches Z-axis position mis-mapping and best_rlzs → label translation errors.
+    Catches Z-axis position mis-mapping and best_rlzs → key translation errors.
     """
     import h5py
 
@@ -284,18 +284,26 @@ def test_disagg_rlz_slices_match_raw_hdf5(fixture_dir):
     hdf5 = fixture_dir / 'calc.hdf5'
     kind = _disagg_kind(fixture_dir)
 
-    probe = OqHdf5Reader(str(hdf5)).disagg_rlzs(kind)  # default site_idx=0, imt_idx=0, poe_idx=0
+    probe_dict = OqHdf5Reader(str(hdf5)).disagg_rlzs(kind)  # default site_idx=0, imt_idx=0, poe_idx=0
+    n_rlz = len(probe_dict)
+    n_digits = max(3, len(str(n_rlz - 1)))
+    probe_items = list(probe_dict.items())
 
     with h5py.File(hdf5, 'r') as f:
         raw = f[f'disagg-rlzs/{kind}'][()]  # (n_sites, *kind_axes, n_imt, n_poe, n_rlz)
         best_rlzs = f['best_rlzs'][()]  # (n_sites, n_rlz)
 
     expected_full = raw[0, ..., 0:1, 0:1, :]  # site=0, imt=0:1, poe=0:1 → (*kind_axes, 1, 1, n_rlz)
-    assert probe.array.shape == expected_full.shape, (
-        f'[OQ {oq_ver}] disagg probe shape {probe.array.shape} != expected {expected_full.shape}'
+    first_entry = probe_items[0][1]
+    expected_per_rlz_shape = expected_full.shape[:-1]  # (*kind_axes, 1, 1)
+    assert n_rlz == expected_full.shape[-1], (
+        f'[OQ {oq_ver}] disagg probe has {n_rlz} entries, expected {expected_full.shape[-1]}'
+    )
+    assert first_entry.array.shape == expected_per_rlz_shape, (
+        f'[OQ {oq_ver}] per-rlz array shape {first_entry.array.shape} != expected {expected_per_rlz_shape}'
     )
 
-    # Sample non-zero rlz positions along the Z axis (last).
+    # Sample non-zero rlz positions along the Z axis.
     rlz_sums = expected_full.reshape(-1, expected_full.shape[-1]).sum(axis=0)
     non_zero = [j for j in range(rlz_sums.shape[0]) if rlz_sums[j] > 0]
     assert non_zero, f'[OQ {oq_ver}] all disagg rlz columns are zero — fixture is degenerate'
@@ -304,17 +312,18 @@ def test_disagg_rlz_slices_match_raw_hdf5(fixture_dir):
     sample_positions = non_zero[::step][:n_sample]
 
     for j in sample_positions:
-        expected_slice = expected_full[..., j]
-        actual_slice = probe.array[..., j]
-        assert np.array_equal(actual_slice, expected_slice), (
+        key, entry = probe_items[j]
+        expected_slice = expected_full[..., j]  # (*kind_axes, 1, 1)
+        assert np.array_equal(entry.array, expected_slice), (
             f'[OQ {oq_ver}] disagg Z position {j} does not match raw slice — '
             f'Z-axis mapping or array layout is wrong. '
-            f'max diff: {np.abs(actual_slice - expected_slice).max():.3e}'
+            f'max diff: {np.abs(entry.array - expected_slice).max():.3e}'
         )
-        expected_label = f'rlz{int(best_rlzs[0, j])}'
-        assert probe.rlz_labels[j] == expected_label, (
-            f'[OQ {oq_ver}] disagg .rlz_labels[{j}]={probe.rlz_labels[j]!r} != {expected_label!r} '
-            f'from best_rlzs — label translation is wrong.'
+        ordinal = int(best_rlzs[0, j])
+        expected_key = f'rlz-{ordinal:0{n_digits}d}'
+        assert key == expected_key, (
+            f'[OQ {oq_ver}] disagg Z position {j} key {key!r} != {expected_key!r} '
+            f'from best_rlzs — key encoding is wrong.'
         )
 
 
@@ -485,20 +494,22 @@ def test_oqhdf5reader_disagg_rlzs_structure(fixture_dir):
     kinds = reader.oqparam().get('disagg_outputs', [])
     kind = next((k for k in kinds if 'Mag' in k and 'Dist' in k), kinds[0])
 
-    probe = reader.disagg_rlzs(kind)
-    ref_probe = OqHdf5Reader(str(_REF_DISAGG_HDF5)).disagg_rlzs(kind)
+    probe_dict = reader.disagg_rlzs(kind)
+    ref_dict = OqHdf5Reader(str(_REF_DISAGG_HDF5)).disagg_rlzs(kind)
+    probe = next(iter(probe_dict.values()))
+    ref_probe = next(iter(ref_dict.values()))
 
     assert probe.array.shape == ref_probe.array.shape, (
-        f'[OQ {oq_ver}] DisaggExtract.array.shape {probe.array.shape} != ref {ref_probe.array.shape}'
+        f'[OQ {oq_ver}] per-rlz array shape {probe.array.shape} != ref {ref_probe.array.shape}'
     )
     assert probe.shape_descr == ref_probe.shape_descr, (
         f'[OQ {oq_ver}] DisaggExtract.shape_descr {probe.shape_descr} != ref {ref_probe.shape_descr}'
     )
-    assert len(probe.rlz_labels) == len(ref_probe.rlz_labels), (
-        f'[OQ {oq_ver}] DisaggExtract.rlz_labels length {len(probe.rlz_labels)} != ref {len(ref_probe.rlz_labels)}'
+    assert len(probe_dict) == len(ref_dict), (
+        f'[OQ {oq_ver}] disagg_rlzs key count {len(probe_dict)} != ref {len(ref_dict)}'
     )
-    for label in probe.rlz_labels:
-        assert label.startswith('rlz'), f'[OQ {oq_ver}] extra label {label!r} not in rlzN format'
+    for key in probe_dict:
+        assert key.startswith('rlz-'), f'[OQ {oq_ver}] key {key!r} not in rlz-NNN format'
     kind_axes = [ax.lower() for ax in kind.split('_')]
     for ax in kind_axes:
         test_bins = getattr(probe, ax)

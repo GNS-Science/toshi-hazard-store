@@ -4,7 +4,6 @@ import logging
 from typing import Dict, Iterator
 
 import numpy as np
-import numpy.typing as npt
 import pyarrow as pa
 from nzshm_common.location import CodedLocation
 
@@ -117,39 +116,22 @@ def generate_disagg_record_batches(
     schema = get_disagg_realisation_schema(use_64bit_values)
 
     log.debug(f'extracting imt={imt} kind={kind}')
-    disagg_data = reader.disagg_rlzs(kind)
+    disagg_dict = reader.disagg_rlzs(kind)
 
-    shape_descr = list(disagg_data.shape_descr)
-    disagg_array: npt.NDArray = disagg_data.array  # shape: (dims..., n_rlz)
-
-    # Squeeze imt and poe axes (both fixed to 1 by the query).
-    for dim_name in _QUERY_DIMS:
-        if dim_name in shape_descr:
-            axis = shape_descr.index(dim_name)
-            disagg_array = np.squeeze(disagg_array, axis=axis)
-            shape_descr.pop(axis)
-
-    # The trailing axis is rlz (not listed in shape_descr). Move it to the front so each
-    # row's disagg grid is contiguous; shape_descr then describes the remaining phys dims.
-    disagg_array = np.moveaxis(disagg_array, -1, 0)  # shape (n_rlz, <phys dims...>)
-
-    n_rlz = disagg_array.shape[0]
-    per_rlz_flat = disagg_array.reshape(n_rlz, -1).astype(vtype)
-
-    # Resolve rlz labels and provenance digests.
-    # disagg_data.rlz_labels[z] = 'rlzN' where N is the rlz ordinal at Z position z
-    # (best_rlzs order — NOT ordinal order; contrast with hcurves_rlzs() which is ordinal order).
-    rlz_labels = disagg_data.rlz_labels
-    ordinals = disagg_data.rlz_ordinals  # integer ordinal per Z position
+    rlz_labels = list(disagg_dict.keys())  # 'rlz-NNN' strings in best_rlzs order
+    ordinals = [int(k.split('-')[1]) for k in rlz_labels]
     sources_list = [sources_by_ordinal[o] for o in ordinals]
     gmms_list = [gmms_by_ordinal[o] for o in ordinals]
 
-    # Build {axis_name: [bin_centre_str, ...]} in shape_descr order. Dict insertion order
-    # is preserved through pyarrow's map encoding, so readers recover the axis order from
-    # the map keys. Identical across rows in the batch; parquet compresses the repetition.
-    disagg_bins: Dict[str, list] = {
-        str(dim): _stringify_bin_centers(getattr(disagg_data, str(dim))) for dim in shape_descr
-    }
+    first = next(iter(disagg_dict.values()))
+    shape_descr = [d for d in first.shape_descr if d not in _QUERY_DIMS]
+
+    # Build {axis_name: [bin_centre_str, ...]} in shape_descr order.
+    disagg_bins: Dict[str, list] = {str(dim): _stringify_bin_centers(getattr(first, str(dim))) for dim in shape_descr}
+
+    # Per-rlz flat arrays: each entry is (*kind_bins, 1, 1); index out the singleton imt/poe dims.
+    n_rlz = len(disagg_dict)
+    per_rlz_flat = np.stack([entry.array[..., 0, 0].ravel() for entry in disagg_dict.values()]).astype(vtype)
 
     zeros = np.zeros(n_rlz, dtype=np.int8)
     vs30_arr = np.full(n_rlz, int(vs30), dtype=np.int32)
@@ -247,8 +229,8 @@ def disaggs_to_record_batch_reader(
 
     rlz_map = build_rlz_mapper(reader)
 
-    # Compute bins_digest from a probe on the single site.
-    probe = reader.disagg_rlzs(kind)
+    # Compute bins_digest from any single entry (bins are shared across all entries).
+    probe = next(iter(reader.disagg_rlzs(kind).values()))
     bins_digest = compute_bins_digest(probe)
     log.debug(f'bins_digest: {bins_digest}')
 

@@ -122,8 +122,7 @@ def test_classical_snapshot_hcurves_rlzs(fixture_dir):
     for key in snap_keys:
         npz_key = 'hcurves_rlzs__' + key.replace('-', '_')
         assert np.allclose(rlzs[key], npz[npz_key], rtol=1e-5), (
-            f'[OQ {oq_ver}] hcurves_rlzs[{key!r}] mismatch — '
-            f'max abs diff: {np.abs(rlzs[key] - npz[npz_key]).max():.3e}'
+            f'[OQ {oq_ver}] hcurves_rlzs[{key!r}] mismatch — max abs diff: {np.abs(rlzs[key] - npz[npz_key]).max():.3e}'
         )
 
 
@@ -191,20 +190,25 @@ def test_disagg_snapshot_disagg_rlzs(fixture_dir):
     npz, sidecar = _load_snapshot(fixture_dir)
 
     kind = sidecar['kind']
-    probe = OqHdf5Reader(str(fixture_dir / 'calc.hdf5')).disagg_rlzs(kind)
+    probe_dict = OqHdf5Reader(str(fixture_dir / 'calc.hdf5')).disagg_rlzs(kind)
 
-    reader_arr = probe.array.squeeze()
+    # Reconstruct (*kind_bins, n_rlz) by squeezing imt/poe from each per-rlz entry then stacking.
+    reader_arr = np.stack([e.array.squeeze() for e in probe_dict.values()], axis=-1)
     snap_arr = npz['disagg__array'].squeeze()
     assert reader_arr.shape == snap_arr.shape, (
         f'[OQ {oq_ver}] disagg array shape mismatch after squeeze: '
         f'reader {reader_arr.shape} != snapshot {snap_arr.shape}'
     )
     assert np.allclose(reader_arr, snap_arr, rtol=1e-5), (
-        f'[OQ {oq_ver}] disagg array mismatch — '
-        f'max abs diff: {np.abs(reader_arr - snap_arr).max():.3e}'
+        f'[OQ {oq_ver}] disagg array mismatch — max abs diff: {np.abs(reader_arr - snap_arr).max():.3e}'
     )
-    assert probe.rlz_labels == sidecar['rlz_labels'], f'[OQ {oq_ver}] rlz_labels mismatch'
+    # Snapshot stores OQ-format labels ('rlzN'); normalise to our 'rlz-NNN' format for comparison.
+    n_rlz = len(probe_dict)
+    n_digits = max(3, len(str(n_rlz - 1)))
+    expected_keys = [f'rlz-{int(lbl[3:]):0{n_digits}d}' for lbl in sidecar['rlz_labels']]
+    assert list(probe_dict.keys()) == expected_keys, f'[OQ {oq_ver}] rlz key mismatch'
 
+    probe = next(iter(probe_dict.values()))
     snap_bins = sidecar['disagg_bins']
     for ax in kind.split('_'):
         ax_lo = ax.lower()
@@ -213,6 +217,4 @@ def test_disagg_snapshot_disagg_rlzs(fixture_dir):
         if snap_vals and isinstance(snap_vals[0], str):
             assert h5_vals == snap_vals, f'[OQ {oq_ver}] disagg_bins[{ax_lo}] string mismatch'
         else:
-            assert np.allclose(h5_vals, snap_vals, rtol=1e-5), (
-                f'[OQ {oq_ver}] disagg_bins[{ax_lo}] numeric mismatch'
-            )
+            assert np.allclose(h5_vals, snap_vals, rtol=1e-5), f'[OQ {oq_ver}] disagg_bins[{ax_lo}] numeric mismatch'
