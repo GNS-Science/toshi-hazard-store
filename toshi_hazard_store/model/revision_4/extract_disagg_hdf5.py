@@ -77,9 +77,10 @@ def generate_disagg_record_batches(
     imtl: float,
     use_64bit_values: bool,
 ) -> Iterator[pa.RecordBatch]:
-    """Yield a single RecordBatch containing one row per realisation.
+    """Yield one RecordBatch per realisation (1 row each).
 
-    Each row carries the flattened disaggregation array for that rlz in the
+    Mirrors ``extract_classical_hdf5.generate_rlz_record_batches``'s per-rlz pattern.
+    Each batch carries the flattened disaggregation array for that rlz in the
     ``disagg_values`` list column, plus an ordered ``disagg_bins`` map
     (``{axis_name: [bin_centre_str, ...]}``) whose key order defines the axis
     order of ``disagg_values``. Bin centres are stringified uniformly (bytes
@@ -118,47 +119,40 @@ def generate_disagg_record_batches(
     log.debug(f'extracting imt={imt} kind={kind}')
     disagg_dict = reader.disagg_rlzs(kind)
 
-    rlz_labels = list(disagg_dict.keys())  # 'rlz-NNN' strings in best_rlzs order
-    ordinals = [int(k.split('-')[1]) for k in rlz_labels]
-    sources_list = [sources_by_ordinal[o] for o in ordinals]
-    gmms_list = [gmms_by_ordinal[o] for o in ordinals]
-
     first = next(iter(disagg_dict.values()))
     shape_descr = [d for d in first.shape_descr if d not in _QUERY_DIMS]
 
-    # Build {axis_name: [bin_centre_str, ...]} in shape_descr order.
+    # Bin metadata is constant across all rlzs — build once before the loop.
     disagg_bins: Dict[str, list] = {str(dim): _stringify_bin_centers(getattr(first, str(dim))) for dim in shape_descr}
+    zero = np.zeros(1, dtype=np.int8)
 
-    # Per-rlz flat arrays: each entry is (*kind_bins, 1, 1); index out the singleton imt/poe dims.
-    n_rlz = len(disagg_dict)
-    per_rlz_flat = np.stack([entry.array[..., 0, 0].ravel() for entry in disagg_dict.values()]).astype(vtype)
+    for rlz_key, entry in disagg_dict.items():
+        ordinal = int(rlz_key.split('-')[1])
+        flat = entry.array[..., 0, 0].ravel().astype(vtype)
 
-    zeros = np.zeros(n_rlz, dtype=np.int8)
-    vs30_arr = np.full(n_rlz, int(vs30), dtype=np.int32)
-
-    yield pa.RecordBatch.from_arrays(
-        [
-            pa.array([compatible_calc_id] * n_rlz, type=pa.string()),
-            pa.DictionaryArray.from_arrays(zeros, [hazard_model_id]),
-            pa.DictionaryArray.from_arrays(zeros, [producer_digest]),
-            pa.DictionaryArray.from_arrays(zeros, [config_digest]),
-            pa.array([calculation_id] * n_rlz, type=pa.string()),
-            pa.DictionaryArray.from_arrays(zeros, [bins_digest]),
-            pa.array([nloc_001_code] * n_rlz, type=pa.string()),
-            pa.array([nloc_0_code] * n_rlz, type=pa.string()),
-            vs30_arr,
-            pa.DictionaryArray.from_arrays(zeros, [imt]),
-            pa.DictionaryArray.from_arrays(zeros, [target_aggr]),
-            pa.DictionaryArray.from_arrays(zeros, [probability.name]),
-            pa.array([float(imtl)] * n_rlz, type=pa_imtl_type),
-            pa.array(rlz_labels, type=pa.string()).dictionary_encode().cast(dict_type),
-            pa.array(sources_list, type=pa.string()).dictionary_encode().cast(dict_type),
-            pa.array(gmms_list, type=pa.string()).dictionary_encode().cast(dict_type),
-            pa.array([disagg_bins] * n_rlz, type=bins_map_type),
-            pa.array(per_rlz_flat.tolist(), type=pa.list_(pa_vtype)),
-        ],
-        schema=schema,
-    )
+        yield pa.RecordBatch.from_arrays(
+            [
+                pa.array([compatible_calc_id], type=pa.string()),
+                pa.DictionaryArray.from_arrays(zero, [hazard_model_id]),
+                pa.DictionaryArray.from_arrays(zero, [producer_digest]),
+                pa.DictionaryArray.from_arrays(zero, [config_digest]),
+                pa.array([calculation_id], type=pa.string()),
+                pa.DictionaryArray.from_arrays(zero, [bins_digest]),
+                pa.array([nloc_001_code], type=pa.string()),
+                pa.array([nloc_0_code], type=pa.string()),
+                pa.array([int(vs30)], type=pa.int32()),
+                pa.DictionaryArray.from_arrays(zero, [imt]),
+                pa.DictionaryArray.from_arrays(zero, [target_aggr]),
+                pa.DictionaryArray.from_arrays(zero, [probability.name]),
+                pa.array([float(imtl)], type=pa_imtl_type),
+                pa.array([rlz_key], type=pa.string()).dictionary_encode().cast(dict_type),
+                pa.array([sources_by_ordinal[ordinal]], type=pa.string()).dictionary_encode().cast(dict_type),
+                pa.array([gmms_by_ordinal[ordinal]], type=pa.string()).dictionary_encode().cast(dict_type),
+                pa.array([disagg_bins], type=bins_map_type),
+                pa.array([flat.tolist()], type=pa.list_(pa_vtype)),
+            ],
+            schema=schema,
+        )
 
 
 def disaggs_to_record_batch_reader(

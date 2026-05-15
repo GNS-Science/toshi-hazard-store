@@ -219,8 +219,12 @@ def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
             kind=kind,
         )
     )
-    assert len(h5_batches) == 1
-    batch = h5_batches[0]
+    assert len(h5_batches) >= 1
+
+    # Flatten per-rlz batches (one batch per rlz, 1 row each).
+    rlz_col = [v for b in h5_batches for v in b.column('rlz').to_pylist()]
+    vals_col = [v for b in h5_batches for v in b.column('disagg_values').to_pylist()]
+    bins_rows = [v for b in h5_batches for v in b.column('disagg_bins').to_pylist()]
 
     # Build reference: {rlz_key: flattened_array} from OQ probe (keys in our 'rlz-NNN' format).
     probe_oq = extractor.get(f'disagg?kind={kind}&imt={imt}&site_id=0&poe_id=0&spec=rlzs')
@@ -235,8 +239,6 @@ def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
     oq_ref = {f'rlz-{oq_ordinals[i]:0{n_digits}d}': oq_arr[i].ravel().astype(np.float32) for i in range(n_rlz)}
 
     # Compare per rlz.
-    rlz_col = batch.column('rlz').to_pylist()
-    vals_col = batch.column('disagg_values').to_pylist()
     for rlz_label, row_vals in zip(rlz_col, vals_col):
         h5_vals = np.asarray(row_vals, dtype=np.float32)
         oq_vals = oq_ref[rlz_label]
@@ -245,9 +247,8 @@ def test_disagg_pipeline_values_match_oq_reference(disagg_pair):
         )
 
     # disagg_bins: axis names and bin-centre strings must be identical across all rows.
-    bins_col = batch.column('disagg_bins').to_pylist()
     probe_h5 = next(iter(reader.disagg_rlzs(kind).values()))
-    for row_bins in bins_col:
+    for row_bins in bins_rows:
         for (ax_name, bin_strs), expected_ax in zip(
             row_bins,
             [ax.lower() for ax in kind.split('_')],

@@ -94,6 +94,29 @@ def test_disaggs_to_record_batch_reader_smoke(disagg_hdf5_info, probability, tmp
         assert batch.num_rows > 0
 
 
+def test_one_batch_per_rlz(disagg_hdf5_info, probability):
+    """Reader yields exactly one 1-row batch per realization, mirroring extract_classical_hdf5."""
+    hdf5_path, kind, imts = disagg_hdf5_info
+    reader_h5 = OqHdf5Reader(str(hdf5_path))
+    n_rlz = len(reader_h5.disagg_rlzs(kind))
+
+    reader = extract_disagg_hdf5.disaggs_to_record_batch_reader(
+        hdf5_file=str(hdf5_path),
+        calculation_id='test-calc-id',
+        compatible_calc_id='compat-0',
+        producer_digest='sha256:' + 'a' * 64,
+        config_digest='cfg-abc123',
+        probability=probability,
+        hazard_model_id=_HAZARD_MODEL_ID,
+        target_aggr=_TARGET_AGGR,
+        kind=kind,
+    )
+    batches = list(reader)
+    assert len(batches) == n_rlz, f'expected {n_rlz} batches (one per rlz), got {len(batches)}'
+    for batch in batches:
+        assert batch.num_rows == 1, f'expected 1 row per batch, got {batch.num_rows}'
+
+
 def test_probability_column_populated(disagg_hdf5_info, probability):
     """Every row carries the user-supplied probability name."""
     hdf5_path, kind, imts = disagg_hdf5_info
