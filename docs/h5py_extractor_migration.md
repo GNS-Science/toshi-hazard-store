@@ -63,7 +63,7 @@ The rlz axis ordering follows `best_rlzs[site_idx]` — an integer array giving 
 
 ### Generating fixtures
 
-A developer may want to generate new fixtures when either new functionality is added to `OqHdf5Reader` that reads features not present in the existing fixtures or they want to support new versions of OpenQuake.
+A developer may want to generate new test fixtures when either new functionality is added to `OqHdf5Reader` that reads features not present in the existing fixtures or they want to support new versions of OpenQuake. These fixtures are then used to make sure that `OqHdf5Reader` continues to behave as expected via tests in `tests/oq_import/test_cross_version_fixtures.py` and `tests/oq_import/test_extractor_snapshot_cross_version.py`.
 
 Prerequisites: Docker installed and `openquake/engine:<ver>` images pullable.
 
