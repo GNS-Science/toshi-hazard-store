@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+### Changed
+- deps: patch (21 pkgs: 7 direct, 14 transitive)
+- deps: minor (52 pkgs: 12 direct, 40 transitive)
+- deps: major: mkdocstrings-python 1.19.0→2.0.5, pandas 2.3.3→3.0.3, cryptography 48.0.0→49.0.0, cyclopts 4.11.2→4.20.0, lxml 6.1.0→6.1.1, pymdown-extensions 10.21.2→11.0.1, readme-renderer 44.0→45.0, rich-rst 1.3.2→2.1.0, setuptools 82.0.1→83.0.0, smart-open 7.6.0→8.0.0
+- deps: skipped pandas-stubs 3.0.3.260530 (requires Python>=3.11, project supports >=3.10), django (pinned <5 by openquake-engine==3.25.1)
+
 ## [2.1.0] 2026-05-15
 ### Added
 - `OqHdf5Reader` to replace OpenQuake `Extractor`
