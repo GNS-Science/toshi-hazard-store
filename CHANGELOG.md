@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [2.1.1] 2026-07-15
 ### Changed
 - deps: patch (21 pkgs: 7 direct, 14 transitive)
 - deps: minor (52 pkgs: 12 direct, 40 transitive)
