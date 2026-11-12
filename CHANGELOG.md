@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [2.1.2] 2026-11-12
 ### Changed
 - deps: major: twine 6→7, pandas-stubs 2.3→3.1, pillow 12→13; minor/patch upgrades (~130 pkgs, direct and transitive)
 - deps: skipped django (pinned <5 by openquake-engine==3.25.1), filelock 4 (blocked by constraints)
