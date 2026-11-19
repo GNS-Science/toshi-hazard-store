@@ -127,6 +127,7 @@ combine-as-imports = true
 
 [tool.uv]
 exclude-newer = "1 week"
+override-dependencies = ["django>=5.2.17,<6"]
 exclude-newer-package = {"nzshm-common" = false, "nzshm-model" = false, "nshm-toshi-client" = false}
 
 [build-system]
