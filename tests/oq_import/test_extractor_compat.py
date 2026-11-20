@@ -11,10 +11,12 @@ Requires the ``oq-compat`` dependency group (openquake-engine==3.25.1):
     uv sync --group oq-compat
     uv run pytest tests/oq_import/test_extractor_compat.py -v
 
-Normal ``uv run pytest`` skips all tests here gracefully.
+Normal ``uv run pytest`` skips all tests here gracefully. Set ``THS_REQUIRE_OQ=1``
+(as the tox env does) to fail instead of skip when openquake cannot be imported.
 """
 
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +28,8 @@ try:
 
     HAVE_OQ = True
 except ImportError:
+    if os.environ.get("THS_REQUIRE_OQ"):
+        raise  # in the oq-compat tox env a missing/broken openquake must fail, not skip
     HAVE_OQ = False
 
 from toshi_hazard_store.model.constraints import ProbabilityEnum
