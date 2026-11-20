@@ -58,8 +58,8 @@ scripts = [
 
 [dependency-groups]
 oq-compat = [
-    "fiona>=1.9.5",
-    "networkx>=3.2.1",
+    "fiona>=1.9.5",  # imported at runtime by openquake-engine but not declared by it
+    "networkx>=3.2.1", # imported at runtime by openquake-engine but not declared by it
     "numba",
     "openquake-engine==3.25.1",
 ]
