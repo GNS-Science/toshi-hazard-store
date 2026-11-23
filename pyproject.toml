@@ -15,11 +15,11 @@ classifiers=[
     'Intended Audience :: Developers',
     'Natural Language :: English',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.10',
-    'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
 ]
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.12,<4.0"
 dependencies = [
     "geopandas>=1.1.2",
     "h5py>=3.10",
@@ -58,8 +58,8 @@ scripts = [
 
 [dependency-groups]
 oq-compat = [
-    "fiona>=1.9.5",
-    "networkx>=3.2.1",
+    "fiona>=1.9.5",  # imported at runtime by openquake-engine but not declared by it
+    "networkx>=3.2.1", # imported at runtime by openquake-engine but not declared by it
     "numba",
     "openquake-engine==3.25.1",
 ]
@@ -91,7 +91,6 @@ dev = [
     "pytest-xdist>=3.5.0",
     "pyvista>=0.44.1",
     "ruff>=0.9.0",
-    "safety>=3.6.2",
     "semver",
     "tox>=4.4.4",
     "tox-uv>=1.0.0",
@@ -103,7 +102,7 @@ dev = [
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py312"
 extend-exclude = [
     "toshi_hazard_store/scripts/legacy/ths_cache.py",
     "toshi_hazard_store/scripts/legacy/testing_ths_v2.py",
@@ -128,6 +127,7 @@ combine-as-imports = true
 
 [tool.uv]
 exclude-newer = "1 week"
+override-dependencies = ["django>=5.2.17,<6"]
 exclude-newer-package = {"nzshm-common" = false, "nzshm-model" = false, "nshm-toshi-client" = false}
 
 [build-system]

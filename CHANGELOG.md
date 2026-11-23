@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0] 2026-11-24
+### Changed
+- requires Python >=3.12,<4 (3.10 and 3.11 dropped); test matrix 3.12, 3.13, 3.14
+- removed `safety` dev dependency (audit uses `pip-audit` only)
+- deps: major: nzshm-common 0.10→0.11, nzshm-model 0.15→0.16, filelock 3→4, cachetools 7→8, pymdown-extensions 12→13
+- deps: django overridden to 5.2 (openquake-engine==3.25.1 declares django<5)
+
 ## [2.1.2] 2026-11-12
 ### Changed
 - deps: major: twine 6→7, pandas-stubs 2.3→3.1, pillow 12→13; minor/patch upgrades (~130 pkgs, direct and transitive)
