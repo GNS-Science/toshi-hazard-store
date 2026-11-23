@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [2.2.0] 2026-11-24
 ### Changed
 - requires Python >=3.12,<4 (3.10 and 3.11 dropped); test matrix 3.12, 3.13, 3.14
 - removed `safety` dev dependency (audit uses `pip-audit` only)
